@@ -16,6 +16,8 @@ AS
 			- 20120523@Elodie: Write log
 			- 20130313@Johnson: Fix format log by xml format
 		Parameter's Explanation:
+		
+			testing 
 	*/
 SET NOCOUNT ON
 	DECLARE @startRun datetime  
