@@ -1,5 +1,5 @@
 ﻿ ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_Outstanding_Ag]
-	@username NVARCHAR(50),
+	@custid		INT,
 	@winlostdate DATETIME,
 	@combo		INT = 0,
 	@sporttype	INT = 0
@@ -18,28 +18,23 @@ AS
 						= 2 : Other sports
 						= 3 : combined sports
 	*/
-SET NOCOUNT ON
-	DECLARE @agentid INT
-	
-	SELECT @agentid = custid FROM bodb02.dbo.customer WITH(NOLOCK) WHERE username = @username
-	
-	IF @agentid IS NULL
-		RETURN
+SET NOCOUNT ON	
 	SELECT @combo = NULLIF(@combo,0),
 			@sporttype = NULLIF(@sporttype,0)
 					
-	SELECT username,
+	SELECT custid,
+		username,
 		SUM(stake*actualrate*(1-tpositiontaking)) as stakePT,
 		SUM(stake*actualrate*odds*(1-tpositiontaking)) as maxpayout,
 		COUNT(1) as betcount
 	FROM rmBettrans WITH(NOLOCK)
-	WHERE recommend = @agentid
+	WHERE recommend = @custid
 		AND matchid = 9
 		AND statusid = 0
 		AND winlostdate = @winlostdate
 		AND liveawayscore = ISNULL(@sporttype,liveawayscore)
 		AND right(betcheck,len(betcheck)-1) = ISNULL(@combo,right(betcheck,len(betcheck)-1))
-	GROUP BY username
+	GROUP BY custid,username
 
 GO
 GRANT EXECUTE ON [dbo].[RMS_Rpt_Parlay_Outstanding_Ag] TO [bodbRMSNet]

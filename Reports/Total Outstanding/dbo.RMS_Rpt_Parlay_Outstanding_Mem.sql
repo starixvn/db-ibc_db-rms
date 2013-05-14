@@ -1,5 +1,5 @@
 ﻿ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_Outstanding_Mem]
-	@username	NVARCHAR(50),
+	@custid		INT,
 	@winlostdate DATETIME,
 	@combo		INT = 0,
 	@sporttype	INT = 0
@@ -19,13 +19,6 @@ AS
 						= 3 : combined sports
 	*/ 
 SET NOCOUNT ON
-	DECLARE @custid INT
-	
-	SELECT @custid = custid FROM bodb02.dbo.customer WITH(NOLOCK) WHERE username = @username
-	
-	IF @custid IS NULL
-		RETURN
-	
 	SELECT @combo = NULLIF(@combo,0),
 			@sporttype = NULLIF(@sporttype,0)
 			
