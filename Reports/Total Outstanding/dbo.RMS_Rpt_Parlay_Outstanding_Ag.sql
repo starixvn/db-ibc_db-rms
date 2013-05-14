@@ -1,8 +1,8 @@
 ﻿ ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_Outstanding_Ag]
 	@custid		INT,
 	@winlostdate DATETIME,
-	@combo		INT = 0,
-	@sporttype	INT = 0
+	@selection	VARCHAR(100) = '',
+	@sporttype	VARCHAR(100) = ''
 AS
 	/*
 		Created: Johnson
@@ -19,8 +19,27 @@ AS
 						= 3 : combined sports
 	*/
 SET NOCOUNT ON	
-	SELECT @combo = NULLIF(@combo,0),
-			@sporttype = NULLIF(@sporttype,0)
+	DECLARE @tmpSelection TABLE (selection int)
+	DECLARE @tmpSport TABLE (sporttype int)
+	DECLARE @6up varchar(100)
+	
+	INSERT INTO @tmpSelection
+	SELECT val
+	FROM f_RMS_strSplit (@selection,',')
+	
+	--Check selection is 6-UP
+	IF EXISTS(SELECT 1 FROM @tmpSelection WHERE selection = 6)
+	BEGIN
+		SELECT @6up = '7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30'
+
+		INSERT INTO @tmpSelection
+		SELECT val
+		FROM f_RMS_strSplit (@6up,',')		
+	END
+	
+	INSERT INTO @tmpSport (sporttype)
+	SELECT val
+	FROM f_RMS_strSplit (@sporttype,',')
 					
 	SELECT custid,
 		username,
@@ -32,8 +51,8 @@ SET NOCOUNT ON
 		AND matchid = 9
 		AND statusid = 0
 		AND winlostdate = @winlostdate
-		AND liveawayscore = ISNULL(@sporttype,liveawayscore)
-		AND right(betcheck,len(betcheck)-1) = ISNULL(@combo,right(betcheck,len(betcheck)-1))
+		AND liveawayscore IN (SELECT sporttype FROM @tmpSport)
+		AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection)
 	GROUP BY custid,username
 
 GO
