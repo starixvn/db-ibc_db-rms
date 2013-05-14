@@ -57,6 +57,11 @@ Begin DataProject = "Risk Management System"
          Script = "dbo.RMS_Rpt_Parlay_TopWinners_Details_Old.sql"
          Script = "dbo.RMS_SelBalanceUpDay.sql"
       End
+      Begin Folder = "Total Outstanding"
+         Script = "dbo.RMS_CustomerSelInfoByUsername.sql"
+         Script = "dbo.RMS_Rpt_Parlay_Outstanding_Ag.sql"
+         Script = "dbo.RMS_Rpt_Parlay_Outstanding_Mem.sql"
+      End
    End
    Begin Folder = "Script"
       Script = "dbo.Correct log data.sql"
