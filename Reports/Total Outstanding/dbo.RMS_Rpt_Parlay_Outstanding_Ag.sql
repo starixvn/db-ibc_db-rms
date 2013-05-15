@@ -1,6 +1,5 @@
 ﻿ ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_Outstanding_Ag]
-	@custid		INT,
-	@winlostdate DATETIME,
+	@custid		INT,	
 	@selection	VARCHAR(100) = '',
 	@sporttype	VARCHAR(100) = ''
 AS
@@ -40,20 +39,23 @@ SET NOCOUNT ON
 	INSERT INTO @tmpSport (sporttype)
 	SELECT val
 	FROM f_RMS_strSplit (@sporttype,',')
-					
-	SELECT custid,
-		username,
-		SUM(stake*actualrate*(1-tpositiontaking)) as stakePT,
-		SUM(stake*actualrate*odds*(1-tpositiontaking)) as maxpayout,
-		COUNT(1) as betcount
-	FROM rmBettrans WITH(NOLOCK)
-	WHERE recommend = @custid
-		AND matchid = 9
-		AND statusid = 0
-		AND winlostdate = @winlostdate
-		AND liveawayscore IN (SELECT sporttype FROM @tmpSport)
-		AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection)
-	GROUP BY custid,username
+	
+	SELECT *
+	FROM (					
+		SELECT custid,
+			username,
+			SUM(stake*actualrate*(1-tpositiontaking)) as stakePT,
+			SUM(stake*actualrate*odds*(1-tpositiontaking)) as maxpayoutPT,
+			COUNT(1) as betcount
+		FROM rmBettrans WITH(NOLOCK)
+		WHERE recommend = @custid
+			AND matchid = 9
+			AND statusid = 0		
+			AND liveawayscore IN (SELECT sporttype FROM @tmpSport)
+			AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection)
+		GROUP BY custid,username
+		) r
+	ORDER  BY maxpayoutPT DESC 
 
 GO
 GRANT EXECUTE ON [dbo].[RMS_Rpt_Parlay_Outstanding_Ag] TO [bodbRMSNet]
