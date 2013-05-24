@@ -8,12 +8,12 @@ AS
 		DB: DB054.bodb_RMS
 		
 		Revisions:
-		
+			- 20130524@Johnson: get funckey
 		Parameter's Explanation:
 	*/ 
 SET NOCOUNT ON
 
-	SELECT f.FuncID, f.FuncName, f.DisplayOrder, f.ParentID, f.ParentName, ISNULL(gp.Policy,0) as Policy
+	SELECT f.FuncID, f.funckey, f.FuncName, f.DisplayOrder, f.ParentID, f.ParentName, ISNULL(gp.Policy,0) as Policy
 	FROM rmFunction f WITH(NOLOCK)
 		LEFT JOIN rmGroupPolicy gp WITH(NOLOCK) ON gp.GroupID = @groupid AND gp.funcid = f.funcid	
 	ORDER BY f.ParentID ,f.DisplayOrder ASC
