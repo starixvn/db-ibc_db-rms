@@ -61,6 +61,7 @@ SET NOCOUNT ON
 		 WHERE winlostdate BETWEEN @f_date AND @t_date
 			AND matchid = 9 
 			AND statusid IN (112,113)
+			AND currency <> 20
 		GROUP BY winlostdate
 	END
 	
@@ -95,6 +96,7 @@ SET NOCOUNT ON
 			FROM rmSumWinloss WITH(NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date				
 					AND statusid IN (112,113)
+					AND currency <> 20
 			GROUP BY winlostdate
 		END
 		IF @fromdate < @balanceupday
@@ -125,7 +127,8 @@ SET NOCOUNT ON
 				,sum(case when statusid = 113 then company_winlost*actualrate else 0 end) as ourPT_lose			
 			FROM rmSumWinloss_Old WITH(NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date				
-				AND statusid IN (112,113)	
+				AND statusid IN (112,113)
+				AND currency <> 20	
 			GROUP BY winlostdate			
 		END			
 	END
