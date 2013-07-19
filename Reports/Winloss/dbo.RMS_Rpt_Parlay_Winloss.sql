@@ -3,6 +3,7 @@
 	@todate		DATETIME,
 	@movebetsday DATETIME,
 	@balanceUpday DATETIME = NULL,
+	@sporttype INT = null,
 	@bettype INT = 9
 AS
 	/*
@@ -12,8 +13,12 @@ AS
 		Task: report parlay winloss
 		
 		Revisions:
-		
+			- 20130719@Johnson: filter by sport
 		Parameter's Explanation:
+			- @sporttype = '1' : soccer only
+						= '2' : Other sports
+						= '3' : combined sports
+			
 	*/
 SET NOCOUNT ON
 	DECLARE @f_date DATETIME,
@@ -61,6 +66,7 @@ SET NOCOUNT ON
 		 WHERE winlostdate BETWEEN @f_date AND @t_date
 			AND matchid = 9 
 			AND statusid IN (112,113)
+			AND liveawayscore = ISNULL(@sporttype,liveawayscore)
 			AND currency <> 20
 		GROUP BY winlostdate
 	END
@@ -97,6 +103,7 @@ SET NOCOUNT ON
 			WHERE winlostdate BETWEEN @f_date AND @t_date				
 					AND statusid IN (112,113)
 					AND currency <> 20
+					AND sporttype = ISNULL(@sporttype, sporttype)
 			GROUP BY winlostdate
 		END
 		IF @fromdate < @balanceupday
@@ -129,6 +136,7 @@ SET NOCOUNT ON
 			WHERE winlostdate BETWEEN @f_date AND @t_date				
 				AND statusid IN (112,113)
 				AND currency <> 20	
+				AND sporttype = ISNULL(@sporttype, sporttype)
 			GROUP BY winlostdate			
 		END			
 	END
