@@ -54,6 +54,7 @@ Begin DataProject = "Risk Management System"
       End
       Begin Folder = "Top Winner"
          Script = "dbo.RMS_Rpt_Parlay_TopWinners.sql"
+         Script = "dbo.RMS_Rpt_Parlay_TopWinners_Bet_Details.sql"
          Script = "dbo.RMS_Rpt_Parlay_TopWinners_Details.sql"
          Script = "dbo.RMS_Rpt_Parlay_TopWinners_Details_Old.sql"
          Script = "dbo.RMS_SelBalanceUpDay.sql"

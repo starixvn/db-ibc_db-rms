@@ -14,6 +14,7 @@ AS
 		
 		Revisions:
 			- 20130719@Johnson: filter by sport
+			- 20130813@Johnson: add combination filter
 		Parameter's Explanation:
 			- @sporttype = '1' : soccer only
 						= '2' : Other sports
@@ -35,10 +36,15 @@ SET NOCOUNT ON
 		ourPT_won MONEY,
 		ourPT_lose MONEY
 	)
+	DECLARE @tmpSelection TABLE(selection tinyint)	
+	
+	INSERT INTO @tmpSelection
+	SELECT val
+	FROM f_RMS_strSplit (@selection,',')
 	
 	IF @todate > @movebetsday
 	BEGIN
-		SELECT @f_date = CASE WHEN @fromdate < @movebetsday THEN DATEADD(dd,1,@movebetsday) ELSE @fromdate END,
+		SELECT @f_date = CASE WHEN @fromdate <= @movebetsday THEN DATEADD(dd,1,@movebetsday) ELSE @fromdate END,
 				@t_date = @todate
 		
 		INSERT INTO @rptWinloss(
@@ -68,6 +74,7 @@ SET NOCOUNT ON
 			AND statusid IN (112,113)
 			AND liveawayscore = ISNULL(@sporttype,liveawayscore)
 			AND currency <> 20
+			AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection) 
 		GROUP BY winlostdate
 	END
 	
@@ -99,11 +106,12 @@ SET NOCOUNT ON
 				,sum(case when statusid = 113 then -(winlost-stake)*actualrate else 0 end) as member_lose
 				,sum(case when statusid = 112 then company_winlost*actualrate else 0 end) as ourPT_won
 				,sum(case when statusid = 113 then company_winlost*actualrate else 0 end) as ourPT_lose			
-			FROM rmSumWinloss WITH(NOLOCK)
+			FROM rmSumWinloss2 WITH(NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date				
 					AND statusid IN (112,113)
 					AND currency <> 20
 					AND sporttype = ISNULL(@sporttype, sporttype)
+					AND combo IN (SELECT selection FROM @tmpSelection)
 			GROUP BY winlostdate
 		END
 		IF @fromdate < @balanceupday
@@ -132,11 +140,12 @@ SET NOCOUNT ON
 				,sum(case when statusid = 113 then -(winlost-stake)*actualrate else 0 end) as member_lose
 				,sum(case when statusid = 112 then company_winlost*actualrate else 0 end) as ourPT_won
 				,sum(case when statusid = 113 then company_winlost*actualrate else 0 end) as ourPT_lose			
-			FROM rmSumWinloss_Old WITH(NOLOCK)
+			FROM rmSumWinloss_Old2 WITH(NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date				
 				AND statusid IN (112,113)
 				AND currency <> 20	
 				AND sporttype = ISNULL(@sporttype, sporttype)
+				AND combo IN (SELECT selection FROM @tmpSelection)
 			GROUP BY winlostdate			
 		END			
 	END

@@ -4,7 +4,8 @@
 	@movebetsday DATETIME,
 	@balanceUpday DATETIME = NULL,
 	@limitedRow	INT = 20,
-	@sporttype	TINYINT = null
+	@sporttype	TINYINT = null,
+	@selection	VARCHAR(100) = ''
 AS
 	/*
 		Created: Johnson	
@@ -17,6 +18,7 @@ AS
 			- 20130125@Johnson: move bettransParlay from bodb02 to bodb_RMS and rename to rmBettrans
 			- 20130225@Johnson: include lose tickets to calculate top winners
 			- 20130315@Johnson: calculate average win odds by formula : Winning Amount/Stake
+			- 20130813@Johnson: add combination filter
 		Parameter's Explanation:
 	*/ 
 SET NOCOUNT ON
@@ -32,11 +34,17 @@ SET NOCOUNT ON
 		,stake_baseRM MONEY
 		,winlost_baseRM MONEY
 		,company_winlost_baseRM MONEY
-		,betcount INT)		
+		,betcount INT)	
+	
+	DECLARE @tmpSelection TABLE(selection tinyint)	
+	
+	INSERT INTO @tmpSelection
+	SELECT val
+	FROM f_RMS_strSplit (@selection,',')
 	
 	IF @todate > @movebetsday
 	BEGIN
-		SELECT @f_date = CASE WHEN @fromdate < @movebetsday THEN DATEADD(dd,1,@movebetsday) ELSE @fromdate END,
+		SELECT @f_date = CASE WHEN @fromdate <= @movebetsday THEN DATEADD(dd,1,@movebetsday) ELSE @fromdate END,
 				@t_date = @todate 
 				
 		INSERT INTO @tmpSum (custid
@@ -65,6 +73,7 @@ SET NOCOUNT ON
 			AND matchid = 9 
 			AND statusid IN (112,113)
 			AND liveawayscore = ISNULL(@sporttype,liveawayscore)
+			AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection)
 		 GROUP BY custid, username, currency
 	END
 	IF @fromdate <= @movebetsday
@@ -95,10 +104,11 @@ SET NOCOUNT ON
 				,SUM((winlost-stake)*actualrate)
 				,SUM(company_winlost*actualrate)
 				,SUM(betcount)				
-			FROM rmSumWinloss WITH(NOLOCK)
+			FROM rmSumWinloss2 WITH(NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND sporttype = ISNULL(@sporttype,sporttype)
 				AND statusid IN (112,113)
+				AND combo IN (SELECT selection FROM @tmpSelection)
 			GROUP BY custid, username, currency
 		END
 		IF @fromdate < @balanceupday
@@ -127,10 +137,11 @@ SET NOCOUNT ON
 				,SUM((winlost-stake)*actualrate)
 				,SUM(company_winlost*actualrate)
 				,SUM(betcount)				
-			FROM rmSumWinloss_Old WITH(NOLOCK)
+			FROM rmSumWinloss_Old2 WITH(NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND sporttype = ISNULL(@sporttype,sporttype)
 				AND statusid IN (112,113)
+				AND combo IN (SELECT selection FROM @tmpSelection)
 			GROUP BY custid, username, currency
 		END
 	END
