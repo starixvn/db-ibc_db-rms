@@ -14,7 +14,7 @@ AS
 		Created: Johnson
 		Date: 2012-05-09
 		Task: function support to split string 
-		DB: DB054.bodb_RMS
+		DB: DBRMS/bodb_RMS,DBARC/bodb_Archive
 		
 		Revisions:
 		

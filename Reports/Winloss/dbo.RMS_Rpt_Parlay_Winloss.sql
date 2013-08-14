@@ -4,7 +4,8 @@
 	@movebetsday DATETIME,
 	@balanceUpday DATETIME = NULL,
 	@sporttype INT = null,
-	@bettype INT = 9
+	@bettype INT = 9,
+	@selection VARCHAR(100)=''
 AS
 	/*
 		Created: Johnson

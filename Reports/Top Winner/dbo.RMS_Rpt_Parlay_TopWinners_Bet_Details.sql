@@ -13,29 +13,124 @@ AS
 		
 	*/
 SET NOCOUNT ON
-	DECLARE @Details TABLE(
+	DECLARE @BetListMP TABLE(
 		transid BIGINT, 
 		bettype int,
 		homeid int,
 		awayid int,
 		hdp1 smallmoney, 
 		hdp2 smallmoney, 
-		bettrans.odds,
-		bettrans.betteam,
-		bettrans.statusid,
-		bettrans.status,
-		bettrans.livehomescore, 
-		bettrans.liveawayscore, 
-		bettrans.liveindicator, 
-		match.leagueid,
-		match.sporttype,
-		match.isNeutral as IsNeutral,
-		match.matchid,
-		match.matchcode,
-		match.betstatus
+		odds smallmoney,
+		betteam nvarchar(20),
+		statusid int,
+		status nvarchar(20),
+		livehomescore smallint, 
+		liveawayscore smallint, 
+		liveindicator bit, 
+		leagueid int,
+		sporttype smallint,
+		isNeutral bit,
+		matchid int,
+		matchcode nvarchar(50),
+		betstatus nvarchar(50)
 	)
-	DECLARE @refno BIGINT
+	
+	if exists(select 1 from bettransm with (nolock) where refno = @refno)
+	BEGIN
+		INSERT INTO @BetListMP
+		SELECT
+			bettrans.transid, 
+			bettrans.bettype,
+			match.homeid,
+			match.awayid,
+			bettrans.hdp1, 
+			bettrans.hdp2, 
+			bettrans.odds,
+			bettrans.betteam,
+			bettrans.statusid,
+			bettrans.status,
+			bettrans.livehomescore, 
+			bettrans.liveawayscore, 
+			bettrans.liveindicator, 
+			match.leagueid,
+			match.sporttype,
+			match.isNeutral as IsNeutral,
+			match.matchid,
+			match.matchcode,
+			match.betstatus
+		from 
+			(SELECT matchid,  Bettype, transid,hdp1, hdp2, odds, betteam, statusid,status,
+					livehomescore,liveawayscore,liveindicator
+			FROM bodb02.dbo.BettransM with (nolock)
+			WHERE refno=@refno ) AS bettrans
+		INNER JOIN bodb02.dbo.match with (nolock) ON bettrans.matchid=match.matchid
+	END
+	
+	if exists(select 1 from bettransm14 with (nolock) where refno = @refno)
+	BEGIN
+		INSERT INTO @BetListMP
+		SELECT
+			bettrans.transid, 
+			bettrans.bettype,
+			match.homeid,
+			match.awayid,
+			bettrans.hdp1, 
+			bettrans.hdp2, 
+			bettrans.odds, 
+			bettrans.betteam,
+			bettrans.statusid,
+			bettrans.status,
+			bettrans.livehomescore, 
+			bettrans.liveawayscore, 
+			bettrans.liveindicator, 
+			match.leagueid,
+			match.sporttype,
+			match.isNeutral as IsNeutral,
+			match.matchid,
+			match.matchcode,
+			match.betstatus
+		from 
+			(SELECT matchid, Bettype, transid,hdp1, hdp2, odds, betteam, statusid, status,
+					livehomescore,liveawayscore,liveindicator
+			FROM bodb02.dbo.BettransM14 with (nolock)
+			WHERE refno=@refno) AS bettrans
+		INNER JOIN bodb02.dbo.match14 as match with (nolock) ON bettrans.matchid=match.matchid
+	END
+	
+		
+	if exists(select 1 from DBARC.bodb_archive.dbo.BettransM with (nolock) where refno = @refno)
+	BEGIN
+		INSERT INTO @BetListMP
+		SELECT 
+			bettrans.transid, 
+			bettrans.bettype,
+			match.homeid,
+			match.awayid,
+			bettrans.hdp1, 
+			bettrans.hdp2, 
+			bettrans.odds, 
+			bettrans.betteam,
+			bettrans.statusid,
+			bettrans.status,
+			bettrans.livehomescore, 
+			bettrans.liveawayscore, 
+			bettrans.liveindicator, 
+			match.leagueid,
+			match.sporttype,
+			match.isNeutral,
+			match.matchid,
+			match.matchcode,
+			match.betstatus
+		from 
+			(SELECT matchid, Bettype, transid,hdp1, hdp2, odds, betteam, statusid, status,
+					livehomescore,liveawayscore,liveindicator
+			FROM DBARC.bodb_archive.dbo.BettransM with (nolock)
+			WHERE refno=@refno) AS bettrans
+		INNER JOIN DBARC.bodb_Archive.dbo.match_bk as match with (nolock) ON bettrans.matchid=match.matchid
+	END
 
-
+		
+	SELECT * FROM @BetListMP
+	ORDER BY TransID desc
 GO
 GRANT EXECUTE ON  [dbo].[RMS_Rpt_Parlay_TopWinners_Bet_Details] TO [bodbRMSNet]
