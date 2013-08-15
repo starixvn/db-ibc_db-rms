@@ -35,7 +35,7 @@ SET NOCOUNT ON
 		betstatus nvarchar(50)
 	)
 	
-	if exists(select 1 from bettransm with (nolock) where refno = @refno)
+	if exists(select 1 from bodb02.dbo.bettransm with (nolock) where refno = @refno)
 	BEGIN
 		INSERT INTO @BetListMP
 		SELECT
@@ -66,7 +66,7 @@ SET NOCOUNT ON
 		INNER JOIN bodb02.dbo.match with (nolock) ON bettrans.matchid=match.matchid
 	END
 	
-	if exists(select 1 from bettransm14 with (nolock) where refno = @refno)
+	if exists(select 1 from bodb02.dbo.bettransm14 with (nolock) where refno = @refno)
 	BEGIN
 		INSERT INTO @BetListMP
 		SELECT
