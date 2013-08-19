@@ -36,11 +36,22 @@ SET NOCOUNT ON
 		,company_winlost_baseRM MONEY
 		,betcount INT)	
 	
-	DECLARE @tmpSelection TABLE(selection tinyint)	
+	DECLARE @tmpSelection TABLE(selection tinyint)
+	DECLARE @6UP VARCHAR(200)	
 	
 	INSERT INTO @tmpSelection
 	SELECT val
 	FROM f_RMS_strSplit (@selection,',')
+	
+	--Check selection is 6-UP
+	IF EXISTS(SELECT 1 FROM @tmpSelection WHERE selection = 6)
+	BEGIN
+		SELECT @6up = '7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30'
+
+		INSERT INTO @tmpSelection
+		SELECT val
+		FROM f_RMS_strSplit (@6up,',')		
+	END
 	
 	IF @todate > @movebetsday
 	BEGIN
@@ -108,7 +119,7 @@ SET NOCOUNT ON
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND sporttype = ISNULL(@sporttype,sporttype)
 				AND statusid IN (112,113)
-				AND combo IN (SELECT selection FROM @tmpSelection)
+				AND combo IN (SELECT selection FROM @tmpSelection WHERE selection <=6)
 			GROUP BY custid, username, currency
 		END
 		IF @fromdate < @balanceupday
@@ -141,7 +152,7 @@ SET NOCOUNT ON
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND sporttype = ISNULL(@sporttype,sporttype)
 				AND statusid IN (112,113)
-				AND combo IN (SELECT selection FROM @tmpSelection)
+				AND combo IN (SELECT selection FROM @tmpSelection WHERE selection <=6)
 			GROUP BY custid, username, currency
 		END
 	END
