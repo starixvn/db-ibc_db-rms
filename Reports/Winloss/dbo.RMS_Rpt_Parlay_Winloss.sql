@@ -16,6 +16,7 @@ AS
 		Revisions:
 			- 20130719@Johnson: filter by sport
 			- 20130813@Johnson: add combination filter
+			- 20130918@Johnson: change to use table rmSumWinloss and rmSumWinloss_old instead rmSumWinloss2 and rmSumWinloss_old2 
 		Parameter's Explanation:
 			- @sporttype = '1' : soccer only
 						= '2' : Other sports
@@ -118,7 +119,7 @@ SET NOCOUNT ON
 				,sum(case when statusid = 113 then -(winlost-stake)*actualrate else 0 end) as member_lose
 				,sum(case when statusid = 112 then company_winlost*actualrate else 0 end) as ourPT_won
 				,sum(case when statusid = 113 then company_winlost*actualrate else 0 end) as ourPT_lose			
-			FROM rmSumWinloss2 WITH(NOLOCK)
+			FROM rmSumWinloss WITH(NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date				
 					AND statusid IN (112,113)
 					AND currency <> 20
@@ -152,7 +153,7 @@ SET NOCOUNT ON
 				,sum(case when statusid = 113 then -(winlost-stake)*actualrate else 0 end) as member_lose
 				,sum(case when statusid = 112 then company_winlost*actualrate else 0 end) as ourPT_won
 				,sum(case when statusid = 113 then company_winlost*actualrate else 0 end) as ourPT_lose			
-			FROM rmSumWinloss_Old2 WITH(NOLOCK)
+			FROM rmSumWinloss_Old WITH(NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date				
 				AND statusid IN (112,113)
 				AND currency <> 20	

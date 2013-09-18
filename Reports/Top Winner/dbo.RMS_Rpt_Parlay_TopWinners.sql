@@ -19,6 +19,7 @@ AS
 			- 20130225@Johnson: include lose tickets to calculate top winners
 			- 20130315@Johnson: calculate average win odds by formula : Winning Amount/Stake
 			- 20130813@Johnson: add combination filter
+			- 20130918@Johnson: change to use table rmSumWinloss and rmSumWinloss_old instead rmSumWinloss2 and rmSumWinloss_old2 
 		Parameter's Explanation:
 	*/ 
 SET NOCOUNT ON
@@ -115,7 +116,7 @@ SET NOCOUNT ON
 				,SUM((winlost-stake)*actualrate)
 				,SUM(company_winlost*actualrate)
 				,SUM(betcount)				
-			FROM rmSumWinloss2 WITH(NOLOCK)
+			FROM rmSumWinloss WITH(NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND sporttype = ISNULL(@sporttype,sporttype)
 				AND statusid IN (112,113)
@@ -148,7 +149,7 @@ SET NOCOUNT ON
 				,SUM((winlost-stake)*actualrate)
 				,SUM(company_winlost*actualrate)
 				,SUM(betcount)				
-			FROM rmSumWinloss_Old2 WITH(NOLOCK)
+			FROM rmSumWinloss_Old WITH(NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND sporttype = ISNULL(@sporttype,sporttype)
 				AND statusid IN (112,113)
