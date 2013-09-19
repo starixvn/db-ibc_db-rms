@@ -65,6 +65,7 @@ Begin DataProject = "Risk Management System"
       End
       Begin Folder = "Winloss"
          Script = "dbo.RMS_Rpt_Parlay_Winloss.sql"
+         Script = "dbo.RMS_Rpt_Parlay_Winloss_Mem.sql"
       End
    End
    Begin Folder = "Script"
