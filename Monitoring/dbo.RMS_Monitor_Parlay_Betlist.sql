@@ -14,6 +14,7 @@
 		
 		Revisions:
 			- 20130125@Johnson: move bettransParlay from bodb02 to bodb_RMS and rename to rmBettrans
+			- 20130923@Johnson: exclude test currency
 		Parameter's Explanation:
 			- @selection:- '2,3': 2,3 selections
 						 - '6': 6 UP
@@ -83,7 +84,8 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 			WHERE mt.combo IN (SELECT selection FROM @tmpSelection)
 				AND mt.transid > @max_transid 						
 				AND b.matchid = 9
-				AND b.statusid = 0	
+				AND b.statusid = 0
+				AND currency <> 20	
 		)r
 		WHERE level IN (SELECT [level] FROM @tmpLevel)
 			AND maxpayout >= @maxpayout	
@@ -124,7 +126,8 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 				AND mt.transid > @max_transid 		
 				--AND b.bettype = 9
 				AND b.matchid = 9
-				AND b.statusid = 0									
+				AND b.statusid = 0			
+				AND currency <> 20						
 		) r
 		WHERE maxpayout >= @maxpayout	
 			AND sporttype IN (SELECT sporttype FROM @tmpSport)	
