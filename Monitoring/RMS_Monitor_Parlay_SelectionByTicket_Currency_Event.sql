@@ -11,10 +11,11 @@ AS
 		Created: Johnson
 		Date: 2012-08-01
 		Task:Get report top events by top tickets and currency
-		DB: DB054.bodb02
+		DB: DBRMS/bodb_RMS
 		
 		Revisions:
 			- 2013123@Johnson: move sp from DB054.bodb02 to DBRMS.bodb_RMS
+			- 20130925@Johnson: call function f_RMS_strSplit instead of strSplit
 		Parameter's Explanation
 			- @sporttype = 0 : all sports
 						= 1 : soccer only
@@ -55,7 +56,7 @@ SET NOCOUNT ON
 		WHERE matchid = @matchid
 			AND statusid = 0
 			AND winlostdate >= @winlostdate
-			AND currency NOT IN (SELECT val FROM strSplit(@topcurrency,','))
+			AND currency NOT IN (SELECT val FROM f_RMS_strSplit(@topcurrency,','))
 			AND currency <> 20
 			AND transid <= @max_transid
 	END

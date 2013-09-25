@@ -17,6 +17,7 @@ AS
 			- 20130719@Johnson: filter by sport
 			- 20130813@Johnson: add combination filter
 			- 20130918@Johnson: change to use table rmSumWinloss and rmSumWinloss_old instead rmSumWinloss2 and rmSumWinloss_old2 
+			- 20130925@Johnson: group by selection for specific day
 		Parameter's Explanation:
 			- @sporttype = '1' : soccer only
 						= '2' : Other sports
@@ -29,6 +30,7 @@ SET NOCOUNT ON
 			
 	DECLARE @rptWinloss TABLE(
 		winlostdate DATETIME,
+		combo	INT,
 		tickets_won	INT,
 		tickets_lose INT,
 		stake_won MONEY,
@@ -62,6 +64,7 @@ SET NOCOUNT ON
 		
 		INSERT INTO @rptWinloss(
 				winlostdate
+				,combo
 				,tickets_won
 				,tickets_lose
 				,stake_won
@@ -73,6 +76,7 @@ SET NOCOUNT ON
 		)
 		SELECT 
 			winlostdate
+			,case when right(betcheck,len(betcheck)-1) < 6 then right(betcheck,len(betcheck)-1) else 6 end 
 			,sum(case when statusid = 112 then 1 else 0 end) as tickets_won
 			,sum(case when statusid = 113 then 1 else 0 end) as tickets_lose
 			,sum(case when statusid = 112 then stake*actualrate*(1-tpositiontaking) else 0 end) as stake_won
@@ -88,7 +92,7 @@ SET NOCOUNT ON
 			AND liveawayscore = ISNULL(@sporttype,liveawayscore)
 			AND currency <> 20
 			AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection) 
-		GROUP BY winlostdate
+		GROUP BY winlostdate,case when right(betcheck,len(betcheck)-1) < 6 then right(betcheck,len(betcheck)-1) else 6 end 
 	END
 	
 	IF @fromdate <= @movebetsday
@@ -100,6 +104,7 @@ SET NOCOUNT ON
 			
 			INSERT INTO @rptWinloss(
 				winlostdate
+				,combo
 				,tickets_won
 				,tickets_lose
 				,stake_won
@@ -111,6 +116,7 @@ SET NOCOUNT ON
 				)
 			SELECT 
 				winlostdate
+				,combo
 				,sum(case when statusid = 112 then betcount else 0 end) as tickets_won
 				,sum(case when statusid = 113 then betcount else 0 end) as tickets_lose
 				,sum(case when statusid = 112 then company_stake*actualrate else 0 end) as stake_won
@@ -125,7 +131,7 @@ SET NOCOUNT ON
 					AND currency <> 20
 					AND sporttype = ISNULL(@sporttype, sporttype)
 					AND combo IN (SELECT selection FROM @tmpSelection WHERE selection <=6)
-			GROUP BY winlostdate
+			GROUP BY winlostdate, combo
 		END
 		IF @fromdate < @balanceupday
 		BEGIN
@@ -134,6 +140,7 @@ SET NOCOUNT ON
 			
 			INSERT INTO @rptWinloss(
 				winlostdate
+				,combo
 				,tickets_won
 				,tickets_lose
 				,stake_won
@@ -145,6 +152,7 @@ SET NOCOUNT ON
 				)
 			SELECT 
 				winlostdate
+				,combo
 				,sum(case when statusid = 112 then betcount else 0 end) as tickets_won
 				,sum(case when statusid = 113 then betcount else 0 end) as tickets_lose
 				,sum(case when statusid = 112 then company_stake*actualrate else 0 end) as stake_won
@@ -159,12 +167,12 @@ SET NOCOUNT ON
 				AND currency <> 20	
 				AND sporttype = ISNULL(@sporttype, sporttype)
 				AND combo IN (SELECT selection FROM @tmpSelection WHERE selection <=6)
-			GROUP BY winlostdate			
+			GROUP BY winlostdate, combo			
 		END			
 	END
 	
 	SELECT * FROM @rptWinloss
-	ORDER BY winlostdate ASC
+	ORDER BY winlostdate ASC, combo ASC
 	
 	
 GO
