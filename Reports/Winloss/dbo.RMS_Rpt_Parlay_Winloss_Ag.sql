@@ -14,7 +14,7 @@ AS
 		Task: Get report win loss for downlines by specific Agent
 		
 		Revisions:
-	
+			- 20131007@Johnson: get report by member
 		Parameter's Explanation:
 			- @sporttype = '1' : soccer only
 						= '2' : Other sports
@@ -26,6 +26,7 @@ SET NOCOUNT ON
 	
 	DECLARE @tmpSum TABLE (
 		month VARCHAR(7)
+		,username varchar(50)
 		,tickets_won INT
 		,tickets_lose INT
 		,stake_won MONEY
@@ -61,6 +62,7 @@ SET NOCOUNT ON
 				
 		INSERT INTO @tmpSum (
 			month 
+			,username
 			,tickets_won
 			,tickets_lose 
 			,stake_won 
@@ -71,6 +73,7 @@ SET NOCOUNT ON
 			,ourPT_lose
 		)
 		 SELECT convert(varchar(7),winlostdate,120)
+			,username
 			,SUM(case when statusid = 112 then 1 else 0 end) as tickets_won
 			,SUM(case when statusid = 113 then 1 else 0 end) as tickets_lose
 			,SUM(case when statusid = 112 then stake*actualrate*(1-tpositiontaking) else 0 end) as stake_won
@@ -86,7 +89,7 @@ SET NOCOUNT ON
 			AND statusid IN (112,113)
 			AND liveawayscore = ISNULL(@sporttype,liveawayscore)
 			AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection)
-		 GROUP BY convert(varchar(7),winlostdate,120)
+		 GROUP BY convert(varchar(7),winlostdate,120),username
 	END
 	
 	IF @fromdate <= @movebetsday
@@ -98,6 +101,7 @@ SET NOCOUNT ON
 			
 			INSERT INTO @tmpSum (
 				month 
+				,username
 				,tickets_won
 				,tickets_lose 
 				,stake_won 
@@ -109,6 +113,7 @@ SET NOCOUNT ON
 			)
 			SELECT 
 				convert(varchar(7),winlostdate,120)
+				,username
 				,sum(case when statusid = 112 then betcount else 0 end) as tickets_won
 				,sum(case when statusid = 113 then betcount else 0 end) as tickets_lose
 				,sum(case when statusid = 112 then company_stake*actualrate else 0 end) as stake_won
@@ -124,7 +129,7 @@ SET NOCOUNT ON
 					AND currency <> 20
 					AND sporttype = ISNULL(@sporttype, sporttype)
 					AND combo IN (SELECT selection FROM @tmpSelection WHERE selection <=6)
-			GROUP BY convert(varchar(7),winlostdate,120)
+			GROUP BY convert(varchar(7),winlostdate,120),username
 		END
 		
 		IF @fromdate < @balanceupday
@@ -135,6 +140,7 @@ SET NOCOUNT ON
 			
 			INSERT INTO @tmpSum (
 				month 
+				,username
 				,tickets_won
 				,tickets_lose 
 				,stake_won 
@@ -146,6 +152,7 @@ SET NOCOUNT ON
 			)
 			SELECT 
 				convert(varchar(7),winlostdate,120)
+				,username
 				,sum(case when statusid = 112 then betcount else 0 end) as tickets_won
 				,sum(case when statusid = 113 then betcount else 0 end) as tickets_lose
 				,sum(case when statusid = 112 then company_stake*actualrate else 0 end) as stake_won
@@ -161,12 +168,13 @@ SET NOCOUNT ON
 					AND currency <> 20
 					AND sporttype = ISNULL(@sporttype, sporttype)
 					AND combo IN (SELECT selection FROM @tmpSelection WHERE selection <=6)
-			GROUP BY convert(varchar(7),winlostdate,120)
+			GROUP BY convert(varchar(7),winlostdate,120),username
 		END
 	END
 	
 	SELECT
 		month 
+		,username
 		,sum(tickets_won) as tickets_won
 		,sum(tickets_lose) as tickets_lose 
 		,sum(stake_won) as stake_won  
@@ -176,7 +184,8 @@ SET NOCOUNT ON
 		,sum(ourPT_won) as ourPT_won  
 		,sum(ourPT_lose) as ourPT_lose
 	FROM @tmpSum
-	GROUP BY month		
+	GROUP BY month,username
+	ORDER BY month,username		
 
 GO
 GRANT EXECUTE ON [dbo].[RMS_Rpt_Parlay_Winloss_Ag] TO [bodbRMSNet]		
