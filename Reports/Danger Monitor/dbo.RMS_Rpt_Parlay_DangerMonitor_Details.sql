@@ -17,15 +17,9 @@
 BEGIN
 	SET NOCOUNT ON
 	
-	DECLARE TABLE @Bettrans (refno BIGINT PRIMARY KEY)
+	DECLARE @Bettrans TABLE(refno BIGINT PRIMARY KEY)
 	DECLARE @tmpSelection TABLE (selection int)
-	DECLARE TABLE @Result (
-		matchid INT	PRIMARY KEY	
-		,hdp INT
-		,hdp_1st INT
-		,ou INT
-		,ou_1st INT
-	)
+	
 	
 	INSERT INTO @tmpSelection
 	SELECT val
@@ -34,6 +28,8 @@ BEGIN
 	--Check selection is 6-UP
 	IF EXISTS(SELECT 1 FROM @tmpSelection WHERE selection = 6)
 	BEGIN
+		DECLARE @6up VARCHAR(500)
+
 		SELECT @6up = '7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30'
 
 		INSERT INTO @tmpSelection
@@ -51,6 +47,7 @@ BEGIN
 			AND currency <> 20
 			AND liveawayscore = 1-- hardcode soccer only
 			AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection)
+			AND transid <= @max_transid
 	END
 	ELSE
 	BEGIN
@@ -63,9 +60,11 @@ BEGIN
 			AND currency <> 20
 			AND liveawayscore = 1
 			AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection)
+			AND transid <= @max_transid
 	END		
 	
-	SELECT hdp1 - hdp2 as hdp		
+	SELECT hdp1 - hdp2 as hdp
+		,odds		
 		,SUM(CASE when bettype = 1 AND betteam = 'h' THEN 1 ELSE 0 end) as hdp_home
 		,SUM(CASE when bettype = 1 AND betteam = 'a' THEN 1 ELSE 0 end) as hdp_away
 		,SUM(CASE when bettype = 7 AND betteam = 'h' THEN 1 ELSE 0 end) as hdp_1st_home
@@ -77,8 +76,11 @@ BEGIN
 	FROM bodb02.dbo.bettransm WITH(NOLOCK)
 	WHERE refno IN (SELECT refno FROM @Bettrans)
 		AND matchid = @matchid
+		AND bettype IN (1,3,7,8)
+		AND liveindicator = 0
+	GROUP BY hdp1-hdp2,odds
 
 END
 
 GO
-GRANT EXECUTE [dbo].[RMS_Rpt_Parlay_DangerMonitor_Details] TO [bodbRMSNet]
+GRANT EXECUTE ON [dbo].[RMS_Rpt_Parlay_DangerMonitor_Details] TO [bodbRMSNet]

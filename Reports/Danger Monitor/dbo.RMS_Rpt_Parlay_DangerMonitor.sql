@@ -1,7 +1,7 @@
 ﻿ ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_DangerMonitor]
 	@AgentIDList VARCHAR(4000) = '',
 	@selection  VARCHAR(500),
-	@max_transid INT = 0 OUTPUT
+	@max_transid BIGINT = 0 OUTPUT
 AS
 /*
 	Created: Johnson
@@ -17,16 +17,9 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	
-	DECLARE TABLE @Bettrans (refno BIGINT PRIMARY KEY)
+	DECLARE @Bettrans TABLE(refno BIGINT PRIMARY KEY)
 	DECLARE @tmpSelection TABLE (selection int)
-	DECLARE TABLE @Result (
-		matchid INT	PRIMARY KEY	
-		,hdp INT
-		,hdp_1st INT
-		,ou INT
-		,ou_1st INT
-	)
-	
+		
 	INSERT INTO @tmpSelection
 	SELECT val
 	FROM f_RMS_strSplit (@selection,',')
@@ -34,6 +27,8 @@ BEGIN
 	--Check selection is 6-UP
 	IF EXISTS(SELECT 1 FROM @tmpSelection WHERE selection = 6)
 	BEGIN
+		DECLARE @6up VARCHAR(500)
+
 		SELECT @6up = '7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30'
 
 		INSERT INTO @tmpSelection
@@ -68,21 +63,24 @@ BEGIN
 			AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection)
 	END	
 	
-	SELECT matchid		
-		,SUM(CASE when bettype = 1 AND betteam = 'h' THEN 1 ELSE 0 end) as hdp_home
-		,SUM(CASE when bettype = 1 AND betteam = 'a' THEN 1 ELSE 0 end) as hdp_away
-		,SUM(CASE when bettype = 7 AND betteam = 'h' THEN 1 ELSE 0 end) as hdp_1st_home
-		,SUM(CASE when bettype = 7 AND betteam = 'a' THEN 1 ELSE 0 end) as hdp_1st_away
-		,SUM(CASE when bettype = 3 AND betteam = 'h' THEN 1 ELSE 0 end) as ou_home
-		,SUM(CASE when bettype = 3 AND betteam = 'a' THEN 1 ELSE 0 end) as ou_away
-		,SUM(CASE when bettype = 8 AND betteam = 'h' THEN 1 ELSE 0 end) as ou_1st_home
-		,SUM(CASE when bettype = 8 AND betteam = 'a' THEN 1 ELSE 0 end) as ou_1st_away
-	FROM bodb02.dbo.bettransm WITH(NOLOCK)
-	WHERE refno IN (SELECT refno FROM @Bettrans)
-	GROUP BY matchid
-	
+	;WITH T AS(
+		SELECT matchid		
+			,SUM(CASE when bettype = 1 AND betteam = 'h' THEN 1 ELSE 0 end) as hdp_home
+			,SUM(CASE when bettype = 1 AND betteam = 'a' THEN 1 ELSE 0 end) as hdp_away
+			,SUM(CASE when bettype = 7 AND betteam = 'h' THEN 1 ELSE 0 end) as hdp_1st_home
+			,SUM(CASE when bettype = 7 AND betteam = 'a' THEN 1 ELSE 0 end) as hdp_1st_away
+			,SUM(CASE when bettype = 3 AND betteam = 'h' THEN 1 ELSE 0 end) as ou_home
+			,SUM(CASE when bettype = 3 AND betteam = 'a' THEN 1 ELSE 0 end) as ou_away
+			,SUM(CASE when bettype = 8 AND betteam = 'h' THEN 1 ELSE 0 end) as ou_1st_home
+			,SUM(CASE when bettype = 8 AND betteam = 'a' THEN 1 ELSE 0 end) as ou_1st_away
+		FROM bodb02.dbo.bettransm WITH(NOLOCK)
+		WHERE refno IN (SELECT refno FROM @Bettrans)
+			AND liveindicator = 0
+		GROUP BY matchid
+	)
+
 	SELECT m.leagueid
-		,r.matchid
+		,m.matchid
 		,m.homeid
 		,m.awayid
 		,hdp_home
@@ -93,8 +91,9 @@ BEGIN
 		,ou_away
 		,ou_1st_home
 		,ou_1st_away
-	FROM @Result r
-		INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON r.matchid = m.matchid 
+	FROM T 
+		INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON T.matchid = m.matchid
+	WHERE m.eventstatus = 'running' 
 END
 
 
