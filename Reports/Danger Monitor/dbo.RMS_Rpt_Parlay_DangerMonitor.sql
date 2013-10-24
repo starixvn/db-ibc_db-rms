@@ -76,6 +76,7 @@ BEGIN
 		FROM bodb02.dbo.bettransm WITH(NOLOCK)
 		WHERE refno IN (SELECT refno FROM @Bettrans)
 			AND liveindicator = 0
+			AND bettype IN (1,3,7,8)
 		GROUP BY matchid
 	)
 
