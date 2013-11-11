@@ -19,7 +19,7 @@ SET NOCOUNT ON
 		,username
 		,[level]		
 	FROM rmCustomer mc WITH(NOLOCK)
-	WHERE username = ISNULL(@username,username)
+	WHERE username like '%' + ISNULL(@username,username) + '%'
 		AND level = ISNULL(@level,level)
 	ORDER BY username ASC
 

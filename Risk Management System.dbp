@@ -9,6 +9,11 @@ Begin DataProject = "Risk Management System"
       Script = "dbo.RMS_UserInfoUpdStatus.sql"
       Script = "dbo.RMS_UserInfoUpdUserPwd.sql"
    End
+   Begin Folder = "Agent Management"
+      Script = "dbo.RMS_DangerousAgentDel.sql"
+      Script = "dbo.RMS_DangerousAgentIns.sql"
+      Script = "dbo.RMS_DangerousAgentSel.sql"
+   End
    Begin Folder = "Customer"
       Script = "dbo.RMS_CustomerCheckExisting.sql"
       Script = "dbo.RMS_CustomerIns.sql"

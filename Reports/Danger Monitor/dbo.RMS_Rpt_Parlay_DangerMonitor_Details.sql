@@ -63,7 +63,7 @@ BEGIN
 			AND transid <= @max_transid
 	END		
 	
-	SELECT hdp1 - hdp2 as hdp
+	SELECT case when bettype in (1,7) then CASE WHEN betteam = 'h' THEN hdp2 - hdp1 else hdp1 - hdp2 end else hdp1 end as hdp
 		,odds		
 		,SUM(CASE when bettype = 1 AND betteam = 'h' THEN 1 ELSE 0 end) as hdp_home
 		,SUM(CASE when bettype = 1 AND betteam = 'a' THEN 1 ELSE 0 end) as hdp_away
@@ -78,7 +78,8 @@ BEGIN
 		AND matchid = @matchid
 		AND bettype IN (1,3,7,8)
 		AND liveindicator = 0
-	GROUP BY hdp1-hdp2,odds
+	GROUP BY case when bettype in (1,7) then CASE WHEN betteam = 'h' THEN hdp2 - hdp1 else hdp1 - hdp2 end else hdp1 end ,odds
+	ORDER BY case when bettype in (1,7) then CASE WHEN betteam = 'h' THEN hdp2 - hdp1 else hdp1 - hdp2 end else hdp1 end
 
 END
 
