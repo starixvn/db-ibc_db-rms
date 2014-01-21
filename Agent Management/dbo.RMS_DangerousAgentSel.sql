@@ -17,6 +17,7 @@ BEGIN
 	SELECT agentid, username
 	FROM rmAgent WITH(NOLOCK)
 	WHERE username LIKE '%'+ ISNULL(@username,username) + '%' 
+	ORDER BY username ASC
 	
 END
 GO

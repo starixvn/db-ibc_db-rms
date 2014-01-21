@@ -1,5 +1,6 @@
 ﻿ ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_DangerMonitor]
 	@AgentIDList VARCHAR(4000) = '',
+	@maxpayout MONEY = 0,
 	@selection  VARCHAR(500),
 	@max_transid BIGINT = 0 OUTPUT
 AS
@@ -10,7 +11,7 @@ AS
 	DB: DBRMS/bodb_RMS
 	
 	Revisions:
-	
+		- 20131111@Johnson: add filter max payout
 	Parameter's Explanation:
 		- @max_transid: transid max is checked
 */
@@ -49,6 +50,7 @@ BEGIN
 			AND currency <> 20
 			AND liveawayscore = 1-- hardcode soccer only
 			AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection)
+			AND (1-tpositiontaking)*stake*actualrate*odds >= @maxpayout
 	END
 	ELSE
 	BEGIN
@@ -61,6 +63,7 @@ BEGIN
 			AND currency <> 20
 			AND liveawayscore = 1
 			AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection)
+			AND (1-tpositiontaking)*stake*actualrate*odds >= @maxpayout
 	END	
 	
 	;WITH T AS(

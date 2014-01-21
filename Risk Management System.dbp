@@ -51,6 +51,7 @@ Begin DataProject = "Risk Management System"
       Script = "RMS_Monitor_Parlay_SelectionByTurnover_League.sql"
       Script = "RMS_Monitor_Parlay_SelectionByTurnover_League_Event.sql"
       Script = "RMS_Monitor_Parlay_Sum.sql"
+      Script = "RMS_Monitor_SystemParlay_Betlist.sql"
       Script = "RMS_Parlay_TransDetails.sql"
    End
    Begin Folder = "Reports"

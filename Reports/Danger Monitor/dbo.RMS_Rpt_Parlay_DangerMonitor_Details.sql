@@ -1,6 +1,7 @@
 ﻿ ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_DangerMonitor_Details]
-	@matchid INT,
+	@matchid INT,	
 	@AgentIDList VARCHAR(4000) = '',
+	@maxpayout MONEY=0,
 	@selection  VARCHAR(500),
 	@max_transid BIGINT = 0	
  AS
@@ -11,7 +12,7 @@
 		DB: DBRMS/bodb_RMS
 		
 		Revisions:
-		
+			- 20131111@Johnson: Add filter max payout
 		Parameter's Explanation:
 	*/
 BEGIN
@@ -47,7 +48,8 @@ BEGIN
 			AND currency <> 20
 			AND liveawayscore = 1-- hardcode soccer only
 			AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection)
-			AND transid <= @max_transid
+			AND (1-tpositiontaking)*stake*actualrate*odds >= @maxpayout
+			AND transid <= @max_transid			
 	END
 	ELSE
 	BEGIN
@@ -60,7 +62,8 @@ BEGIN
 			AND currency <> 20
 			AND liveawayscore = 1
 			AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection)
-			AND transid <= @max_transid
+			AND (1-tpositiontaking)*stake*actualrate*odds >= @maxpayout
+			AND transid <= @max_transid			
 	END		
 	
 	SELECT case when bettype in (1,7) then CASE WHEN betteam = 'h' THEN hdp2 - hdp1 else hdp1 - hdp2 end else hdp1 end as hdp
