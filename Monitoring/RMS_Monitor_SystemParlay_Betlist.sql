@@ -1,4 +1,4 @@
-﻿ CREATE PROCEDURE [dbo].[RMS_Monitor_SystemParlay_Betlist]
+﻿ ALTER PROCEDURE [dbo].[RMS_Monitor_SystemParlay_Betlist]
 	@selection		VARCHAR(100) = '',
 	@sporttype		VARCHAR(100) = '',
 	@level			VARCHAR(100) = '',
@@ -24,6 +24,17 @@ AS
 	*/
 BEGIN
 	SET NOCOUNT ON
+	CREATE TABLE #result 
+			(	
+				transdate datetime,
+				transid bigint primary key,				
+				refno bigint,
+				username varchar(50),
+				stake money,
+				combo int,
+				level int	
+			)
+	
 	DECLARE @tmpSelection TABLE (selection int)
 	DECLARE @tmpSport TABLE (sporttype int)
 	DECLARE @tmpLevel TABLE (level int)
@@ -39,18 +50,23 @@ BEGIN
 	INSERT INTO @tmpLevel (level)
 	SELECT val
 	FROM f_RMS_strSplit (@level,',')
-	
 			
 	IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
-	BEGIN		
+	BEGIN
+		INSERT INTO #result(
+			transdate,			
+			transid,
+			refno,
+			username,			
+			stake,			
+			combo,
+			level)		
 		SELECT top (@limitRowcount)
 			transdate,
 			transid,
 			refno,
-			username,
-			odds,
-			stake,
-			maxpayout,			
+			username,			
+			stake,					
 			combo,
 			level
 		FROM
@@ -60,11 +76,14 @@ BEGIN
 				b.transid,
 				b.refno, 
 				b.username,
-				b.liveawayscore as sporttype,
-				b.odds,
+				b.liveawayscore as sporttype,			
 				b.statusid,
-				b.stake*b.actualrate*(1-b.tpositiontaking) as stake,
-				b.odds*b.stake*actualrate*(1-b.tpositiontaking) as maxpayout,		
+				(case when mt.combo = 3 then b.stake/4
+					WHEN mt.combo = 4 then b.stake/11
+					WHEN mt.combo = 5 THEN b.stake/26
+					WHEN mt.combo = 6 THEN b.stake/57
+					WHEN mt.combo = 7 THEN b.stake/120
+					when mt.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking) as stake,				
 				mt.combo,				
 				ISNULL(mc.level,0) level
 			FROM rmTransaction mt WITH(NOLOCK)				
@@ -83,14 +102,19 @@ BEGIN
 	END
 	ELSE
 	BEGIN
+		INSERT INTO #result(transdate,
+			transid,
+			refno,
+			username,			
+			stake,		
+			combo,
+			level)	
 		SELECT top (@limitRowCount)
 			transdate,
 			transid,
 			refno,
-			username,
-			odds,
-			stake,
-			maxpayout,			
+			username,			
+			stake,						
 			combo,
 			level
 		FROM 
@@ -100,11 +124,14 @@ BEGIN
 				b.transid,
 				b.refno, 
 				b.username,
-				b.liveawayscore as sporttype,
-				b.odds,
+				b.liveawayscore as sporttype,			
 				b.statusid,
-				b.stake*b.actualrate*(1-b.tpositiontaking) as stake,
-				b.odds*b.stake*actualrate*(1-b.tpositiontaking) as maxpayout,		
+				(case when mt.combo = 3 then b.stake/4
+					WHEN mt.combo = 4 then b.stake/11
+					WHEN mt.combo = 5 THEN b.stake/26
+					WHEN mt.combo = 6 THEN b.stake/57
+					WHEN mt.combo = 7 THEN b.stake/120
+					when mt.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking) as stake,				
 				mt.combo,				
 				ISNULL(mc.level,0) level
 			FROM rmCustomer mc WITH(NOLOCK) 			
@@ -112,8 +139,7 @@ BEGIN
 				INNER JOIN rmBettrans b WITH(NOLOCK) ON mt.transid = b.transid
 			WHERE [level] IN (SELECT [level] FROM @tmpLevel)
 				AND mt.combo IN (SELECT selection FROM @tmpSelection)
-				AND mt.transid > @max_transid 		
-				--AND b.bettype = 9
+				AND mt.transid > @max_transid 						
 				AND b.matchid = 29
 				AND b.statusid = 0			
 				AND currency <> 20						
@@ -121,7 +147,22 @@ BEGIN
 		WHERE stake >= @stake
 			AND sporttype IN (SELECT sporttype FROM @tmpSport)	
 		ORDER BY transid DESC
-	END		
+	END
+	
+	select * from #result
+	
+	SELECT refno , odds
+	FROM(
+			SELECT refno, odds
+			from bodb02.dbo.bettransm with(NOLOCK)
+			where refno in (SELECT refno from #result)
+			UNION ALL 
+			SELECT refno, odds
+			from bodb02.dbo.bettransm14 with(NOLOCK)
+			where refno in (SELECT refno from #result)
+	)r	
+	order by refno
+		
 END
 
 GO
