@@ -150,6 +150,7 @@ BEGIN
 	END
 	
 	select * from #result
+	order by transid desc 
 	
 	SELECT refno , odds
 	FROM(
