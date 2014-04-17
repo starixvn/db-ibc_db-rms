@@ -2,7 +2,7 @@
 	@selection		VARCHAR(100) = '',
 	@sporttype		VARCHAR(100) = '',
 	@level			VARCHAR(100) = '',
-	@maxpayout		MONEY= 0,
+	@stake			MONEY= 0,
 	@max_transid	BIGINT = 0,
 	@limitRowCount	INT = 20
  AS
@@ -15,6 +15,7 @@
 		Revisions:
 			- 20130125@Johnson: move bettransParlay from bodb02 to bodb_RMS and rename to rmBettrans
 			- 20130923@Johnson: exclude test currency
+			- 20140417@Johnson: filter by stake instead of max pay out
 		Parameter's Explanation:
 			- @selection:- '2,3': 2,3 selections
 						 - '6': 6 UP
@@ -75,20 +76,19 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 				b.odds,
 				b.statusid,
 				b.stake*b.actualrate*(1-b.tpositiontaking) as stake,
-				b.odds*b.stake*actualrate*(1-b.tpositiontaking) as maxpayout,		
-				mt.combo,				
+				(b.odds-1)*b.stake*actualrate*(1-b.tpositiontaking) as maxpayout,		
+				b.combo,				
 				ISNULL(mc.level,0) level
-			FROM rmTransaction mt WITH(NOLOCK)				
-				INNER JOIN rmBettrans b WITH(NOLOCK) ON mt.transid = b.transid
-				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON mt.custid = mc.custid
-			WHERE mt.combo IN (SELECT selection FROM @tmpSelection)
-				AND mt.transid > @max_transid 						
+			FROM rmBettrans b WITH(NOLOCK) 
+				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON b.custid = mc.custid
+			WHERE b.combo IN (SELECT selection FROM @tmpSelection)
+				AND b.transid > @max_transid 						
 				AND b.matchid = 9
 				AND b.statusid = 0
 				AND currency <> 20	
 		)r
 		WHERE level IN (SELECT [level] FROM @tmpLevel)
-			AND maxpayout >= @maxpayout	
+			AND r.stake >= @stake
 			AND sporttype IN (SELECT sporttype FROM @tmpSport)	
 		ORDER BY transid DESC
 	END
@@ -115,21 +115,20 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 				b.odds,
 				b.statusid,
 				b.stake*b.actualrate*(1-b.tpositiontaking) as stake,
-				b.odds*b.stake*actualrate*(1-b.tpositiontaking) as maxpayout,		
-				mt.combo,				
+				(b.odds-1)*b.stake*actualrate*(1-b.tpositiontaking) as maxpayout,		
+				b.combo,				
 				ISNULL(mc.level,0) level
 			FROM rmCustomer mc WITH(NOLOCK) 			
-				INNER JOIN rmTransaction mt WITH(NOLOCK) ON mt.custid = mc.custid
-				INNER JOIN rmBettrans b WITH(NOLOCK) ON mt.transid = b.transid
+				INNER JOIN rmBettrans b WITH(NOLOCK) ON b.custid = mc.custid
 			WHERE [level] IN (SELECT [level] FROM @tmpLevel)
-				AND mt.combo IN (SELECT selection FROM @tmpSelection)
-				AND mt.transid > @max_transid 		
+				AND b.combo IN (SELECT selection FROM @tmpSelection)
+				AND b.transid > @max_transid 		
 				--AND b.bettype = 9
 				AND b.matchid = 9
 				AND b.statusid = 0			
 				AND currency <> 20						
 		) r
-		WHERE maxpayout >= @maxpayout	
+		WHERE r.stake >= @stake
 			AND sporttype IN (SELECT sporttype FROM @tmpSport)	
 		ORDER BY transid DESC
 	END		
