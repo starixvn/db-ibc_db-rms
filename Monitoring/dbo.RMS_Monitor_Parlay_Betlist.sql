@@ -16,6 +16,7 @@
 			- 20130125@Johnson: move bettransParlay from bodb02 to bodb_RMS and rename to rmBettrans
 			- 20130923@Johnson: exclude test currency
 			- 20140417@Johnson: filter by stake instead of max pay out
+			- 20140418@Johnson: add column IP
 		Parameter's Explanation:
 			- @selection:- '2,3': 2,3 selections
 						 - '6': 6 UP
@@ -64,6 +65,7 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 			stake,
 			maxpayout,			
 			combo,
+			IP,
 			level
 		FROM
 		(
@@ -77,7 +79,8 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 				b.statusid,
 				b.stake*b.actualrate*(1-b.tpositiontaking) as stake,
 				(b.odds-1)*b.stake*actualrate*(1-b.tpositiontaking) as maxpayout,		
-				b.combo,				
+				b.combo,
+				b.IP,				
 				ISNULL(mc.level,0) level
 			FROM rmBettrans b WITH(NOLOCK) 
 				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON b.custid = mc.custid
@@ -103,6 +106,7 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 			stake,
 			maxpayout,			
 			combo,
+			IP,
 			level
 		FROM 
 		(
@@ -116,7 +120,8 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 				b.statusid,
 				b.stake*b.actualrate*(1-b.tpositiontaking) as stake,
 				(b.odds-1)*b.stake*actualrate*(1-b.tpositiontaking) as maxpayout,		
-				b.combo,				
+				b.combo,			
+				b.IP,	
 				ISNULL(mc.level,0) level
 			FROM rmCustomer mc WITH(NOLOCK) 			
 				INNER JOIN rmBettrans b WITH(NOLOCK) ON b.custid = mc.custid

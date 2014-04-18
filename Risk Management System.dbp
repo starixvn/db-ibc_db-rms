@@ -53,8 +53,13 @@ Begin DataProject = "Risk Management System"
       Script = "RMS_Monitor_Parlay_Sum.sql"
       Script = "RMS_Monitor_SystemParlay_Betlist.sql"
       Script = "RMS_Parlay_TransDetails.sql"
+      Script = "RMS_SystemParlay_CombinationDetails.sql"
    End
    Begin Folder = "Reports"
+      Begin Folder = "Bets Statistics by IP"
+         Script = "dbo.RMS_Rpt_Parlay_BetsStatisticsByIP.sql"
+         Script = "dbo.RMS_Rpt_Parlay_BetsStatisticsByIP_Sporttype.sql"
+      End
       Begin Folder = "Danger Monitor"
          Script = "dbo.RMS_Rpt_Parlay_DangerMonitor.sql"
          Script = "dbo.RMS_Rpt_Parlay_DangerMonitor_Details.sql"
