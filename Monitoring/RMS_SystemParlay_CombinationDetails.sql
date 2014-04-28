@@ -1,5 +1,6 @@
 ﻿ALTER PROCEDURE [dbo].[RMS_SystemParlay_CombinationDetails] 
-	@refno	BIGINT = 0
+	@refno	BIGINT = 0,
+	@Outstanding MONEY = 0 OUTPUT
 AS
 	/*
 		Created: Johnson
@@ -53,7 +54,25 @@ BEGIN
 			INNER JOIN @betParlayDetail b ON p.Serial = b.Serial
 			INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid	
 		WHERE p.statusid <> 113
+		union 
+		SELECT
+			p.serial,
+			homeid,
+			awayid
+		FROM @tmpResults p 
+			INNER JOIN @betParlayDetail b ON p.Serial = b.Serial
+			INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid	
+		WHERE p.statusid <> 113
 	
+	SELECT @outStanding = stake
+	FROM rmBettrans WITH(NOLOCK) 
+	WHERE matchid = 29  
+		AND refno = @refno
+	
+	SELECT @outStanding = @outStanding - ISNULL(SUM(stake),0)
+	FROM @tmpResults
+	WHERE statusid not in (0,1)
+		
 	-- return combo detail
 	SELECT 
 		winlostdate,

@@ -13,7 +13,8 @@ AS
 		DB: DBRMS/bodb_RMS
 		
 		Revisions:
-		
+			- 20140425@Johnson: add column IP
+			
 		Parameter's Explanation:	
 			- @combo:- '3,4': 3,4 selections						 
 			- @sporttype:= '1' : soccer only
@@ -30,6 +31,7 @@ BEGIN
 				transid bigint primary key,				
 				refno bigint,
 				username varchar(50),
+				IP varchar(50),
 				stake money,
 				combo int,
 				level int	
@@ -57,7 +59,8 @@ BEGIN
 			transdate,			
 			transid,
 			refno,
-			username,			
+			username,
+			IP,			
 			stake,			
 			combo,
 			level)		
@@ -65,7 +68,8 @@ BEGIN
 			transdate,
 			transid,
 			refno,
-			username,			
+			username,	
+			IP,		
 			stake,					
 			combo,
 			level
@@ -78,19 +82,19 @@ BEGIN
 				b.username,
 				b.liveawayscore as sporttype,			
 				b.statusid,
-				(case when mt.combo = 3 then b.stake/4
-					WHEN mt.combo = 4 then b.stake/11
-					WHEN mt.combo = 5 THEN b.stake/26
-					WHEN mt.combo = 6 THEN b.stake/57
-					WHEN mt.combo = 7 THEN b.stake/120
-					when mt.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking) as stake,				
-				mt.combo,				
+				b.IP,
+				(case when b.combo = 3 then b.stake/4
+					WHEN b.combo = 4 then b.stake/11
+					WHEN b.combo = 5 THEN b.stake/26
+					WHEN b.combo = 6 THEN b.stake/57
+					WHEN b.combo = 7 THEN b.stake/120
+					when b.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking) as stake,				
+				b.combo,				
 				ISNULL(mc.level,0) level
-			FROM rmTransaction mt WITH(NOLOCK)				
-				INNER JOIN rmBettrans b WITH(NOLOCK) ON mt.transid = b.transid
-				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON mt.custid = mc.custid
-			WHERE mt.combo IN (SELECT selection FROM @tmpSelection)
-				AND mt.transid > @max_transid 						
+			FROM rmBettrans b WITH(NOLOCK) 
+				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON b.custid = mc.custid
+			WHERE b.combo IN (SELECT selection FROM @tmpSelection)
+				AND b.transid > @max_transid 						
 				AND b.matchid = 29
 				AND b.statusid = 0
 				AND currency <> 20	
@@ -106,6 +110,7 @@ BEGIN
 			transid,
 			refno,
 			username,			
+			IP,
 			stake,		
 			combo,
 			level)	
@@ -113,7 +118,8 @@ BEGIN
 			transdate,
 			transid,
 			refno,
-			username,			
+			username,	
+			IP,		
 			stake,						
 			combo,
 			level
@@ -126,20 +132,20 @@ BEGIN
 				b.username,
 				b.liveawayscore as sporttype,			
 				b.statusid,
-				(case when mt.combo = 3 then b.stake/4
-					WHEN mt.combo = 4 then b.stake/11
-					WHEN mt.combo = 5 THEN b.stake/26
-					WHEN mt.combo = 6 THEN b.stake/57
-					WHEN mt.combo = 7 THEN b.stake/120
-					when mt.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking) as stake,				
-				mt.combo,				
+				b.IP,
+				(case when b.combo = 3 then b.stake/4
+					WHEN b.combo = 4 then b.stake/11
+					WHEN b.combo = 5 THEN b.stake/26
+					WHEN b.combo = 6 THEN b.stake/57
+					WHEN b.combo = 7 THEN b.stake/120
+					when b.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking) as stake,				
+				b.combo,				
 				ISNULL(mc.level,0) level
 			FROM rmCustomer mc WITH(NOLOCK) 			
-				INNER JOIN rmTransaction mt WITH(NOLOCK) ON mt.custid = mc.custid
-				INNER JOIN rmBettrans b WITH(NOLOCK) ON mt.transid = b.transid
+				INNER JOIN rmBettrans b WITH(NOLOCK) ON b.custid = mc.custid
 			WHERE [level] IN (SELECT [level] FROM @tmpLevel)
-				AND mt.combo IN (SELECT selection FROM @tmpSelection)
-				AND mt.transid > @max_transid 						
+				AND b.combo IN (SELECT selection FROM @tmpSelection)
+				AND b.transid > @max_transid 						
 				AND b.matchid = 29
 				AND b.statusid = 0			
 				AND currency <> 20						

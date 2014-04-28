@@ -22,10 +22,12 @@ BEGIN
 			refno,
 			transdate,
 			bettype,
+			modds,
 			odds,
 			stake,
 			statusid,
 			status,
+			combo,
 			winlost - actual_stake as winlost	
 	FROM rmBettrans WITH(NOLOCK)
 	WHERE winlostdate = @winlostdate
