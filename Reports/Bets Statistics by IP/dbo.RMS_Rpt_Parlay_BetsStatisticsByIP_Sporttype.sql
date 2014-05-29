@@ -1,5 +1,5 @@
 ﻿ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_BetsStatisticsByIP_Sporttype]
-	@winlostdate	DATETIME,
+	@fromdate		DATETIME,
 	@IP				VARCHAR(30),
 	@custid			INT,
 	@sporttype		INT
@@ -18,6 +18,9 @@ AS
 BEGIN
 	SET NOCOUNT ON 
 	
+	DECLARE @todate DATETIME
+	SELECT @todate = @fromdate + '23:59:59'
+	
 	SELECT transid,
 			refno,
 			transdate,
@@ -30,7 +33,7 @@ BEGIN
 			combo,
 			winlost - actual_stake as winlost	
 	FROM rmBettrans WITH(NOLOCK)
-	WHERE winlostdate = @winlostdate
+	WHERE transdate between @fromdate and @todate
 		AND custid = @custid
 		AND IP = @IP
 		AND 1 = CASE when @sporttype = 1 and liveawayscore = 1 then 1
