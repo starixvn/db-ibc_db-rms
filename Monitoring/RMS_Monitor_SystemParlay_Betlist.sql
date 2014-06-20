@@ -3,6 +3,8 @@
 	@sporttype		VARCHAR(100) = '',
 	@level			VARCHAR(100) = '',
 	@stake			MONEY= 0,
+	@maxpayout		MONEY= 0,
+	@ReportType		TINYINT = 1,
 	@max_transid	BIGINT = 0,
 	@limitRowCount	INT = 20
 AS
@@ -14,7 +16,7 @@ AS
 		
 		Revisions:
 			- 20140425@Johnson: add column IP
-			
+			- 20140620@Johnson: add option filter by net win after pt
 		Parameter's Explanation:	
 			- @combo:- '3,4': 3,4 selections						 
 			- @sporttype:= '1' : soccer only
@@ -22,6 +24,8 @@ AS
 						= '3' : combined sports
 			- @level:= '0': none
 					 = '1,2,3': level 1,2,3
+			- @ReportType = 1: filter by stake
+						= 2: filter by net win after pt
 	*/
 BEGIN
 	SET NOCOUNT ON
@@ -55,22 +59,16 @@ BEGIN
 			
 	IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 	BEGIN
-		INSERT INTO #result(
-			transdate,			
-			transid,
-			refno,
-			username,
-			IP,			
-			stake,			
-			combo,
-			level)		
+			
 		SELECT top (@limitRowcount)
 			transdate,
 			transid,
 			refno,
 			username,	
 			IP,		
-			stake,					
+			stake,	
+			odds,
+			r.maxpayout,				
 			combo,
 			level
 		FROM
@@ -88,7 +86,14 @@ BEGIN
 					WHEN b.combo = 5 THEN b.stake/26
 					WHEN b.combo = 6 THEN b.stake/57
 					WHEN b.combo = 7 THEN b.stake/120
-					when b.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking) as stake,				
+					when b.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking) as stake,	
+				b.odds2 as odds,
+				(case when b.combo = 3 then b.stake/4
+					WHEN b.combo = 4 then b.stake/11
+					WHEN b.combo = 5 THEN b.stake/26
+					WHEN b.combo = 6 THEN b.stake/57
+					WHEN b.combo = 7 THEN b.stake/120
+					when b.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking)*(odds2-1) as maxpayout,												
 				b.combo,				
 				ISNULL(mc.level,0) level
 			FROM rmBettrans b WITH(NOLOCK) 
@@ -100,27 +105,22 @@ BEGIN
 				AND currency <> 20	
 		)r
 		WHERE level IN (SELECT [level] FROM @tmpLevel)
-			AND stake >= @stake
+			AND 1 = case when @ReportType = 1 AND stake >= @stake THEN 1 
+						when @ReportType = 2 AND r.maxpayout >= @maxpayout then 1 else 0 end 
 			AND sporttype IN (SELECT sporttype FROM @tmpSport)	
 		ORDER BY transid DESC
 	END
 	ELSE
-	BEGIN
-		INSERT INTO #result(transdate,
-			transid,
-			refno,
-			username,			
-			IP,
-			stake,		
-			combo,
-			level)	
+	BEGIN			
 		SELECT top (@limitRowCount)
 			transdate,
 			transid,
 			refno,
 			username,	
 			IP,		
-			stake,						
+			stake,	
+			r.odds,
+			r.maxpayout,					
 			combo,
 			level
 		FROM 
@@ -139,6 +139,13 @@ BEGIN
 					WHEN b.combo = 6 THEN b.stake/57
 					WHEN b.combo = 7 THEN b.stake/120
 					when b.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking) as stake,				
+				b.odds2 as odds,
+				(case when b.combo = 3 then b.stake/4
+					WHEN b.combo = 4 then b.stake/11
+					WHEN b.combo = 5 THEN b.stake/26
+					WHEN b.combo = 6 THEN b.stake/57
+					WHEN b.combo = 7 THEN b.stake/120
+					when b.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking)*(odds2-1) as maxpayout,								
 				b.combo,				
 				ISNULL(mc.level,0) level
 			FROM rmCustomer mc WITH(NOLOCK) 			
@@ -150,25 +157,12 @@ BEGIN
 				AND b.statusid = 0			
 				AND currency <> 20						
 		) r
-		WHERE stake >= @stake
+		WHERE 1 = case when @ReportType = 1 AND stake >= @stake THEN 1 
+						when @ReportType = 2 AND r.maxpayout >= @maxpayout then 1 else 0 end 			
 			AND sporttype IN (SELECT sporttype FROM @tmpSport)	
 		ORDER BY transid DESC
 	END
 	
-	select * from #result
-	order by transid desc 
-	
-	SELECT refno , odds
-	FROM(
-			SELECT refno, odds
-			from bodb02.dbo.bettransm with(NOLOCK)
-			where refno in (SELECT refno from #result)
-			UNION ALL 
-			SELECT refno, odds
-			from bodb02.dbo.bettransm14 with(NOLOCK)
-			where refno in (SELECT refno from #result)
-	)r	
-	order by refno
 		
 END
 

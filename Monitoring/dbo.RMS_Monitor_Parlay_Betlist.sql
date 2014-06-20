@@ -3,6 +3,8 @@
 	@sporttype		VARCHAR(100) = '',
 	@level			VARCHAR(100) = '',
 	@stake			MONEY= 0,
+	@maxpayout		MONEY= 0,
+	@ReportType		TINYINT = 1,
 	@max_transid	BIGINT = 0,
 	@limitRowCount	INT = 20
  AS
@@ -17,6 +19,7 @@
 			- 20130923@Johnson: exclude test currency
 			- 20140417@Johnson: filter by stake instead of max pay out
 			- 20140418@Johnson: add column IP
+			- 20140620@Johnson: add morer option filter by net win after pt
 		Parameter's Explanation:
 			- @selection:- '2,3': 2,3 selections
 						 - '6': 6 UP
@@ -25,6 +28,8 @@
 						= '3' : combined sports
 			- @level:= '0': none
 					 = '1,2,3': level 1,2,3
+			- @ReportType = 1: Filter by stake
+						= 2: filter by net win
 	*/
 SET NOCOUNT ON 
 	DECLARE @tmpSelection TABLE (selection int)
@@ -91,7 +96,8 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 				AND currency <> 20	
 		)r
 		WHERE level IN (SELECT [level] FROM @tmpLevel)
-			AND r.stake >= @stake
+			AND 1= case when @reportType = 1 AND r.stake >= @stake then 1
+						when @reportType = 2 AND r.maxpayout >= @maxpayout then 1 else 0 end
 			AND sporttype IN (SELECT sporttype FROM @tmpSport)	
 		ORDER BY transid DESC
 	END
@@ -133,7 +139,8 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 				AND b.statusid = 0			
 				AND currency <> 20						
 		) r
-		WHERE r.stake >= @stake
+		WHERE 1= case when @ReportType = 1 AND r.stake >= @stake then 1 
+						when @ReportType = 2 AND r.maxpayout >= @maxpayout then 1 else 0 END 
 			AND sporttype IN (SELECT sporttype FROM @tmpSport)	
 		ORDER BY transid DESC
 	END		
