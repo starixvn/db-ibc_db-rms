@@ -93,7 +93,12 @@ BEGIN
 					WHEN b.combo = 5 THEN b.stake/26
 					WHEN b.combo = 6 THEN b.stake/57
 					WHEN b.combo = 7 THEN b.stake/120
-					when b.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking)*(odds2-1) as maxpayout,												
+					when b.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking)*(odds2-case when b.combo = 3 then 4
+																										WHEN b.combo = 4 then 11
+																										WHEN b.combo = 5 THEN 26
+																										WHEN b.combo = 6 THEN 57
+																										WHEN b.combo = 7 THEN 120
+																										when b.combo = 8 THEN 247 end) as maxpayout,												
 				b.combo,				
 				ISNULL(mc.level,0) level
 			FROM rmBettrans b WITH(NOLOCK) 
@@ -145,7 +150,12 @@ BEGIN
 					WHEN b.combo = 5 THEN b.stake/26
 					WHEN b.combo = 6 THEN b.stake/57
 					WHEN b.combo = 7 THEN b.stake/120
-					when b.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking)*(odds2-1) as maxpayout,								
+					when b.combo = 8 THEN b.stake/247 END)*b.actualrate*(1-b.tpositiontaking)*(odds2-case when b.combo = 3 then 4
+																										WHEN b.combo = 4 then 11
+																										WHEN b.combo = 5 THEN 26
+																										WHEN b.combo = 6 THEN 57
+																										WHEN b.combo = 7 THEN 120
+																										when b.combo = 8 THEN 247 end) as maxpayout,								
 				b.combo,				
 				ISNULL(mc.level,0) level
 			FROM rmCustomer mc WITH(NOLOCK) 			

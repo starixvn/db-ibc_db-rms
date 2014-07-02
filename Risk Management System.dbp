@@ -60,6 +60,7 @@ Begin DataProject = "Risk Management System"
          Script = "dbo.RMS_Rpt_Parlay_BetsStatisticsByIP.sql"
          Script = "dbo.RMS_Rpt_Parlay_BetsStatisticsByIP_Sporttype.sql"
          Script = "dbo.RMS_Rpt_Parlay_SelMinTransdate.sql"
+         Script = "dbo.RMS_Rpt_Parlay_UsersStatisticsByIP.sql"
       End
       Begin Folder = "Danger Monitor"
          Script = "dbo.RMS_Rpt_Parlay_DangerMonitor.sql"
