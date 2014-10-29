@@ -2,6 +2,7 @@
 	@selection		VARCHAR(100) = '',
 	@sporttype		VARCHAR(100) = '',
 	@level			VARCHAR(100) = '',
+	@Market			VARCHAR(100) = '',
 	@stake			MONEY= 0,
 	@maxpayout		MONEY= 0,
 	@ReportType		TINYINT = 1,
@@ -17,6 +18,7 @@ AS
 		Revisions:
 			- 20140425@Johnson: add column IP
 			- 20140620@Johnson: add option filter by net win after pt
+			- 20141028@Johnson: filter tickets by specific market
 		Parameter's Explanation:	
 			- @combo:- '3,4': 3,4 selections						 
 			- @sporttype:= '1' : soccer only
@@ -26,24 +28,22 @@ AS
 					 = '1,2,3': level 1,2,3
 			- @ReportType = 1: filter by stake
 						= 2: filter by net win after pt
+			- @Market = 1: Today only maket
+						2: Early only maket
+						3: Combined
+						
 	*/
 BEGIN
 	SET NOCOUNT ON
-	CREATE TABLE #result 
-			(	
-				transdate datetime,
-				transid bigint primary key,				
-				refno bigint,
-				username varchar(50),
-				IP varchar(50),
-				stake money,
-				combo int,
-				level int	
-			)
 	
 	DECLARE @tmpSelection TABLE (selection int)
 	DECLARE @tmpSport TABLE (sporttype int)
 	DECLARE @tmpLevel TABLE (level int)
+	DECLARE @tmpMarket TABLE (type INT)
+	CREATE TABLE #bettransm(refno BIGINT, transid BIGINT, today BIT DEFAULT(0), early BIT DEFAULT(0), type INT)
+	DECLARE @today DATETIME
+	
+	SELECT @today = CONVERT(VARCHAR(10),GETDATE(),120)
 	
 	INSERT INTO @tmpSelection
 	SELECT val
@@ -56,6 +56,44 @@ BEGIN
 	INSERT INTO @tmpLevel (level)
 	SELECT val
 	FROM f_RMS_strSplit (@level,',')
+	
+	INSERT INTO @tmpMarket
+	SELECT val
+	FROM f_RMS_strSplit (@Market,',')
+	
+	INSERT INTO #bettransm(refno,transid)
+	SELECT refno, transid
+	FROM rmBettrans b WITH(NOLOCK) 				
+	WHERE b.combo IN (SELECT selection FROM @tmpSelection)
+		AND b.transid > @max_transid 						
+		AND b.matchid = 29
+		AND b.statusid = 0
+		AND currency <> 20
+	
+	UPDATE b
+	SET today = 1
+	FROM #bettransm b
+		INNER JOIN bodb02.dbo.bettransm bm WITH(NOLOCK) ON b.refno = bm.refno
+	WHERE matchdate = @today	
+	
+	UPDATE b
+	SET early = 1
+	FROM #bettransm b
+		INNER JOIN bodb02.dbo.bettransm bm WITH(NOLOCK) ON b.refno = bm.refno
+	WHERE matchdate <> @today
+	
+	UPDATE b
+	SET early = 1
+	FROM #bettransm b
+		INNER JOIN bodb02.dbo.bettransm14 bm WITH(NOLOCK) ON b.refno = bm.refno
+	WHERE matchdate <> @today
+		AND early = 0	
+	
+	UPDATE #bettransm
+	SET type = CASE WHEN today = 1 AND early = 0 THEN 1
+					WHEN today = 0 AND early = 1 THEN 2
+					ELSE 3 END
+	
 			
 	IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 	BEGIN
@@ -103,11 +141,10 @@ BEGIN
 				ISNULL(mc.level,0) level
 			FROM rmBettrans b WITH(NOLOCK) 
 				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON b.custid = mc.custid
-			WHERE b.combo IN (SELECT selection FROM @tmpSelection)
-				AND b.transid > @max_transid 						
-				AND b.matchid = 29
-				AND b.statusid = 0
-				AND currency <> 20	
+			WHERE  b.transid IN (SELECT transid 
+								FROM #bettransm
+								WHERE type IN (SELECT type FROM @tmpMarket)
+							)	
 		)r
 		WHERE level IN (SELECT [level] FROM @tmpLevel)
 			AND 1 = case when @ReportType = 1 AND stake >= @stake THEN 1 
@@ -161,11 +198,10 @@ BEGIN
 			FROM rmCustomer mc WITH(NOLOCK) 			
 				INNER JOIN rmBettrans b WITH(NOLOCK) ON b.custid = mc.custid
 			WHERE [level] IN (SELECT [level] FROM @tmpLevel)
-				AND b.combo IN (SELECT selection FROM @tmpSelection)
-				AND b.transid > @max_transid 						
-				AND b.matchid = 29
-				AND b.statusid = 0			
-				AND currency <> 20						
+				 AND b.transid IN (SELECT transid 
+								FROM #bettransm
+								WHERE type IN (SELECT type FROM @tmpMarket)
+							)						
 		) r
 		WHERE 1 = case when @ReportType = 1 AND stake >= @stake THEN 1 
 						when @ReportType = 2 AND r.maxpayout >= @maxpayout then 1 else 0 end 			
