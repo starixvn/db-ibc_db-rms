@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_Betlist]
+﻿ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_Betlist]
 	@selection		VARCHAR(100) = '',
 	@sporttype		VARCHAR(100) = '',
 	@level			VARCHAR(100) = '',
@@ -22,6 +22,8 @@
 			- 20140418@Johnson: add column IP
 			- 20140620@Johnson: add more option filter by net win after pt
 			- 20141028@Johnson: filter tickets by specific market
+			- 20150323@Elodie: Add signs to indicate the presence of the BetRadar bet types on Parlay tickets [Red:#30517]
+
 		Parameter's Explanation:
 			- @selection:- '2,3': 2,3 selections
 						 - '6': 6 UP
@@ -37,10 +39,15 @@
 						3: Combined
 	*/
 SET NOCOUNT ON 
+	----Get Sport Bettype Matrix------
+	DECLARE @BetRadar TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @BetRadar
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @Mode = 4, @SubProduct = 'BetRadar'
+
 	DECLARE @tmpSelection TABLE (selection int)
 	DECLARE @tmpSport TABLE (sporttype int)
 	DECLARE @tmpMarket TABLE(type INT)
-	CREATE TABLE #bettransm(refno BIGINT, transid BIGINT, today BIT DEFAULT(0), early BIT DEFAULT(0), type INT)
+	CREATE TABLE #bettransm(refno BIGINT, transid BIGINT, today BIT DEFAULT(0), early BIT DEFAULT(0), type INT, IsBetRadar BIT DEFAULT(0))
 	DECLARE @tmpLevel TABLE (level int)
 	DECLARE @6up varchar(100), @today DATETIME
 	
@@ -82,6 +89,12 @@ SET NOCOUNT ON
 		AND currency <> 20
 	
 	UPDATE #bettransm
+	SET IsBetRadar = 1
+	FROM #bettransm b
+		INNER JOIN bodb02.dbo.bettransm bm WITH(NOLOCK) ON b.refno = bm.refno
+	WHERE bm.bettype IN (SELECT Bettype FROM @BetRadar)
+
+	UPDATE #bettransm
 	SET today = 1
 	FROM #bettransm b
 		INNER JOIN bodb02.dbo.bettransm bm WITH(NOLOCK) ON b.refno = bm.refno
@@ -117,7 +130,8 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 			maxpayout,			
 			combo,
 			IP,
-			level
+			level,
+			IsBetRadar
 		FROM
 		(
 			SELECT
@@ -132,13 +146,12 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 				(b.odds-1)*b.stake*actualrate*(1-b.tpositiontaking) as maxpayout,		
 				b.combo,
 				b.IP,				
-				ISNULL(mc.level,0) level
+				ISNULL(mc.level,0) level,
+				bm.IsBetRadar
 			FROM rmBettrans b WITH(NOLOCK) 
+				INNER JOIN #bettransm bm ON b.transid = bm.transid
 				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON b.custid = mc.custid
-			WHERE b.transid IN (SELECT transid 
-								FROM #bettransm
-								WHERE type IN (SELECT type FROM @tmpMarket)
-							)
+			WHERE bm.type IN (SELECT type FROM @tmpMarket)
 		)r
 		WHERE level IN (SELECT [level] FROM @tmpLevel)
 			AND 1= case when @reportType = 1 AND r.stake >= @stake then 1
@@ -158,7 +171,8 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 			maxpayout,			
 			combo,
 			IP,
-			level
+			level,
+			IsBetRadar
 		FROM 
 		(
 			SELECT
@@ -173,14 +187,13 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 				(b.odds-1)*b.stake*actualrate*(1-b.tpositiontaking) as maxpayout,		
 				b.combo,			
 				b.IP,	
-				ISNULL(mc.level,0) level
+				ISNULL(mc.level,0) level,
+				bm.IsBetRadar
 			FROM rmCustomer mc WITH(NOLOCK) 			
 				INNER JOIN rmBettrans b WITH(NOLOCK) ON b.custid = mc.custid
+				INNER JOIN #bettransm bm ON b.transid = bm.transid
 			WHERE [level] IN (SELECT [level] FROM @tmpLevel)
-				AND b.transid IN (SELECT transid 
-								FROM #bettransm
-								WHERE type IN (SELECT type FROM @tmpMarket)
-							)					
+				AND bm.type IN (SELECT type FROM @tmpMarket)			
 		) r
 		WHERE 1= case when @ReportType = 1 AND r.stake >= @stake then 1 
 						when @ReportType = 2 AND r.maxpayout >= @maxpayout then 1 else 0 END 
@@ -190,5 +203,3 @@ IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 	
 
 
-GO
-GRANT EXECUTE ON [dbo].[RMS_Monitor_Parlay_Betlist] TO [bodbRMSNet]
