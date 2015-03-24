@@ -95,6 +95,12 @@ SET NOCOUNT ON
 	WHERE bm.bettype IN (SELECT Bettype FROM @BetRadar)
 
 	UPDATE #bettransm
+	SET IsBetRadar = 1
+	FROM #bettransm b
+		INNER JOIN bodb02.dbo.bettransm14 bm WITH(NOLOCK) ON b.refno = bm.refno
+	WHERE bm.bettype IN (SELECT Bettype FROM @BetRadar)
+
+	UPDATE #bettransm
 	SET today = 1
 	FROM #bettransm b
 		INNER JOIN bodb02.dbo.bettransm bm WITH(NOLOCK) ON b.refno = bm.refno
@@ -117,7 +123,7 @@ SET NOCOUNT ON
 	SET type = CASE WHEN today = 1 AND early = 0 THEN 1
 					WHEN today = 0 AND early = 1 THEN 2
 					ELSE 3 END
-	
+
 IF EXISTS(SELECT 1 FROM @tmpLevel WHERE level = 0)
 	BEGIN		
 		SELECT top (@limitRowcount)
