@@ -40,9 +40,10 @@ BEGIN
 
 	SELECT	b.transdate,
 			b.transid,
+			b.refno,
 			b.odds,
 			b.stake*b.actualrate AS Stake,
-			(b.odds-1)*b.stake*b.actualrate AS WinningAmout,
+			(b.odds-1)*b.stake*b.actualrate AS WinningAmount,
 			(b.odds-1)*b.stake*b.actualrate*(1-b.tpositiontaking) AS CompanyLoseAmount,
 			b.ip,
 			(1-b.tpositiontaking) AS HousePT, 
@@ -54,6 +55,7 @@ BEGIN
 		AND b.statusid = 0
 		AND currency <> 20
 		AND b.liveawayscore IN (SELECT sporttype FROM @tmpSport)
+	ORDER BY b.transdate
 END
 
 GO
