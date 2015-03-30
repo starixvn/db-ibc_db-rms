@@ -92,7 +92,7 @@ BEGIN
 			FROM rmBettrans b WITH(NOLOCK) 
 				INNER JOIN #bettransm bm ON b.transid = bm.transid
 				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON b.custid = mc.custid AND level IN (SELECT [level] FROM @tmpLevel)
-			WHERE b.transID > @MinTransID
+			WHERE b.transID >= @MinTransID
 			GROUP BY b.custid, b.username, ISNULL(mc.level,0)
 		)r		
 		WHERE WinningAmount >= @WinningAmount
@@ -126,7 +126,7 @@ BEGIN
 				INNER JOIN rmBettrans b WITH(NOLOCK) ON b.custid = mc.custid
 				INNER JOIN #bettransm bm ON b.transid = bm.transid
 			WHERE [level] IN (SELECT [level] FROM @tmpLevel)		
-				AND b.transID > @MinTransID
+				AND b.transID >= @MinTransID
 			GROUP BY b.custid, b.username, ISNULL(mc.level,0)	
 		) r
 		WHERE WinningAmount >= @WinningAmount 
