@@ -91,9 +91,8 @@ BEGIN
 				ISNULL(mc.level,0) AS level
 			FROM rmBettrans b WITH(NOLOCK) 
 				INNER JOIN #bettransm bm ON b.transid = bm.transid
-				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON b.custid = mc.custid	
-			WHERE level IN (SELECT [level] FROM @tmpLevel)
-				AND b.transID > @MinTransID
+				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON b.custid = mc.custid AND level IN (SELECT [level] FROM @tmpLevel)
+			WHERE b.transID > @MinTransID
 			GROUP BY b.custid, b.username, ISNULL(mc.level,0)
 		)r		
 		WHERE WinningAmount >= @WinningAmount
