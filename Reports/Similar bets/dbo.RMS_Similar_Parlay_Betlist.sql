@@ -9,6 +9,7 @@ AS
 		
 		Revisions:
 			- 20130205@Johnson: move bettransParlay from bodb02 to bodb_RMS and rename to rmBettrans
+			- 20150404@Elodie: change Net Win after PT instead of Max Pay Out after PT
 		Parameter's Explanation:
 	*/ 
 SET NOCOUNT ON
@@ -73,7 +74,7 @@ SET NOCOUNT ON
 		,isnull(c.level,0) as level
 		,odds
 		,stake*actualrate*(1-p.tpositiontaking) as stake
-		,stake*odds*actualrate*(1-p.tpositiontaking) as max_payout
+		,stake*(odds-1)*actualrate*(1-p.tpositiontaking) as net_win
 		,@combo as combo
 		,@cnt_bets as cnt_bets
 	FROM rmBettrans p WITH(NOLOCK) 
@@ -84,7 +85,7 @@ SET NOCOUNT ON
 		,p.refno
 		,p.username
 		,isnull(c.level,0) as level
-		,stake*odds*actualrate*(1-p.tpositiontaking) as max_payout
+		,stake*(odds-1)*actualrate*(1-p.tpositiontaking) as net_win
 		,cnt as similar_combo 
 	FROM 
 		(

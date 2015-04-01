@@ -10,7 +10,7 @@ AS
 		DB: DBRMS/bodb_RMS
 		
 		Revisions:
-		
+			- 20150404@Elodie: change Net Win after PT instead of Max Pay Out after PT
 		Parameter's Explanation:	
 			-@sporttype = 0 : all sports
 						= 1 : soccer only
@@ -45,7 +45,7 @@ SET NOCOUNT ON
 		transdate,
 		stake,
 		stakePT,
-		maxpayoutPT,
+		net_win,
 		odds,
 		combo
 	FROM (		
@@ -55,7 +55,7 @@ SET NOCOUNT ON
 			odds,
 			stake*actualrate stake,
 			stake*actualrate*(1-tpositiontaking) stakePT,
-			stake*actualrate*odds*(1-tpositiontaking) maxpayoutPT,
+			stake*actualrate*(odds-1)*(1-tpositiontaking) net_win,
 			right(betcheck,len(betcheck)-1) combo,
 			liveawayscore as sporttype			
 		FROM rmBettrans WITH(NOLOCK)
@@ -65,7 +65,7 @@ SET NOCOUNT ON
 	)r 
 	WHERE sporttype IN (SELECT sporttype FROM @tmpSport)
 		AND combo IN (SELECT selection FROM @tmpSelection)
-	ORDER BY maxpayoutPT DESC
+	ORDER BY net_win DESC
 	
 GO
 GRANT EXECUTE ON [dbo].[RMS_Rpt_Parlay_Outstanding_Mem] TO [bodbRMSNet]

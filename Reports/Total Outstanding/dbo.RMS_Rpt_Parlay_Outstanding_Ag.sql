@@ -10,7 +10,8 @@ AS
 		DB: DBRMS/bodb_RMS
 		
 		Revisions:
-		
+			- 20150404@Elodie: change Net Win after PT instead of Max Pay Out after PT
+
 		Parameter's Explanation:
 			-@sporttype = 0 : all sports
 						= 1 : soccer only
@@ -45,7 +46,7 @@ SET NOCOUNT ON
 		SELECT custid,
 			username,
 			SUM(stake*actualrate*(1-tpositiontaking)) as stakePT,
-			SUM(stake*actualrate*odds*(1-tpositiontaking)) as maxpayoutPT,
+			SUM(stake*actualrate*(odds-1)*(1-tpositiontaking)) as net_win,
 			COUNT(1) as betcount
 		FROM rmBettrans WITH(NOLOCK)
 		WHERE recommend = @custid
@@ -55,7 +56,7 @@ SET NOCOUNT ON
 			AND right(betcheck,len(betcheck)-1) IN (SELECT selection FROM @tmpSelection)
 		GROUP BY custid,username
 		) r
-	ORDER  BY maxpayoutPT DESC 
+	ORDER  BY net_win DESC 
 
 GO
 GRANT EXECUTE ON [dbo].[RMS_Rpt_Parlay_Outstanding_Ag] TO [bodbRMSNet]
