@@ -32,7 +32,8 @@ SET NOCOUNT ON
 		isNeutral bit,
 		matchid int,
 		matchcode nvarchar(50),
-		betstatus nvarchar(50)
+		betstatus nvarchar(50), 
+		betcheck nvarchar(50)
 	)
 	
 	if exists(select 1 from bodb02.dbo.bettransm with (nolock) where refno = @refno)
@@ -57,10 +58,11 @@ SET NOCOUNT ON
 			match.isNeutral as IsNeutral,
 			match.matchid,
 			match.matchcode,
-			match.betstatus
+			match.betstatus,
+			bettrans.betcheck
 		from 
 			(SELECT matchid,  Bettype, transid,hdp1, hdp2, odds, betteam, statusid,status,
-					livehomescore,liveawayscore,liveindicator
+					livehomescore,liveawayscore,liveindicator, betcheck
 			FROM bodb02.dbo.BettransM with (nolock)
 			WHERE refno=@refno ) AS bettrans
 		INNER JOIN bodb02.dbo.match with (nolock) ON bettrans.matchid=match.matchid
@@ -88,10 +90,11 @@ SET NOCOUNT ON
 			match.isNeutral as IsNeutral,
 			match.matchid,
 			match.matchcode,
-			match.betstatus
+			match.betstatus,
+			bettrans.betcheck
 		from 
 			(SELECT matchid, Bettype, transid,hdp1, hdp2, odds, betteam, statusid, status,
-					livehomescore,liveawayscore,liveindicator
+					livehomescore,liveawayscore,liveindicator, betcheck
 			FROM bodb02.dbo.BettransM14 with (nolock)
 			WHERE refno=@refno) AS bettrans
 		INNER JOIN bodb02.dbo.match14 as match with (nolock) ON bettrans.matchid=match.matchid
@@ -120,10 +123,11 @@ SET NOCOUNT ON
 			match.isNeutral,
 			match.matchid,
 			match.matchcode,
-			match.betstatus
+			match.betstatus,
+			bettrans.betcheck
 		from 
 			(SELECT matchid, Bettype, transid,hdp1, hdp2, odds, betteam, statusid, status,
-					livehomescore,liveawayscore,liveindicator
+					livehomescore,liveawayscore,liveindicator, betcheck
 			FROM DBARC.bodb_archive.dbo.BettransM with (nolock)
 			WHERE refno=@refno) AS bettrans
 		INNER JOIN DBARC.bodb_Archive.dbo.match_bk as match with (nolock) ON bettrans.matchid=match.matchid
