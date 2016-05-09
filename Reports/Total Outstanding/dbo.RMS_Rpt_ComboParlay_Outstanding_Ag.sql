@@ -65,7 +65,7 @@ SET NOCOUNT ON
 				
 		SELECT custid,
 			username,
-			SUM(stake*actualrate*(1-tpositiontaking))/SUM(TotalBet) as stakePT,
+			SUM(stake*actualrate*(1-tpositiontaking)) as stakePT,
 			SUM(stake*actualrate*(odds2-1)*(1-tpositiontaking)) as net_win,
 			COUNT(1) as betcount
 		FROM rmBettrans a WITH(NOLOCK)
