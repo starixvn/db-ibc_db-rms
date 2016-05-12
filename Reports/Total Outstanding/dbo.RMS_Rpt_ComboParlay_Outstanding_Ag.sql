@@ -74,7 +74,7 @@ SET NOCOUNT ON
 		WHERE recommend = @custid
 			AND matchid = 29
 			AND statusid = 0
-			AND (@_parlayType=0 OR (@_parlayType=1 AND a.betteam<>'a' AND a.betteam<>'h' AND CAST(betteam as int)=1 ) OR (@_parlayType=2 AND a.betteam<>'a' AND a.betteam<>'h' AND CAST(betteam as int)<>1 ))		
+			AND (@_parlayType=0 OR (@_parlayType=1  AND betteam ='1' ) OR (@_parlayType=2  AND betteam <>'1' ))		
 		GROUP BY custid,username
 		ORDER  BY net_win DESC 
 		

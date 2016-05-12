@@ -117,7 +117,7 @@ BEGIN
 				INNER JOIN #bettransm bm ON b.transid = bm.transid
 				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON b.custid = mc.custid AND level IN (SELECT [level] FROM @tmpLevel)
 			WHERE b.transID >= @MinTransID 
-			AND (@_parlayType=0 OR (@_parlayType=1 AND b.betteam<>'a' AND b.betteam<>'h' AND CAST(betteam as int)=1 ) OR (@_parlayType=2 AND b.betteam<>'a' AND b.betteam<>'h' AND CAST(betteam as int)<>1 ))
+			AND (@_parlayType=0 OR (@_parlayType=1 AND betteam ='1' ) OR (@_parlayType=2 AND betteam <>'1' ))
 			GROUP BY b.custid, b.username, ISNULL(mc.level,0)			
 			
 			)r
@@ -155,7 +155,7 @@ BEGIN
 				INNER JOIN #bettransm bm ON b.transid = bm.transid
 				INNER JOIN @tmpLevel t ON ISNULL(mc.level,0)=t.level
 			WHERE	b.transID >= @MinTransID  
-			AND (@_parlayType=0 OR (@_parlayType=1 AND b.betteam<>'a' AND b.betteam<>'h' AND CAST(betteam as int)=1 ) OR (@_parlayType=2 AND b.betteam<>'a' AND b.betteam<>'h' AND CAST(betteam as int)<>1 ))
+			AND (@_parlayType=0 OR (@_parlayType=1 AND betteam ='1' ) OR (@_parlayType=2 AND betteam <>'1' ))
 			GROUP BY b.custid, b.username, ISNULL(mc.level,0)	
 			
 			)

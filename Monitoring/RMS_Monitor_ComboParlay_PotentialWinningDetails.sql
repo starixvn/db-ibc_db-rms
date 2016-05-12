@@ -80,7 +80,7 @@ BEGIN
 		AND b.matchid = 29
 		AND b.statusid = 0
 		AND currency <> 20	
-		AND (@_parlayType=0 OR (@_parlayType=1 AND b.betteam<>'a' AND b.betteam<>'h' AND CAST(betteam as int)=1 ) OR (@_parlayType=2 AND b.betteam<>'a' AND b.betteam<>'h' AND CAST(betteam as int)<>1 ))	
+		AND (@_parlayType=0 OR (@_parlayType=1 AND betteam ='1' ) OR (@_parlayType=2 AND betteam <>'1' ))	
 	ORDER BY b.transdate
 END
 
