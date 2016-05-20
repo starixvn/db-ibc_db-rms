@@ -4,7 +4,7 @@
 	@movebetsday DATETIME,
 	@balanceUpday DATETIME = NULL,
 	@limitedRow	INT = 20,
-	@sporttype	TINYINT = null,
+	@sporttype	VARCHAR(100)='',
 	@selection	VARCHAR(100) = '',
 	@ParlayType	VARCHAR(10)=''
 AS
@@ -20,7 +20,7 @@ AS
 SET NOCOUNT ON
 	DECLARE @f_date DATETIME,
 			@t_date DATETIME
-			
+	DECLARE @tmpSport TABLE (sporttype int)		
 	DECLARE @tmpSum TABLE (custid INT
 		,username VARCHAR(30)
 		,currency INT
@@ -51,6 +51,15 @@ SET NOCOUNT ON
 	INSERT INTO @tmpSelection
 	SELECT val
 	FROM f_RMS_strSplit (@selection,',')
+	
+	INSERT INTO @tmpSport (sporttype)
+	SELECT val
+	FROM f_RMS_strSplit (@sporttype,',')
+	IF EXISTS (SELECT TOP 1 1 FROM @tmpSport WHERE sporttype=-2)
+	BEGIN
+	INSERT INTO @tmpSport
+	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43)
+	END
 	
 	--Check selection is 10-UP
 	IF EXISTS(SELECT TOP 1 1 FROM @tmpSelection WHERE selection = 0)
@@ -96,12 +105,12 @@ SET NOCOUNT ON
 			 ,SUM((winlost-actual_stake)*actualrate)
 			 ,SUM(-(winlost-actual_stake)*(1-tpositiontaking)*actualrate)
 			 ,COUNT(1) as betcount			
-		 FROM rmBettrans WITH(NOLOCK)
+		 FROM rmBettrans a WITH(NOLOCK)
 		 INNER JOIN @tmpSelection b ON CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END =b.selection
+		 INNER JOIN @tmpSport c ON a.transid2=c.sporttype
 		 WHERE winlostdate BETWEEN @f_date AND @t_date
 			AND matchid IN(9,29)
-			AND statusid IN (112,113)
-			AND liveawayscore = ISNULL(@sporttype,liveawayscore)			
+			AND statusid IN (112,113)				
 			AND (@_parlayType=0 OR (@_parlayType=1 AND betteam ='1' AND bettype=29)OR (@_parlayType=1 AND bettype=9) OR (@_parlayType=2 AND bettype=29 AND betteam <>'1' ))		
 		 GROUP BY custid, username, currency
 
@@ -137,10 +146,10 @@ SET NOCOUNT ON
 				,SUM(betcount)				
 			FROM rmSumWinloss a WITH(NOLOCK)
 			INNER JOIN @tmpSelection b ON a.combo=b.selection
-			WHERE winlostdate BETWEEN @f_date AND @t_date
-				AND sporttype = ISNULL(@sporttype,sporttype)
+			INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
+			WHERE winlostdate BETWEEN @f_date AND @t_date				
 				AND statusid IN (112,113)	
-				AND (@_parlayType=0 OR (@_parlayType=1 AND a.IsMixParlay=1) OR (@_parlayType=2 AND a.IsMixParlay<>1))		
+				AND (@_parlayType=0 OR (@_parlayType=1 AND a.parlaytype IN (1,2)) OR (@_parlayType=2 AND a.parlaytype=3))		
 		 GROUP BY custid, username, currency			
 			
 		END
@@ -172,10 +181,10 @@ SET NOCOUNT ON
 				,SUM(betcount)				
 			FROM rmSumWinloss_Old a WITH(NOLOCK)
 			INNER JOIN @tmpSelection b ON a.combo=b.selection
-			WHERE winlostdate BETWEEN @f_date AND @t_date
-				AND sporttype = ISNULL(@sporttype,sporttype)
+			INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
+			WHERE winlostdate BETWEEN @f_date AND @t_date				
 				AND statusid IN (112,113)			
-				AND (@_parlayType=0 OR (@_parlayType=1 AND a.IsMixParlay=1) OR (@_parlayType=2 AND a.IsMixParlay<>1))		
+				AND (@_parlayType=0 OR (@_parlayType=1 AND a.parlaytype IN (1,2)) OR (@_parlayType=2 AND a.parlaytype=3))			
 			GROUP BY custid, username, currency
 		END
 	END

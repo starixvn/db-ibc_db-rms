@@ -34,10 +34,9 @@ SET NOCOUNT ON
 	WHERE refno = @refno
 	
 	INSERT INTO @bettrans(transid ,refno)
-	SELECT mt.transid, mt.refno 
-	FROM rmTransaction mt WITH(NOLOCK) 
-		INNER JOIN rmBettrans b WITH(NOLOCK) ON mt.transid = b.transid
-	WHERE mt.Selection = @combo 		
+	SELECT b.transid, b.refno 
+	FROM  rmBettrans b WITH(NOLOCK)
+	WHERE b.combo = @combo 		
 		AND statusid = 0
 		AND winlostdate > @yesterday
 	
@@ -66,6 +65,7 @@ SET NOCOUNT ON
 		,refno
 		,p.username
 		,isnull(c.level,0) as level
+		,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43) THEN -2 ELSE transid2 END AS Sporttype
 		,odds2*TotalBet AS odds
 		,stake*actualrate*(1-p.tpositiontaking)/TotalBet  as stake
 		,stake*(odds2-1)*actualrate*(1-p.tpositiontaking) as net_win		
@@ -91,6 +91,7 @@ SET NOCOUNT ON
 		INNER JOIN rmBettrans p WITH(NOLOCK) ON b.transid = p.transid
 		LEFT JOIN rmCustomer c WITH(NOLOCK) ON p.custid = c.custid
 	ORDER BY cnt DESC
+
 
 GO
 GRANT EXECUTE ON [dbo].[RMS_Similar_ComboParlay_Betlist] TO [bodbRMSNet]

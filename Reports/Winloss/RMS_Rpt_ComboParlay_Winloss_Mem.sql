@@ -1,10 +1,10 @@
-﻿ CREATE PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss_Mem]
+﻿ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss_Mem]
 	@custid		INT,
 	@fromdate	DATETIME,
 	@todate		DATETIME,
 	@movebetsday DATETIME,
 	@balanceUpday DATETIME = NULL,
-	@sporttype	TINYINT = null,
+	@sporttype VARCHAR(100)='',
 	@selection	VARCHAR(100) = '',
 	@ParlayType	VARCHAR(10)=''
 AS
@@ -42,6 +42,17 @@ SET NOCOUNT ON
 	DECLARE @10UP VARCHAR(500),@all varchar(500)
 	DECLARE @tmpParlayType TABLE (parlaytype tinyint)
 	DECLARE @_ParlayType	TINYINT
+	DECLARE @tmpSport TABLE (sporttype int)
+	
+	
+	INSERT INTO @tmpSport (sporttype)
+	SELECT val
+	FROM f_RMS_strSplit (@sporttype,',')
+	IF EXISTS (SELECT TOP 1 1 FROM @tmpSport WHERE sporttype=-2)
+	BEGIN
+	INSERT INTO @tmpSport
+	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43)
+	END
 
 	INSERT INTO @tmpParlayType
 	SELECT val
@@ -102,12 +113,12 @@ SET NOCOUNT ON
 			,sum(case when statusid = 113 then -(winlost-actual_stake)*actualrate*(1-tpositiontaking) else 0 end) as ourPT_lose
 		 FROM rmBettrans WITH(NOLOCK)
 		 INNER JOIN @tmpSelection b ON CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END =b.selection
+		 INNER JOIN @tmpSport c ON transid2=c.sporttype
 		 WHERE custid = @custid 
 			AND winlostdate BETWEEN @f_date AND @t_date
 			AND matchid IN(9,29) 
-			AND statusid IN (112,113)
-			AND liveawayscore = ISNULL(@sporttype,liveawayscore)
-			AND (@_parlayType=0 OR (@_parlayType=1 AND betteam =1 AND bettype=29)OR (@_parlayType=1 AND bettype=9) OR (@_parlayType=2 AND bettype=29 AND betteam <>1 ))	
+			AND statusid IN (112,113)			
+			AND (@_parlayType=0 OR (@_parlayType=1  AND bettype=29 AND betteam ='1')OR (@_parlayType=1 AND bettype=9) OR (@_parlayType=2 AND bettype=29 AND betteam <>'1' ))	
 			
 		 GROUP BY convert(varchar(7),winlostdate,120)
 	END
@@ -142,12 +153,12 @@ SET NOCOUNT ON
 				,sum(case when statusid = 113 then company_winlost*actualrate else 0 end) as ourPT_lose			
 			FROM rmSumWinloss a WITH(NOLOCK)
 			INNER JOIN @tmpSelection b ON a.combo=b.selection
+			INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
 			WHERE custid = @custid
 					AND winlostdate BETWEEN @f_date AND @t_date				
 					AND statusid IN (112,113)
-					AND currency <> 20
-					AND sporttype = ISNULL(@sporttype, sporttype)	
-					AND (@_parlayType=0 OR (@_parlayType=1 AND a.IsMixParlay=1) OR (@_parlayType=2 AND a.IsMixParlay<>1))					
+					AND currency <> 20					
+					AND (@_parlayType=0 OR (@_parlayType=1 AND a.parlaytype IN(1,2)) OR (@_parlayType=2 AND a.parlaytype=3))					
 			GROUP BY convert(varchar(7),winlostdate,120)
 		END
 		
@@ -180,12 +191,12 @@ SET NOCOUNT ON
 				,sum(case when statusid = 113 then company_winlost*actualrate else 0 end) as ourPT_lose			
 			FROM rmSumWinloss_Old a WITH(NOLOCK)
 			INNER JOIN @tmpSelection b ON a.combo=b.selection
+			INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
 			WHERE custid = @custid
 					AND winlostdate BETWEEN @f_date AND @t_date				
 					AND statusid IN (112,113)
-					AND currency <> 20
-					AND sporttype = ISNULL(@sporttype, sporttype)
-					AND (@_parlayType=0 OR (@_parlayType=1 AND a.IsMixParlay=1) OR (@_parlayType=2 AND a.IsMixParlay<>1))	
+					AND currency <> 20					
+					AND (@_parlayType=0 OR (@_parlayType=1 AND a.parlaytype IN(1,2)) OR (@_parlayType=2 AND a.parlaytype=3))	
 			GROUP BY convert(varchar(7),winlostdate,120)
 		END
 	END
@@ -202,6 +213,7 @@ SET NOCOUNT ON
 		,sum(ourPT_lose) as ourPT_lose
 	FROM @tmpSum
 	GROUP BY month		
+
 
 GO
 GRANT EXECUTE ON [dbo].[RMS_Rpt_ComboParlay_Winloss_Mem] TO [bodbRMSNet]		

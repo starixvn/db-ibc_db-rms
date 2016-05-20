@@ -61,10 +61,17 @@ BEGIN
 	INSERT INTO @tmpSport (sporttype)
 	SELECT val
 	FROM f_RMS_strSplit (@sporttype,',')
-
+	IF EXISTS (SELECT TOP 1 1 FROM @tmpSport WHERE sporttype=-2)
+	BEGIN
+	INSERT INTO @tmpSport
+	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43)
+	END
+	
 	SELECT	b.transdate,
 			b.transid,
 			b.refno,
+			CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43) THEN -2 ELSE transid2 END AS Sporttype,		
+			(SELECT COUNT(bm.transid) FROM bodb02.dbo.bettransm bm WITH(NOLOCK) WHERE b.refno = bm.refno AND bm.statusid=112) AS NumberWon,
 			b.odds2 *b.TotalBet AS odds,
 			b.stake*b.actualrate/b.TotalBet AS Stake,
 			(b.odds2-1)*b.stake *b.actualrate AS WinningAmount,
@@ -74,14 +81,14 @@ BEGIN
 			b.hdp2 AS TotalSelection,
 			b.TotalBet AS TotalBet		
 	FROM rmBettrans b WITH (NOLOCK)	
-	INNER JOIN @tmpSport c ON b.liveawayscore=c.sporttype
+	INNER JOIN @tmpSport c ON b.transid2=c.sporttype
 	INNER JOIN #tmpSelection d ON b.hdp2=d.selection
 	WHERE b.custid = @CustID		
 		AND b.matchid = 29
 		AND b.statusid = 0
 		AND currency <> 20	
 		AND (@_parlayType=0 OR (@_parlayType=1 AND betteam ='1' ) OR (@_parlayType=2 AND betteam <>'1' ))	
-	ORDER BY b.transdate
+	ORDER BY b.transdate DESC
 END
 
 GO

@@ -2,7 +2,7 @@
 	@custid			INT,
 	@fromdate		DATETIME,
 	@todate			DATETIME,
-	@sporttype		TINYINT = NULL,
+	@sporttype		VARCHAR(100)='',
 	@movebetsday	DATETIME,
 	@selection		VARCHAR(100) = '',
 	@ParlayType		VARCHAR(10)=''
@@ -34,13 +34,15 @@ SET NOCOUNT ON
 			)
 		DECLARE @tmpBettrans2 TABLE (transid BIGINT PRIMARY KEY		
 				,hdp2       INT
-				,betteam	BIGINT				
+				,betteam	BIGINT
+				,refno		BIGINT		
 			)
 	
 	DECLARE @tmpSelection TABLE(selection tinyint)	
 	DECLARE @10up varchar(500),@all varchar(500)
 	DECLARE @tmpParlayType TABLE (parlaytype tinyint)
 	DECLARE @_ParlayType	TINYINT
+	DECLARE @tmpSport TABLE (sporttype int)	
 
 	INSERT INTO @tmpParlayType
 	SELECT val
@@ -55,6 +57,15 @@ SET NOCOUNT ON
 	INSERT INTO @tmpSelection
 	SELECT val
 	FROM f_RMS_strSplit (@selection,',')
+	
+	INSERT INTO @tmpSport (sporttype)
+	SELECT val
+	FROM f_RMS_strSplit (@sporttype,',')
+	IF EXISTS (SELECT TOP 1 1 FROM @tmpSport WHERE sporttype=-2)
+	BEGIN
+	INSERT INTO @tmpSport
+	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43)
+	END
 	
 	--Check selection is 10-UP
 	IF EXISTS(SELECT TOP 1 1 FROM @tmpSelection WHERE selection = 0)
@@ -93,7 +104,7 @@ SET NOCOUNT ON
 				,TotalCombo)
 		SELECT transid
 			,refno
-			,liveawayscore
+			,transid2
 			,stake
 			,winlost-actual_stake
 			,-(winlost-actual_stake)*(1-tpositiontaking) as company_winlost
@@ -149,11 +160,13 @@ SET NOCOUNT ON
 
 		INSERT INTO @tmpBettrans2 (transid
 				,hdp2    
-				,betteam					
+				,betteam	
+				,refno				
 				)
 			SELECT transid
 				,hdp2
-				,betteam				
+				,betteam
+				,refno				
 			FROM bodb02.dbo.bettrans14 WITH(NOLOCK)
 			WHERE custid = @custid				
 				AND bettype =29 AND betcheck IS NOT NULL
@@ -170,13 +183,30 @@ SET NOCOUNT ON
 		SET b.TotalCombo = pt.TotalCombo
 		FROM @tmpBettrans b 
 		INNER JOIN ParlayTotalBet pt ON b.TransID = pt.TransID	
-	
+		
+		UPDATE bb
+		SET bb.sporttype = aa.transid2
+		FROM @tmpBettrans  bb INNER JOIN 
+		(SELECT b.refno,
+		CASE WHEN COUNT(DISTINCT(sporttype))=1 THEN MIN(sporttype)
+		WHEN EXISTS(SELECT TOP 1 1 FROM @tmpBettrans2 bbb 
+								 INNER JOIN bodb02.dbo.bettransm aaa(NOLOCK) ON bbb.transid=aaa.transid
+								 INNER JOIN bodb02.dbo.match ccc(NOLOCK) ON aaa.matchid=ccc.matchid 
+								 WHERE ccc.sporttype=1 
+								) THEN -1
+		ELSE -3
+		END AS transid2
+		FROM @tmpBettrans2 b 
+		INNER JOIN bodb02.dbo.bettransm a(NOLOCK) ON a.refno=b.refno
+		INNER JOIN bodb02.dbo.match c(NOLOCK) ON a.matchid=c.matchid	
+		GROUP BY b.refno) aa ON aa.refno=bb.refno
+		
 	END
 	
 	SELECT a.* FROM @tmpBettrans a
 	INNER JOIN @tmpSelection b ON a.combo=b.selection
-	WHERE sporttype = ISNULL(@sporttype,sporttype)
-	AND (@_parlayType=0 OR (@_parlayType=1 AND a.IsMixParlay=1) OR (@_parlayType=2 AND a.IsMixParlay<>1))	
+	INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
+	WHERE (@_parlayType=0 OR (@_parlayType=1 AND a.IsMixParlay=1) OR (@_parlayType=2 AND a.IsMixParlay<>1))	
 	ORDER BY transid DESC
 	
 GO

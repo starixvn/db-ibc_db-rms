@@ -60,22 +60,27 @@ SET NOCOUNT ON
 	INSERT INTO @tmpSport (sporttype)
 	SELECT val
 	FROM f_RMS_strSplit (@sporttype,',')
-	
+	IF EXISTS (SELECT TOP 1 1 FROM @tmpSport WHERE sporttype=-2)
+	BEGIN
+	INSERT INTO @tmpSport
+	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43)
+	END
 	
 				
 		SELECT custid,
 			username,
 			SUM(stake*actualrate*(1-tpositiontaking)) as stakePT,
 			SUM(stake*actualrate*(odds2-1)*(1-tpositiontaking)) as net_win,
-			COUNT(1) as betcount
+			COUNT(1) as betcount,
+			CASE WHEN c.SportType NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43) THEN -2 ELSE c.sporttype END AS Sporttype
 		FROM rmBettrans a WITH(NOLOCK)
 		INNER JOIN @tmpSelection b ON a.hdp2=b.selection
-		INNER JOIN @tmpSport c ON a.liveawayscore=c.sporttype
+		INNER JOIN @tmpSport c ON a.transid2=c.sporttype
 		WHERE recommend = @custid
 			AND matchid = 29
 			AND statusid = 0
 			AND (@_parlayType=0 OR (@_parlayType=1  AND betteam ='1' ) OR (@_parlayType=2  AND betteam <>'1' ))		
-		GROUP BY custid,username
+		GROUP BY custid,username,CASE WHEN c.SportType NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43) THEN -2 ELSE c.sporttype END
 		ORDER  BY net_win DESC 
 		
 	

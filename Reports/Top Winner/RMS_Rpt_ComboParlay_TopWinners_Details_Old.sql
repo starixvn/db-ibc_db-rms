@@ -2,7 +2,7 @@
 	@custid			INT,
 	@fromdate		DATETIME,
 	@todate			DATETIME,
-	@sporttype		TINYINT = NULL,
+	@sporttype		VARCHAR(100)='',
 	@selection		VARCHAR(100) = '',
 	@ParlayType		VARCHAR(10)=''
  AS
@@ -37,6 +37,16 @@ SET NOCOUNT ON
 	DECLARE @10up varchar(500),@all varchar(500)
 	DECLARE @tmpParlayType TABLE (parlaytype tinyint)
 	DECLARE @_ParlayType	TINYINT
+	DECLARE @tmpSport TABLE (sporttype int)	
+	
+	INSERT INTO @tmpSport (sporttype)
+	SELECT val
+	FROM f_RMS_strSplit (@sporttype,',')
+	IF EXISTS (SELECT TOP 1 1 FROM @tmpSport WHERE sporttype=-2)
+	BEGIN
+	INSERT INTO @tmpSport
+	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43)
+	END
 
 	INSERT INTO @tmpParlayType
 	SELECT val
@@ -71,8 +81,7 @@ SET NOCOUNT ON
 	END
 	
 	INSERT INTO @tmpBettrans (transid
-				,refno
-				,sporttype
+				,refno			
 				,stake
 				,winlost
 				,company_winlost
@@ -83,8 +92,7 @@ SET NOCOUNT ON
 				,IsMixParlay
 				,TotalCombo)		
 	SELECT transid
-		,refno
-		,liveawayscore
+		,refno		
 		,stake
 		,winlost-actual_stake
 		,-(winlost-actual_stake)*(1-tpositiontaking)
@@ -123,10 +131,28 @@ SET NOCOUNT ON
 		SET b.TotalCombo = pt.TotalCombo
 		FROM @tmpBettrans b 
 		INNER JOIN ParlayTotalBet pt ON b.TransID = pt.TransID	
+		
+		UPDATE bb
+		SET bb.sporttype = aa.transid2
+		FROM @tmpBettrans bb  INNER JOIN 
+		(SELECT b.refno,
+		CASE WHEN COUNT(DISTINCT(c.sporttype))=1 THEN MIN(c.sporttype)
+		WHEN EXISTS(SELECT TOP 1 1 FROM @tmpBettrans bbb 
+								 INNER JOIN bodb02.dbo.bettransm aaa(NOLOCK) ON bbb.transid=aaa.transid
+								 INNER JOIN bodb02.dbo.match ccc(NOLOCK) ON aaa.matchid=ccc.matchid 
+								 WHERE ccc.sporttype=1
+								) THEN -1
+		ELSE -3
+		END AS transid2
+		FROM @tmpBettrans b 
+		INNER JOIN bodb02.dbo.bettransm a(NOLOCK) ON a.refno=b.refno
+		INNER JOIN bodb02.dbo.match c(NOLOCK) ON a.matchid=c.matchid	
+		GROUP BY b.refno) aa ON aa.refno=bb.refno
+		
 
 	SELECT a.* FROM @tmpBettrans a
 	INNER JOIN @tmpSelection b ON a.combo=b.selection
-		WHERE sporttype = ISNULL(@sporttype,sporttype)
+	INNER JOIN @tmpSport c ON a.sporttype=c.sporttype		
 	AND (@_parlayType=0 OR (@_parlayType=1 AND a.IsMixParlay=1) OR (@_parlayType=2 AND a.IsMixParlay<>1))	
 	ORDER BY transid DESC
 	

@@ -72,6 +72,12 @@ BEGIN
 	SELECT val
 	FROM f_RMS_strSplit (@sporttype,',')
 	
+	IF EXISTS (SELECT TOP 1 1 FROM @tmpSport WHERE sporttype=-2)
+	BEGIN
+	INSERT INTO @tmpSport
+	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43)
+	END
+	
 	INSERT INTO @tmpLevel (level)
 	SELECT val
 	FROM f_RMS_strSplit (@level,',')
@@ -80,7 +86,7 @@ BEGIN
 	SELECT refno, transid
 	FROM rmBettrans b WITH(NOLOCK) 		
 	INNER JOIN 	@tmpSelection c ON b.hdp2=c.selection	
-	INNER JOIN  @tmpSport     d ON b.liveawayscore=d.sporttype
+	INNER JOIN  @tmpSport     d ON b.transid2=d.sporttype
 	WHERE	b.matchid = 29
 		AND b.statusid = 0
 		AND currency <> 20
@@ -116,6 +122,7 @@ BEGIN
 			FROM rmBettrans b WITH(NOLOCK) 
 				INNER JOIN #bettransm bm ON b.transid = bm.transid
 				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON b.custid = mc.custid AND level IN (SELECT [level] FROM @tmpLevel)
+				INNER JOIN @tmpSport c ON b.transid2=c.sporttype
 			WHERE b.transID >= @MinTransID 
 			AND (@_parlayType=0 OR (@_parlayType=1 AND betteam ='1' ) OR (@_parlayType=2 AND betteam <>'1' ))
 			GROUP BY b.custid, b.username, ISNULL(mc.level,0)			
@@ -154,6 +161,7 @@ BEGIN
 				INNER JOIN rmBettrans b WITH(NOLOCK) ON b.custid = mc.custid
 				INNER JOIN #bettransm bm ON b.transid = bm.transid
 				INNER JOIN @tmpLevel t ON ISNULL(mc.level,0)=t.level
+				INNER JOIN @tmpSport c ON b.transid2=c.sporttype
 			WHERE	b.transID >= @MinTransID  
 			AND (@_parlayType=0 OR (@_parlayType=1 AND betteam ='1' ) OR (@_parlayType=2 AND betteam <>'1' ))
 			GROUP BY b.custid, b.username, ISNULL(mc.level,0)	

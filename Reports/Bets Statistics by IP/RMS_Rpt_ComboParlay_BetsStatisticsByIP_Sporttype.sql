@@ -2,7 +2,7 @@
 	@fromdate		DATETIME,
 	@IP				VARCHAR(30),
 	@custid			INT,
-	@sporttype		INT
+	@sporttype		VARCHAR(100)
 AS
 	/*
 		Created: Winnie
@@ -19,7 +19,18 @@ BEGIN
 	SET NOCOUNT ON 
 	
 	DECLARE @todate DATETIME
+	DECLARE @tmpSport TABLE (sporttype int)
 	SELECT @todate = @fromdate + '23:59:59'
+	
+	INSERT INTO @tmpSport (sporttype)
+	SELECT val
+	FROM f_RMS_strSplit (@sporttype,',')
+	
+	IF EXISTS (SELECT TOP 1 1 FROM @tmpSport WHERE sporttype=-2)
+	BEGIN
+	INSERT INTO @tmpSport
+	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43)
+	END
 	
 	SELECT transid,
 			refno,
@@ -32,13 +43,12 @@ BEGIN
 			status,			
 			winlost - actual_stake as winlost,
 			hdp1, hdp2, betteam, betcheck 
-	FROM rmBettrans WITH(NOLOCK)
+	FROM rmBettrans a WITH(NOLOCK)
+	INNER JOIN @tmpSport b ON a.transid2=b.sporttype
 	WHERE transdate between @fromdate and @todate
 		AND custid = @custid
 		AND IP = @IP
-		AND 1 = CASE when @sporttype = 1 and liveawayscore = 1 then 1
-					when @sporttype = 2 AND liveawayscore in (2,3) THEN 1
-					else 0 END
+		
 		
 END 
 
