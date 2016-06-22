@@ -149,7 +149,7 @@ SET NOCOUNT ON
 			INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
 			WHERE winlostdate BETWEEN @f_date AND @t_date				
 				AND statusid IN (112,113)	
-				AND (@_parlayType=0 OR (@_parlayType=1 AND a.parlaytype IN (1,2)) OR (@_parlayType=2 AND a.parlaytype=3))		
+				AND (@_parlayType=0 OR (@_parlayType=1 AND (ISNULL(a.parlaytype,1) IN (1,2))) OR (@_parlayType=2 AND ISNULL(a.parlaytype,1)=3))		
 		 GROUP BY custid, username, currency			
 			
 		END
@@ -184,7 +184,7 @@ SET NOCOUNT ON
 			INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
 			WHERE winlostdate BETWEEN @f_date AND @t_date				
 				AND statusid IN (112,113)			
-				AND (@_parlayType=0 OR (@_parlayType=1 AND a.parlaytype IN (1,2)) OR (@_parlayType=2 AND a.parlaytype=3))			
+				AND (@_parlayType=0 OR (@_parlayType=1 AND ISNULL(a.parlaytype,1) IN (1,2)) OR (@_parlayType=2 AND ISNULL(a.parlaytype,1)=3))			
 			GROUP BY custid, username, currency
 		END
 	END
