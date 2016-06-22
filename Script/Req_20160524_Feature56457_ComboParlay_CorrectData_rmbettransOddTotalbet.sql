@@ -6,7 +6,7 @@
 */
 USE bodb_RMS
 GO
-SET NOCOUNT ON
+
 
 CREATE TABLE #tmpBettrans (transid BIGINT PRIMARY KEY, hdp1 SMALLMONEY, hdp2 SMALLINT, betteam NVARCHAR(10), betcheck NVARCHAR(50))
 
@@ -92,34 +92,3 @@ FROM	dbo.rmbettrans b
 DROP TABLE #tmpBettrans
 DROP TABLE #tmp
 --
-update rmBettrans
-SET transid2=-1
-WHERE liveawayscore =2
-
-update rmBettrans
-SET transid2=1
-WHERE liveawayscore =1
-
-update rmBettrans
-SET transid2=-3
-WHERE liveawayscore =3
-
----update table SUM
-UPDATE [rmSumWinloss]
-SET parlaytype=1
-
-UPDATE [rmSumWinloss]
-SET sporttype=-1 WHERE sporttype=2
-
-UPDATE [rmSumWinloss]
-SET sporttype=-3 WHERE sporttype=3
-
-UPDATE [rmSumWinloss_OLD]
-SET parlaytype=1
-
-UPDATE [rmSumWinloss_OLD]
-SET sporttype=-1 WHERE sporttype=2
-
-UPDATE [rmSumWinloss_OLD]
-SET sporttype=-3 WHERE sporttype=3
-	
