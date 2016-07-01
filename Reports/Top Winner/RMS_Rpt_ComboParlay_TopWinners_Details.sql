@@ -189,11 +189,7 @@ SET NOCOUNT ON
 		FROM @tmpBettrans  bb INNER JOIN 
 		(SELECT b.refno,
 		CASE WHEN COUNT(DISTINCT(sporttype))=1 THEN MIN(sporttype)
-		WHEN EXISTS(SELECT TOP 1 1 FROM @tmpBettrans2 bbb 
-								 INNER JOIN bodb02.dbo.bettransm aaa(NOLOCK) ON bbb.transid=aaa.transid
-								 INNER JOIN bodb02.dbo.match ccc(NOLOCK) ON aaa.matchid=ccc.matchid 
-								 WHERE ccc.sporttype=1 
-								) THEN -1
+		WHEN COUNT(DISTINCT(sporttype))<>1 AND MIN(sporttype)=1 THEN  -1 
 		ELSE -3
 		END AS transid2
 		FROM @tmpBettrans2 b 
@@ -209,6 +205,7 @@ SET NOCOUNT ON
 	WHERE (@_parlayType=0 OR (@_parlayType=1 AND a.IsMixParlay=1) OR (@_parlayType=2 AND a.IsMixParlay<>1))	
 	ORDER BY transid DESC
 	
+
 GO
 GRANT EXECUTE ON [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details] TO [bodbRMSNet]
  
