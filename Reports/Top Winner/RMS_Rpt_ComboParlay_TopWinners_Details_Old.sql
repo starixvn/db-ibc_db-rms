@@ -137,8 +137,8 @@ SET NOCOUNT ON
 		FROM @tmpBettrans bb  INNER JOIN 
 		(SELECT b.refno,
 		CASE WHEN COUNT(DISTINCT(b.sporttype))=1 THEN MIN(b.sporttype)
-		WHEN COUNT(DISTINCT(b.sporttype))<>1 AND MIN(b.sporttype)=1 THEN  -1 
-		ELSE -3
+		WHEN COUNT(DISTINCT(b.sporttype))<>1 AND MIN(b.sporttype)=1 THEN  -3
+		ELSE -1
 		END AS transid2
 		FROM @tmpBettrans b 
 		INNER JOIN bodb02.dbo.bettransm a(NOLOCK) ON a.refno=b.refno
