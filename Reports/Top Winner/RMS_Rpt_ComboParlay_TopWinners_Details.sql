@@ -21,7 +21,7 @@ SET NOCOUNT ON
 			@t_date DATETIME			
 	DECLARE @tmpBettrans TABLE (transid BIGINT PRIMARY KEY
 				,refno BIGINT
-				,sporttype TINYINT
+				,sporttype SMALLINT
 				,stake MONEY
 				,winlost MONEY
 				,company_winlost MONEY
