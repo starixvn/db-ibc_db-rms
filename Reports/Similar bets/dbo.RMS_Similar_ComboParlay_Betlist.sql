@@ -36,7 +36,9 @@ SET NOCOUNT ON
 	INSERT INTO @bettrans(transid ,refno)
 	SELECT b.transid, b.refno 
 	FROM  rmBettrans b WITH(NOLOCK)
-	WHERE b.combo = @combo 		
+	WHERE 
+		b.bettype=29
+	    AND b.combo = @combo 		
 		AND statusid = 0
 		AND winlostdate > @yesterday
 	
