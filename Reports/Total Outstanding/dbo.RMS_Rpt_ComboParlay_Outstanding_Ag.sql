@@ -64,15 +64,14 @@ SET NOCOUNT ON
 	BEGIN
 	INSERT INTO @tmpSport
 	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43)
-	END
-	
+	END	
 				
 		SELECT custid,
 			username,
 			SUM(stake*actualrate*(1-tpositiontaking)) as stakePT,
 			SUM(stake*actualrate*(odds2-1)*(1-tpositiontaking)) as net_win,
-			COUNT(1) as betcount,
-			CASE WHEN c.SportType NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43) THEN -2 ELSE c.sporttype END AS Sporttype
+			COUNT(1) as betcount--,
+			--CASE WHEN c.SportType NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43) THEN -2 ELSE c.sporttype END AS Sporttype
 		FROM rmBettrans a WITH(NOLOCK)
 		INNER JOIN @tmpSelection b ON a.hdp2=b.selection
 		INNER JOIN @tmpSport c ON a.transid2=c.sporttype
@@ -80,7 +79,7 @@ SET NOCOUNT ON
 			AND matchid = 29
 			AND statusid = 0
 			AND (@_parlayType=0 OR (@_parlayType=1  AND betteam ='1' ) OR (@_parlayType=2  AND betteam <>'1' ))		
-		GROUP BY custid,username,CASE WHEN c.SportType NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43) THEN -2 ELSE c.sporttype END
+		GROUP BY custid,username--,CASE WHEN c.SportType NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43) THEN -2 ELSE c.sporttype END
 		ORDER  BY net_win DESC 
 		
 	
