@@ -76,7 +76,7 @@ SET NOCOUNT ON
 		@cnt_bets as cnt_bets
 	FROM rmBettrans p WITH(NOLOCK) 
 		LEFT JOIN rmCustomer c WITH(NOLOCK) ON p.custid = c.custid
-	WHERE transid = @transid
+	WHERE transid = @transid and bettype=9
 	
 	SELECT p.transid
 		,p.refno
