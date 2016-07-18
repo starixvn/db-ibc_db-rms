@@ -123,7 +123,7 @@ SET NOCOUNT ON
 		;WITH ParlayTotalBet AS(
 		SELECT TransID, SUM (rcs.cnt) AS TotalCombo
 		FROM @tmpBettrans2 b
-			INNER JOIN bodb02.dbo.RefCombinationSet_xtest rcs WITH(NOLOCK) ON b.hdp2 = rcs.N
+			INNER JOIN bodb02.dbo.RefCombinationSet rcs WITH(NOLOCK) ON b.hdp2 = rcs.N
 		WHERE  (b.betteam & rcs.bitmapR) > 0
 		GROUP BY b.transid
 		)
@@ -151,7 +151,5 @@ SET NOCOUNT ON
 	INNER JOIN @tmpSport c ON a.sporttype=c.sporttype		
 	AND (@_parlayType=0 OR (@_parlayType=1 AND a.IsMixParlay=1) OR (@_parlayType=2 AND a.IsMixParlay<>1))	
 	ORDER BY transid DESC
-	
-
 GO
 GRANT EXECUTE ON [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details_Old] TO [bodbRMSNet]
