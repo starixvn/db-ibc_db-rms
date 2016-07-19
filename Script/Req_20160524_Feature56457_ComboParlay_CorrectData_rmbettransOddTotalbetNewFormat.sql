@@ -34,8 +34,8 @@ WHERE	matchid = 29
 	SELECT EXP(SUM(LOG(odds))) AS Odds, b.transid, ps.SetStake
 	INTO #tmp
 	FROM tmpbettrans b 
-		INNER JOIN bodb02.dbo.RefCombinationSet_xtest rcs WITH(NOLOCK) ON b.selection_cnt = rcs.N AND (b.bitmapR & rcs.bitmapR) > 0  
-		INNER JOIN bodb02.dbo.RefCombination_xtest rc WITH(NOLOCK) ON rcs.N = rc.N AND rcs.R = rc.R AND b.RN = rc.seq
+		INNER JOIN bodb02.dbo.RefCombinationSet rcs WITH(NOLOCK) ON b.selection_cnt = rcs.N AND (b.bitmapR & rcs.bitmapR) > 0  
+		INNER JOIN bodb02.dbo.RefCombination rc WITH(NOLOCK) ON rcs.N = rc.N AND rcs.R = rc.R AND b.RN = rc.seq
 		INNER JOIN ParlayStake ps ON ps.refno = b.refno AND ps.RN = rc.R
 	GROUP BY b.transid, ps.SetStake, serial
 
@@ -56,7 +56,7 @@ WHERE	matchid = 29
 		SELECT b.TransID, SUM (rcs.cnt) AS TotalBet
 		FROM rmBettrans b WITH(NOLOCK)
 			INNER JOIN #tmpBettrans c ON b.transid=c.transid
-			INNER JOIN bodb02.dbo.RefCombinationSet_xtest rcs WITH(NOLOCK) ON b.hdp2 = rcs.N
+			INNER JOIN bodb02.dbo.RefCombinationSet rcs WITH(NOLOCK) ON b.hdp2 = rcs.N
 		WHERE b.bettype=29 AND (b.betteam & rcs.bitmapR) > 0
 		GROUP BY b.transid
 	)
