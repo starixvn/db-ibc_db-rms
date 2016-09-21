@@ -14,6 +14,7 @@ AS
 		Task: Combo Parlay bet list for top winners
 		
 		Revisions:
+		- 20160921@Winnie: Fix bug wrong bettype RedmineID: #64286
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -37,6 +38,15 @@ SET NOCOUNT ON
 				,betteam	BIGINT
 				,refno		BIGINT		
 			)
+			
+	CREATE TABLE #tmpbettransm(	
+	refno BIGINT NOT NULL,
+	sporttype INT NULL)	
+	
+	CREATE CLUSTERED INDEX [IX_refno] ON [dbo].#tmpbettransm 
+	(
+		[refno] ASC
+	)WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON) ON [PRIMARY]
 	
 	DECLARE @tmpSelection TABLE(selection tinyint)	
 	DECLARE @10up varchar(500),@all varchar(500)
@@ -184,6 +194,24 @@ SET NOCOUNT ON
 		FROM @tmpBettrans b 
 		INNER JOIN ParlayTotalBet pt ON b.TransID = pt.TransID	
 		
+		INSERT INTO #tmpbettransm(	refno ,	sporttype)
+		SELECT a.refno,m.sporttype 
+		FROM @tmpBettrans b 
+		INNER JOIN DBARC.bodb_Archive.dbo.bettransm a(NOLOCK) ON a.refno=b.refno
+		INNER JOIN DBARC.bodb_Archive.dbo.match_bk m(NOLOCK) ON a.matchid=m.matchid	
+		
+		INSERT INTO #tmpbettransm(	refno ,	sporttype)
+		SELECT a.refno,m.sporttype 
+		FROM @tmpBettrans b 
+		INNER JOIN bodb02.dbo.bettransm a(NOLOCK) ON a.refno=b.refno
+		INNER JOIN bodb02.dbo.match m(NOLOCK) ON a.matchid=m.matchid	
+		
+		INSERT INTO #tmpbettransm(	refno ,	sporttype)
+		SELECT a.refno,m.sporttype 
+		FROM @tmpBettrans b 
+		INNER JOIN bodb02.dbo.bettransm14 a(NOLOCK) ON a.refno=b.refno
+		INNER JOIN bodb02.dbo.match14 m(NOLOCK) ON a.matchid=m.matchid	
+		
 		UPDATE bb
 		SET bb.sporttype = aa.transid2
 		FROM @tmpBettrans  bb INNER JOIN 
@@ -192,9 +220,7 @@ SET NOCOUNT ON
 		WHEN COUNT(DISTINCT(sporttype))<>1 AND MIN(sporttype)=1 THEN  -3
 		ELSE -1
 		END AS transid2
-		FROM @tmpBettrans2 b 
-		INNER JOIN bodb02.dbo.bettransm a(NOLOCK) ON a.refno=b.refno
-		INNER JOIN bodb02.dbo.match c(NOLOCK) ON a.matchid=c.matchid	
+		FROM #tmpbettransm b 		
 		GROUP BY b.refno) aa ON aa.refno=bb.refno
 		
 	END
