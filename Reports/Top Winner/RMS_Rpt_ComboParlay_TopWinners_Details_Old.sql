@@ -13,7 +13,7 @@
 		DB:DBARC/bodb_Archive
 		
 		Revisions:			
-		- 20160921@Winnie: Fix bug wrong bettype RedmineID: #64286
+		- 20160921@Winnie: Fix bug wrong bettype and fix ticket bettype 29 old format RedmineID: #64286
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -109,7 +109,9 @@ SET NOCOUNT ON
 		,stake*actualrate
 		,(winlost-actual_stake)*actualrate
 		,-(winlost-actual_stake)*(1-tpositiontaking)*actualrate
-		,CASE WHEN bettype=9 THEN RIGHT(betcheck,len(betcheck)-1) ELSE hdp2 END AS combo		
+		,CASE WHEN bettype=9 THEN RIGHT(betcheck,len(betcheck)-1) 
+					  WHEN bettype=29 AND betcheck IS NULL THEN LEN(betteam)
+					ELSE hdp2 END AS combo
 		,CASE WHEN bettype=9 OR betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 		,CASE WHEN bettype=9 THEN 1 ELSE NULL END AS IsMixParlay
 	FROM dbo.bettrans_bk WITH(NOLOCK)
