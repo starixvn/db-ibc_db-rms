@@ -10,6 +10,7 @@ AS
 		Revisions:
 			- 20130205@Johnson: move bettransParlay from bodb02 to bodb_RMS and rename to rmBettrans
 			- 20150404@Elodie: change Net Win after PT instead of Max Pay Out after PT
+			- 20160927@Winnie: fix issue conflict refno with racing 
 		Parameter's Explanation:
 	*/ 
 SET NOCOUNT ON
@@ -31,13 +32,15 @@ SET NOCOUNT ON
 	--	SELECT @yesterday = '2012-11-05'
 
 	INSERT INTO @Selection (matchid, bettype, betteam)
-	SELECT matchid, bettype, betteam
-	FROM bodb02.dbo.bettransm WITH(NOLOCK)
-	WHERE refno = @refno
+	SELECT a.matchid, bettype, betteam
+	FROM bodb02.dbo.bettransm a WITH(NOLOCK)
+	INNER JOIN bodb02.dbo.match m(NOLOCK) ON a.matchid=m.matchid	
+	WHERE refno = @refno AND m.sporttype<=99
 	UNION
-	SELECT matchid, bettype, betteam
-	FROM bodb02.dbo.bettransm14 WITH(NOLOCK)
-	WHERE refno = @refno
+	SELECT a.matchid, bettype, betteam
+	FROM bodb02.dbo.bettransm14 a WITH(NOLOCK)
+	INNER JOIN bodb02.dbo.match14 m(NOLOCK) ON a.matchid=m.matchid	
+	WHERE refno = @refno AND m.sporttype<=99	
 	
 	INSERT INTO @bettrans(transid ,refno)
 	SELECT mt.transid, mt.refno 
@@ -51,13 +54,17 @@ SET NOCOUNT ON
 	SELECT refno,count(1)
 	FROM 
 	(
-		SELECT b.refno, matchid, bettype, betteam
+		SELECT b.refno, bm.matchid, bettype, betteam
 		FROM bodb02.dbo.bettransm bm WITH(NOLOCK)
-			INNER JOIN @bettrans b ON bm.refno = b.refno		 
+			INNER JOIN @bettrans b ON bm.refno = b.refno	
+			INNER JOIN bodb02.dbo.match m(NOLOCK) ON bm.matchid=m.matchid	
+			WHERE m.sporttype<=99		 
 		UNION 
-		SELECT b.refno, matchid, bettype, betteam
+		SELECT b.refno, bm.matchid, bettype, betteam
 		FROM bodb02.dbo.bettransm14 bm WITH(NOLOCK)
 			INNER JOIN @bettrans b ON bm.refno = b.refno
+			INNER JOIN bodb02.dbo.match14 m(NOLOCK) ON bm.matchid=m.matchid	
+			WHERE m.sporttype<=99	
 	) r
 		INNER JOIN @Selection s ON r.matchid = s.matchid AND r.bettype = s.bettype
 	WHERE r.betteam = s.betteam

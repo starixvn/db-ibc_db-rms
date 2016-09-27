@@ -14,7 +14,7 @@ AS
 		Task: Combo Parlay bet list for top winners
 		
 		Revisions:
-		- 20160921@Winnie: Fix bug wrong bettype and fix ticket bettype 29 old format RedmineID: #64286
+		- 20160921@Winnie: Fix bug wrong bettype and fix ticket bettype 29 old format and conflict refno with racing RedmineID: #64286
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -201,18 +201,21 @@ SET NOCOUNT ON
 		FROM @tmpBettrans b 
 		INNER JOIN DBARC.bodb_Archive.dbo.bettransm a(NOLOCK) ON a.refno=b.refno
 		INNER JOIN DBARC.bodb_Archive.dbo.match_bk m(NOLOCK) ON a.matchid=m.matchid	
+		WHERE m.sporttype<=99
 		
 		INSERT INTO #tmpbettransm(	refno ,	sporttype)
 		SELECT a.refno,m.sporttype 
 		FROM @tmpBettrans b 
 		INNER JOIN bodb02.dbo.bettransm a(NOLOCK) ON a.refno=b.refno
 		INNER JOIN bodb02.dbo.match m(NOLOCK) ON a.matchid=m.matchid	
+		WHERE m.sporttype<=99
 		
 		INSERT INTO #tmpbettransm(	refno ,	sporttype)
 		SELECT a.refno,m.sporttype 
 		FROM @tmpBettrans b 
 		INNER JOIN bodb02.dbo.bettransm14 a(NOLOCK) ON a.refno=b.refno
 		INNER JOIN bodb02.dbo.match14 m(NOLOCK) ON a.matchid=m.matchid	
+		WHERE m.sporttype<=99
 		
 		UPDATE bb
 		SET bb.sporttype = aa.transid2

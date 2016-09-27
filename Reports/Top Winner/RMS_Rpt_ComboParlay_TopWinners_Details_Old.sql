@@ -149,18 +149,21 @@ SET NOCOUNT ON
 		FROM @tmpBettrans b 
 		INNER JOIN dbo.bettransm a(NOLOCK) ON a.refno=b.refno
 		INNER JOIN dbo.match_bk m(NOLOCK) ON a.matchid=m.matchid	
+		WHERE m.sporttype<=99
 		
 		INSERT INTO #tmpbettransm(	refno ,	sporttype)
 		SELECT a.refno,m.sporttype 
 		FROM @tmpBettrans b 
 		INNER JOIN bodb02.dbo.bettransm a(NOLOCK) ON a.refno=b.refno
 		INNER JOIN bodb02.dbo.match m(NOLOCK) ON a.matchid=m.matchid	
+		WHERE m.sporttype<=99
 		
 		INSERT INTO #tmpbettransm(	refno ,	sporttype)
 		SELECT a.refno,m.sporttype 
 		FROM @tmpBettrans b 
 		INNER JOIN bodb02.dbo.bettransm14 a(NOLOCK) ON a.refno=b.refno
 		INNER JOIN bodb02.dbo.match14 m(NOLOCK) ON a.matchid=m.matchid	
+		WHERE m.sporttype<=99
 		
 		UPDATE bb
 		SET bb.sporttype = aa.transid2

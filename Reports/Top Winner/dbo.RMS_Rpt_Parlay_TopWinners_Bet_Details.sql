@@ -8,7 +8,7 @@ AS
 		Task: View bet details 
 		
 		Revisions:
-		
+		- -20160926@Winnie: fix issue conflict refno with racing
 		Parameter's Explanation:
 		
 	*/
@@ -61,10 +61,11 @@ SET NOCOUNT ON
 			match.betstatus,
 			bettrans.betcheck
 		from 
-			(SELECT matchid,  Bettype, transid,hdp1, hdp2, odds, betteam, statusid,status,
-					livehomescore,liveawayscore,liveindicator, betcheck
-			FROM bodb02.dbo.BettransM with (nolock)
-			WHERE refno=@refno ) AS bettrans
+			(SELECT a.matchid,  Bettype, transid,hdp1, hdp2, odds, betteam, statusid,status,
+					a.livehomescore,a.liveawayscore,liveindicator, betcheck
+			FROM bodb02.dbo.BettransM a with (nolock)
+			INNER JOIN bodb02.dbo.match m(NOLOCK) ON a.matchid=m.matchid
+			WHERE refno=@refno AND m.sporttype<=99) AS bettrans
 		INNER JOIN bodb02.dbo.match with (nolock) ON bettrans.matchid=match.matchid
 	END
 	
@@ -93,10 +94,11 @@ SET NOCOUNT ON
 			match.betstatus,
 			bettrans.betcheck
 		from 
-			(SELECT matchid, Bettype, transid,hdp1, hdp2, odds, betteam, statusid, status,
-					livehomescore,liveawayscore,liveindicator, betcheck
-			FROM bodb02.dbo.BettransM14 with (nolock)
-			WHERE refno=@refno) AS bettrans
+			(SELECT a.matchid, Bettype, transid,hdp1, hdp2, odds, betteam, statusid, status,
+					a.livehomescore,a.liveawayscore,liveindicator, betcheck
+			FROM bodb02.dbo.BettransM14 a with (nolock)
+			INNER JOIN bodb02.dbo.match14 m(NOLOCK) ON a.matchid=m.matchid
+			WHERE refno=@refno AND m.sporttype<=99) AS bettrans
 		INNER JOIN bodb02.dbo.match14 as match with (nolock) ON bettrans.matchid=match.matchid
 	END
 	
@@ -126,10 +128,11 @@ SET NOCOUNT ON
 			match.betstatus,
 			bettrans.betcheck
 		from 
-			(SELECT matchid, Bettype, transid,hdp1, hdp2, odds, betteam, statusid, status,
-					livehomescore,liveawayscore,liveindicator, betcheck
-			FROM DBARC.bodb_archive.dbo.BettransM with (nolock)
-			WHERE refno=@refno) AS bettrans
+			(SELECT a.matchid, Bettype, transid,hdp1, hdp2, odds, betteam, a.statusid, status,
+					a.livehomescore,a.liveawayscore,a.liveindicator, a.betcheck
+			FROM DBARC.bodb_archive.dbo.BettransM a with (nolock)
+			INNER JOIN DBARC.bodb_archive.dbo.match_bk m(NOLOCK) ON a.matchid=m.matchid
+			WHERE refno=@refno AND m.sporttype<=99) AS bettrans
 		INNER JOIN DBARC.bodb_Archive.dbo.match_bk as match with (nolock) ON bettrans.matchid=match.matchid
 	END
 
