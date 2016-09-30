@@ -7,7 +7,7 @@ AS
 		Task: Get similar bets combo parlay tickets
 		DB: DBRMS/bobd_RMS		
 		Revisions:
-		- 20160927@Winnie: fix issue conflict refno with racing 
+		- 20160927@Winnie: fix issue conflict refno with racing RedmineID: #64286
 		Parameter's Explanation:
 	*/ 
 SET NOCOUNT ON
