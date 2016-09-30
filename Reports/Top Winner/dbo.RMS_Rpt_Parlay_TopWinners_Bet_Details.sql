@@ -8,7 +8,7 @@ AS
 		Task: View bet details 
 		
 		Revisions:
-		- -20160926@Winnie: fix issue conflict refno with racing
+		- -20160926@Winnie: fix issue conflict refno with racing RedmineID: #64286
 		Parameter's Explanation:
 		
 	*/
