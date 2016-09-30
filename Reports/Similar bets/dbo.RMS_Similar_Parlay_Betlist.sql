@@ -10,7 +10,7 @@ AS
 		Revisions:
 			- 20130205@Johnson: move bettransParlay from bodb02 to bodb_RMS and rename to rmBettrans
 			- 20150404@Elodie: change Net Win after PT instead of Max Pay Out after PT
-			- 20160927@Winnie: fix issue conflict refno with racing 
+			- 20160927@Winnie: fix issue conflict refno with racing RedmineID: #64286
 		Parameter's Explanation:
 	*/ 
 SET NOCOUNT ON
