@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[RMS_Parlay_TransDetails]
+﻿ ALTER  PROCEDURE [dbo].[RMS_Parlay_TransDetails]
 	@refno	BIGINT
  AS
 	/*	
@@ -9,6 +9,7 @@
 		
 		Revisions:
 			- 20150407@Elodie: Add betcheck column [Red:#30605]
+			- 20160906: Winnie Change betlist to support other bettype [RedmineID: #63648] 	
 		Parameter's Explanation:
 		
 	*/
@@ -34,10 +35,12 @@ SET NOCOUNT ON
 		match.matchid,
 		match.matchcode,
 		match.betstatus,
-		bettrans.betcheck
+		bettrans.betcheck,
+		bettrans.transdate,
+		bettrans.transdesc
 	from 
 		(SELECT matchid,  Bettype, transid,hdp1, hdp2, odds, betteam, statusid, status,
-				livehomescore,liveawayscore,liveindicator, betcheck
+				livehomescore,liveawayscore,liveindicator, betcheck,transdate,transdesc
 		FROM bodb02.dbo.BettransM with (nolock)
 		WHERE refno=@refno ) AS bettrans
 	INNER JOIN bodb02.dbo.match with (nolock) ON bettrans.matchid=match.matchid
@@ -62,10 +65,12 @@ SET NOCOUNT ON
 		match.matchid,
 		match.matchcode,		
 		match.betstatus,
-		bettrans.betcheck
+		bettrans.betcheck,
+		bettrans.transdate,
+		bettrans.transdesc
 	from 
 		(SELECT matchid,  Bettype, transid,hdp1, hdp2, odds, betteam, statusid, status,
-				livehomescore,liveawayscore,liveindicator, betcheck
+				livehomescore,liveawayscore,liveindicator, betcheck,transdate,transdesc
 		FROM bodb02.dbo.BettransM14 with (nolock)
 		WHERE refno=@refno ) AS bettrans
 	INNER JOIN bodb02.dbo.match14  as [match] with (nolock) ON bettrans.matchid=match.matchid
