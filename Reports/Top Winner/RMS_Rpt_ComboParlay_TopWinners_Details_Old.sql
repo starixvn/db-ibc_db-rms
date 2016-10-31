@@ -13,12 +13,13 @@
 		DB:DBARC/bodb_Archive
 		
 		Revisions:			
+		- 20160921@Winnie: Fix bug wrong bettype and fix ticket bettype 29 old format RedmineID: #64286
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
 	DECLARE @tmpBettrans TABLE (transid BIGINT PRIMARY KEY
 				,refno BIGINT
-				,sporttype TINYINT
+				,sporttype SMALLINT
 				,stake MONEY
 				,winlost MONEY
 				,company_winlost MONEY
@@ -33,6 +34,15 @@ SET NOCOUNT ON
 				,hdp2       INT
 				,betteam	BIGINT				
 			)
+	CREATE TABLE #tmpbettransm(	
+	refno BIGINT NOT NULL,
+	sporttype INT NULL)	
+	
+	CREATE CLUSTERED INDEX [IX_refno] ON [dbo].#tmpbettransm 
+	(
+		[refno] ASC
+	)WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON) ON [PRIMARY]
+	
 	DECLARE @tmpSelection TABLE(selection tinyint)	
 	DECLARE @10up varchar(500),@all varchar(500)
 	DECLARE @tmpParlayType TABLE (parlaytype tinyint)
@@ -99,7 +109,9 @@ SET NOCOUNT ON
 		,stake*actualrate
 		,(winlost-actual_stake)*actualrate
 		,-(winlost-actual_stake)*(1-tpositiontaking)*actualrate
-		,CASE WHEN bettype=9 THEN RIGHT(betcheck,len(betcheck)-1) ELSE hdp2 END AS combo		
+		,CASE WHEN bettype=9 THEN RIGHT(betcheck,len(betcheck)-1) 
+					  WHEN bettype=29 AND betcheck IS NULL THEN LEN(betteam)
+					ELSE hdp2 END AS combo
 		,CASE WHEN bettype=9 OR betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 		,CASE WHEN bettype=9 THEN 1 ELSE NULL END AS IsMixParlay
 	FROM dbo.bettrans_bk WITH(NOLOCK)
@@ -132,17 +144,36 @@ SET NOCOUNT ON
 		FROM @tmpBettrans b 
 		INNER JOIN ParlayTotalBet pt ON b.TransID = pt.TransID	
 		
+		INSERT INTO #tmpbettransm(	refno ,	sporttype)
+		SELECT a.refno,m.sporttype 
+		FROM @tmpBettrans b 
+		INNER JOIN dbo.bettransm a(NOLOCK) ON a.refno=b.refno
+		INNER JOIN dbo.match_bk m(NOLOCK) ON a.matchid=m.matchid	
+		WHERE m.sporttype<=99
+		
+		INSERT INTO #tmpbettransm(	refno ,	sporttype)
+		SELECT a.refno,m.sporttype 
+		FROM @tmpBettrans b 
+		INNER JOIN bodb02.dbo.bettransm a(NOLOCK) ON a.refno=b.refno
+		INNER JOIN bodb02.dbo.match m(NOLOCK) ON a.matchid=m.matchid	
+		WHERE m.sporttype<=99
+		
+		INSERT INTO #tmpbettransm(	refno ,	sporttype)
+		SELECT a.refno,m.sporttype 
+		FROM @tmpBettrans b 
+		INNER JOIN bodb02.dbo.bettransm14 a(NOLOCK) ON a.refno=b.refno
+		INNER JOIN bodb02.dbo.match14 m(NOLOCK) ON a.matchid=m.matchid	
+		WHERE m.sporttype<=99
+		
 		UPDATE bb
 		SET bb.sporttype = aa.transid2
 		FROM @tmpBettrans bb  INNER JOIN 
 		(SELECT b.refno,
-		CASE WHEN COUNT(DISTINCT(b.sporttype))=1 THEN MIN(b.sporttype)
-		WHEN COUNT(DISTINCT(b.sporttype))<>1 AND MIN(b.sporttype)=1 THEN  -3
+		CASE WHEN COUNT(DISTINCT(sporttype))=1 THEN MIN(sporttype)
+		WHEN COUNT(DISTINCT(sporttype))<>1 AND MIN(sporttype)=1 THEN  -3
 		ELSE -1
 		END AS transid2
-		FROM @tmpBettrans b 
-		INNER JOIN bodb02.dbo.bettransm a(NOLOCK) ON a.refno=b.refno
-		INNER JOIN bodb02.dbo.match c(NOLOCK) ON a.matchid=c.matchid	
+		FROM #tmpbettransm b 		
 		GROUP BY b.refno) aa ON aa.refno=bb.refno
 		
 

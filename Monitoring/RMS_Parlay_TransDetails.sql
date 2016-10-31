@@ -10,6 +10,7 @@
 		Revisions:
 			- 20150407@Elodie: Add betcheck column [Red:#30605]
 			- 20160906: Winnie Change betlist to support other bettype [RedmineID: #63648] 	
+			- 20160926: Winnie: fix issue conflict refno with racing RedmineID: #64286
 		Parameter's Explanation:
 		
 	*/
@@ -44,6 +45,7 @@ SET NOCOUNT ON
 		FROM bodb02.dbo.BettransM with (nolock)
 		WHERE refno=@refno ) AS bettrans
 	INNER JOIN bodb02.dbo.match with (nolock) ON bettrans.matchid=match.matchid
+	WHERE match.sporttype<=99
 	UNION 
 	SELECT
 		bettrans.transid, 
@@ -74,6 +76,7 @@ SET NOCOUNT ON
 		FROM bodb02.dbo.BettransM14 with (nolock)
 		WHERE refno=@refno ) AS bettrans
 	INNER JOIN bodb02.dbo.match14  as [match] with (nolock) ON bettrans.matchid=match.matchid
+	WHERE match.sporttype<=99
 
 GO
 GRANT EXECUTE ON [dbo].[RMS_Parlay_TransDetails] TO [bodbRMSNet]
