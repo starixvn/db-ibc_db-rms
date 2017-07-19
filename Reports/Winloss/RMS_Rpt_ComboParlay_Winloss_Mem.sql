@@ -15,7 +15,7 @@ AS
 		Task: Get report win loss by specific member
 		
 		Revisions:
-	
+				- 20170719@Winnie: Add MuayThai RedmineID: #79500			
 		Parameter's Explanation:
 			- @sporttype = '1' : soccer only
 						= '2' : Other sports
@@ -51,7 +51,7 @@ SET NOCOUNT ON
 	IF EXISTS (SELECT TOP 1 1 FROM @tmpSport WHERE sporttype=-2)
 	BEGIN
 	INSERT INTO @tmpSport
-	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43)
+	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
 	END
 
 	INSERT INTO @tmpParlayType

@@ -15,7 +15,8 @@ AS
 		DB: DBRMS/bodb_RMS
 		Task: report comboparlay winloss
 		
-		Revisions:			
+		Revisions:	
+		- 20170719@Winnie: Add MuayThai RedmineID: #79500		
 		Parameter's Explanation:
 			- @sporttype = '1' : soccer only
 						= '2' : Other sports
@@ -54,7 +55,7 @@ SET NOCOUNT ON
 	IF EXISTS (SELECT TOP 1 1 FROM @tmpSport WHERE sporttype=-2)
 	BEGIN
 	INSERT INTO @tmpSport
-	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43)
+	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
 	END
 
 	INSERT INTO @tmpParlayType
@@ -233,7 +234,7 @@ SET NOCOUNT ON
 	END
 	ELSE
 	SELECT winlostdate
-				,CASE WHEN sporttype NOT IN  (-1,-3,1,2,3,4,5,6,7,8,9,11,43) THEN -2 ELSE sporttype END AS sporttype
+				,CASE WHEN sporttype NOT IN  (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE sporttype END AS sporttype
 				,SUM(tickets_won) AS tickets_won
 				,SUM(tickets_lose) AS tickets_lose
 				,SUM(stake_won) AS stake_won
@@ -243,7 +244,7 @@ SET NOCOUNT ON
 				,SUM(ourPT_won) AS ourPT_won
 				,SUM(ourPT_lose) AS ourPT_lose				
 	 FROM @rptWinloss
-	 GROUP BY  winlostdate, CASE WHEN sporttype NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43) THEN -2 ELSE sporttype END
+	 GROUP BY  winlostdate, CASE WHEN sporttype NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE sporttype END
 	 ORDER BY winlostdate ASC
 GO
 GRANT EXECUTE ON [dbo].[RMS_Rpt_ComboParlay_Winloss] TO [bodbRMSNet]

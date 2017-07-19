@@ -11,6 +11,7 @@ AS
 		DB: DBRMS/bodb_RMS
 		
 		Revisions:		
+		- 20170719@Winnie: Add MuayThai RedmineID: #79500
 		Parameter's Explanation:	
 			-@sporttype = 0 : all sports
 						= 1 : soccer only
@@ -63,7 +64,7 @@ SET NOCOUNT ON
 	IF EXISTS (SELECT TOP 1 1 FROM @tmpSport WHERE sporttype=-2)
 	BEGIN
 	INSERT INTO @tmpSport
-	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43)
+	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
 	END
 	
 		
@@ -76,7 +77,7 @@ SET NOCOUNT ON
 			stake*actualrate*(odds2-1)*(1-tpositiontaking) net_win,
 			hdp2 AS TotalSelection,
 			TotalBet AS TotalBet,
-			CASE WHEN c.sporttype NOT IN(-1,-3,1,2,3,4,5,6,7,8,9,11,43) THEN -2 ELSE c.sporttype END AS Sporttype
+			CASE WHEN c.sporttype NOT IN(-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE c.sporttype END AS Sporttype
 		FROM rmBettrans a WITH(NOLOCK)
 		INNER JOIN @tmpSelection b ON a.hdp2=b.selection
 		INNER JOIN @tmpSport c ON a.transid2=c.sporttype

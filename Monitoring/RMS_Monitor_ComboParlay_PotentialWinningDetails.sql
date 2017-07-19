@@ -11,7 +11,7 @@
 		Task: Get detail report of Potential Winning Tool
 		
 		Revisions:
-		
+			-20170719@Winnie: Add MuayThai RedmineID: #79500
 		Parameter's Explanation:
 		
 	*/
@@ -64,13 +64,13 @@ BEGIN
 	IF EXISTS (SELECT TOP 1 1 FROM @tmpSport WHERE sporttype=-2)
 	BEGIN
 	INSERT INTO @tmpSport
-	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43)
+	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
 	END
 	
 	SELECT	b.transdate,
 			b.transid,
 			b.refno,
-			CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43) THEN -2 ELSE transid2 END AS Sporttype,		
+			CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype,		
 			(SELECT COUNT(bm.transid) FROM bodb02.dbo.bettransm bm WITH(NOLOCK) WHERE b.refno = bm.refno AND bm.statusid=112) AS NumberWon,
 			b.odds2 *b.TotalBet AS odds,
 			b.stake*b.actualrate/b.TotalBet AS Stake,
