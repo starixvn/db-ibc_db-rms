@@ -8,6 +8,7 @@ AS
 		DB: DBRMS/bobd_RMS		
 		Revisions:
 		- 20160927@Winnie: fix issue conflict refno with racing RedmineID: #64286
+		- 20170719@Winnie: Add MuayThai RedmineID: #79500
 		Parameter's Explanation:
 	*/ 
 SET NOCOUNT ON
@@ -74,7 +75,7 @@ SET NOCOUNT ON
 		,refno
 		,p.username
 		,isnull(c.level,0) as level
-		,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43) THEN -2 ELSE transid2 END AS Sporttype
+		,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype
 		,odds2*TotalBet AS odds
 		,stake*actualrate*(1-p.tpositiontaking)/TotalBet  as stake
 		,stake*(odds2-1)*actualrate*(1-p.tpositiontaking) as net_win		
