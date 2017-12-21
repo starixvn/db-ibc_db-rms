@@ -1,3 +1,4 @@
+/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="vnteam" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_PotentialWinning]
 	@selection		VARCHAR(100) = '',
 	@sporttype		VARCHAR(100) = '',
@@ -14,6 +15,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_PotentialWinning]
 		
 		Revisions:
 			-20170719@Winnie: Add MuayThai RedmineID: #79500
+			-20171219@Vicky: Add column currency [RedmineID: #88400]
 		Parameter's Explanation:
 			- @selection:- '2,3': 2,3 selections
 						 - '10': 10 UP
@@ -105,7 +107,8 @@ BEGIN
 			WinningAmount,			
 			CompanyLoseAmount,
 			TotalBets,
-			level
+			level,
+			currency
 		FROM
 		(		
 	
@@ -118,14 +121,15 @@ BEGIN
 				SUM((b.odds2-1)*b.stake*b.actualrate) as WinningAmount,		
 				SUM((b.odds2-1)*b.stake*b.actualrate*(1-b.tpositiontaking)) as CompanyLoseAmount,	
 				COUNT(1) AS TotalBets,				
-				ISNULL(mc.level,0) AS level
+				ISNULL(mc.level,0) AS level,
+				b.CurrencyName as currency
 			FROM rmBettrans b WITH(NOLOCK) 
 				INNER JOIN #bettransm bm ON b.transid = bm.transid
 				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON b.custid = mc.custid AND level IN (SELECT [level] FROM @tmpLevel)
 				INNER JOIN @tmpSport c ON b.transid2=c.sporttype
 			WHERE b.transID >= @MinTransID 
 			AND (@_parlayType=0 OR (@_parlayType=1 AND betteam ='1' ) OR (@_parlayType=2 AND betteam <>'1' ))
-			GROUP BY b.custid, b.username, ISNULL(mc.level,0)			
+			GROUP BY b.custid, b.username, ISNULL(mc.level,0),b.CurrencyName
 			
 			)r
 			WHERE WinningAmount >= @WinningAmount
@@ -143,7 +147,8 @@ BEGIN
 			WinningAmount,			
 			CompanyLoseAmount,
 			TotalBets,
-			level
+			level,
+			currency
 			FROM 
 			(
 			
@@ -156,7 +161,8 @@ BEGIN
 				SUM((b.odds2-1)*b.stake*b.actualrate) AS WinningAmount,		
 				SUM((b.odds2-1)*b.stake*b.actualrate*(1-b.tpositiontaking)) AS CompanyLoseAmount,	
 				COUNT(1) AS TotalBets,				
-				ISNULL(mc.level,0) AS level
+				ISNULL(mc.level,0) AS level,
+				b.CurrencyName as currency
 			FROM rmCustomer mc WITH(NOLOCK) 			
 				INNER JOIN rmBettrans b WITH(NOLOCK) ON b.custid = mc.custid
 				INNER JOIN #bettransm bm ON b.transid = bm.transid
@@ -164,7 +170,7 @@ BEGIN
 				INNER JOIN @tmpSport c ON b.transid2=c.sporttype
 			WHERE	b.transID >= @MinTransID  
 			AND (@_parlayType=0 OR (@_parlayType=1 AND betteam ='1' ) OR (@_parlayType=2 AND betteam <>'1' ))
-			GROUP BY b.custid, b.username, ISNULL(mc.level,0)	
+			GROUP BY b.custid, b.username, ISNULL(mc.level,0),b.CurrencyName
 			
 			)
 			 r
@@ -175,8 +181,3 @@ BEGIN
 END
 
 GO
-GRANT EXECUTE ON [dbo].[RMS_Monitor_ComboParlay_PotentialWinning] TO [bodbRMSNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[RMS_Monitor_ComboParlay_PotentialWinning] TO [vnteam]	
-
-
