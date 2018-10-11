@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[RMS_UserInfoAddNew]
+﻿/*<info serverAlias="DBCUST-CUSTDB" executers="bodbRMSNet" viewers="vnteam" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[RMS_UserInfoAddNew]
 	@AdminID	INT = 0,	
 	@Username	VARCHAR(50),
 	@custid		INT = 0 OUTPUT,
@@ -21,6 +22,7 @@ AS
 			- 20120619@Johnson: Manually rollback
 			- 20130121@Johnson: change linked server DB054 to DBRMS and try catch for writing log
 			- 20130313@Johnson: Fix format log by xml format
+			- 20181011@Dominic: Check existing username/username2 in archive DB  [Redmine:103011]
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -37,6 +39,7 @@ SET NOCOUNT ON
 		RETURN
 	
 	IF EXISTS (SELECT 1 FROM Customer WITH(NOLOCK) WHERE username = @username)
+	OR EXISTS(SELECT 1 FROM Dep_Customer_Archived WITH (NOLOCK) WHERE username= @username)
 	BEGIN
 		SELECT @ErrMsg = 'This username is not available',
 			@ErrCode = 100
