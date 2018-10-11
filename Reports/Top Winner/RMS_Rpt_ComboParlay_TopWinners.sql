@@ -1,6 +1,8 @@
-﻿ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners]
-	@fromdate	DATETIME,
-	@todate		DATETIME,
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
+
+ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners]
+	@fromdate	SMALLDATETIME,
+	@todate		SMALLDATETIME,
 	@movebetsday DATETIME,
 	@balanceUpday DATETIME = NULL,
 	@limitedRow	INT = 20,
@@ -15,12 +17,14 @@ AS
 		Task: Get top members won comno parlay
 		
 		Revisions:
-		 20170719@Winnie: Add MuayThai RedmineID: #79500
+			- 20170719@Winnie: Add MuayThai RedmineID: #79500
+			- 20181010@Elodie: Enhance performance
+
 		Parameter's Explanation:
 	*/ 
 SET NOCOUNT ON
-	DECLARE @f_date DATETIME,
-			@t_date DATETIME
+	DECLARE @f_date SMALLDATETIME,
+			@t_date SMALLDATETIME
 	DECLARE @tmpSport TABLE (sporttype int)		
 	DECLARE @tmpSum TABLE (custid INT
 		,username VARCHAR(30)
@@ -47,6 +51,7 @@ SET NOCOUNT ON
 		SELECT @_ParlayType=2
 	
 	DECLARE @tmpSelection TABLE(selection tinyint)
+	DECLARE @tmpSelection_Sport TABLE(selection tinyint, sporttype int)		
 	DECLARE @10UP VARCHAR(500),@all varchar(500)
 	
 	INSERT INTO @tmpSelection
@@ -80,6 +85,10 @@ SET NOCOUNT ON
 		FROM f_RMS_strSplit (@10up,',')		
 	END
 	
+	INSERT INTO @tmpSelection_Sport (sporttype, selection)
+	SELECT sporttype, selection
+	FROM @tmpSelection CROSS JOIN @tmpSport	
+
 	IF @todate > @movebetsday
 	BEGIN
 		SELECT @f_date = CASE WHEN @fromdate <= @movebetsday THEN DATEADD(dd,1,@movebetsday) ELSE @fromdate END,
@@ -106,9 +115,8 @@ SET NOCOUNT ON
 			 ,SUM((winlost-actual_stake)*actualrate)
 			 ,SUM(-(winlost-actual_stake)*(1-tpositiontaking)*actualrate)
 			 ,COUNT(1) as betcount			
-		 FROM rmBettrans a WITH(NOLOCK)
-		 INNER JOIN @tmpSelection b ON CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END =b.selection
-		 INNER JOIN @tmpSport c ON a.transid2=c.sporttype
+		 FROM rmBettrans WITH(NOLOCK)
+			INNER JOIN @tmpSelection_Sport b ON CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END =b.selection AND transid2=b.sporttype
 		 WHERE winlostdate BETWEEN @f_date AND @t_date
 			AND matchid IN(9,29)
 			AND statusid IN (112,113)				
@@ -146,8 +154,7 @@ SET NOCOUNT ON
 				,SUM(company_winlost*actualrate)
 				,SUM(betcount)				
 			FROM rmSumWinloss a WITH(NOLOCK)
-			INNER JOIN @tmpSelection b ON a.combo=b.selection
-			INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
+				INNER JOIN @tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
 			WHERE winlostdate BETWEEN @f_date AND @t_date				
 				AND statusid IN (112,113)	
 				AND (@_parlayType=0 OR (@_parlayType=1 AND (ISNULL(a.parlaytype,1) IN (1,2))) OR (@_parlayType=2 AND ISNULL(a.parlaytype,1)=3))		
@@ -180,9 +187,8 @@ SET NOCOUNT ON
 				,SUM((winlost-stake)*actualrate)
 				,SUM(company_winlost*actualrate)
 				,SUM(betcount)				
-			FROM rmSumWinloss_Old a WITH(NOLOCK)
-			INNER JOIN @tmpSelection b ON a.combo=b.selection
-			INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
+			FROM rmSumWinloss_old a WITH(NOLOCK)
+				INNER JOIN @tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
 			WHERE winlostdate BETWEEN @f_date AND @t_date				
 				AND statusid IN (112,113)			
 				AND (@_parlayType=0 OR (@_parlayType=1 AND ISNULL(a.parlaytype,1) IN (1,2)) OR (@_parlayType=2 AND ISNULL(a.parlaytype,1)=3))			
@@ -229,4 +235,3 @@ SET NOCOUNT ON
 	
 	
 GO
-GRANT EXECUTE ON [dbo].[RMS_Rpt_ComboParlay_TopWinners] TO [bodbRMSNet]

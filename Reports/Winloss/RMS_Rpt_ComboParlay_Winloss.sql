@@ -1,8 +1,8 @@
 ﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss]
-	@fromdate	DATETIME,
-	@todate		DATETIME,
+	@fromdate	SMALLDATETIME,
+	@todate		SMALLDATETIME,
 	@movebetsday DATETIME,
 	@balanceUpday DATETIME = NULL,
 	@sporttype VARCHAR(100)='',
@@ -20,6 +20,8 @@ AS
 		Revisions:	
 		- 20170719@Winnie: Add MuayThai RedmineID: #79500		
 		- 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 		
+		- 20181010@Elodie: Enhance performance
+
 		Parameter's Explanation:
 			- @sporttype = '1' : soccer only
 						= '2' : Other sports
@@ -29,8 +31,8 @@ AS
 			
 	*/
 SET NOCOUNT ON
-	DECLARE @f_date DATETIME,
-			@t_date DATETIME
+	DECLARE @f_date SMALLDATETIME,
+			@t_date SMALLDATETIME
 			
 	DECLARE @rptWinloss TABLE(
 		winlostdate DATETIME,
@@ -50,7 +52,7 @@ SET NOCOUNT ON
 	DECLARE @tmpParlayType TABLE (parlaytype tinyint)
 	DECLARE @_ParlayType	TINYINT
 	DECLARE @tmpSport TABLE (sporttype int)
-	
+	DECLARE @tmpSelection_Sport TABLE(selection tinyint, sporttype int)		
 	
 	INSERT INTO @tmpSport (sporttype)
 	SELECT val
@@ -93,6 +95,10 @@ SET NOCOUNT ON
 		FROM f_RMS_strSplit (@10up,',')		
 	END
 	
+	INSERT INTO @tmpSelection_Sport (sporttype, selection)
+	SELECT sporttype, selection
+	FROM @tmpSelection CROSS JOIN @tmpSport	
+
 	IF @todate > @movebetsday
 	BEGIN
 		SELECT @f_date = CASE WHEN @fromdate <= @movebetsday THEN DATEADD(dd,1,@movebetsday) ELSE @fromdate END,
@@ -148,13 +154,12 @@ SET NOCOUNT ON
 			    END) AS ourPT_lose
 			,transid2
 		FROM rmBettrans WITH(NOLOCK)
-		INNER JOIN @tmpSelection b ON CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END =b.selection
-		INNER JOIN @tmpSport c ON transid2=c.sporttype
-		LEFT JOIN bodb02.dbo.Acc_GroupExtraPTSetting AS a WITH (NOLOCK) ON srecommend = a.SuperId
-                                                                        AND winlostdate BETWEEN a.FromDate AND a.Todate
-														  AND a.ProductID = 1
-														  AND a.Sporttype = 0
-														  AND a.SubProduct = ''
+			INNER JOIN @tmpSelection_Sport b ON CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END =b.selection AND transid2=b.sporttype
+			LEFT JOIN bodb02.dbo.Acc_GroupExtraPTSetting AS a WITH (NOLOCK) ON srecommend = a.SuperId
+																				AND winlostdate BETWEEN a.FromDate AND a.Todate
+																				AND a.ProductID = 1
+																				AND a.Sporttype = 0
+																				AND a.SubProduct = ''
 		 WHERE winlostdate BETWEEN @f_date AND @t_date
 			AND matchid IN(9,29) 
 			AND statusid IN (112,113)			
@@ -197,9 +202,8 @@ SET NOCOUNT ON
 				,sum(case when a.statusid = 113 then (company_winlost- ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) *actualrate else 0 end) as ourPT_lose		
 				,a.sporttype	
 			FROM rmSumWinloss a WITH(NOLOCK)
-			INNER JOIN @tmpSelection b ON a.combo=b.selection
-			INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
-			LEFT JOIN rmSumWinLossExtraPT e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo]
+				INNER JOIN @tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
+				LEFT JOIN rmSumWinLossExtraPT e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo]
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 					AND a.statusid IN (112,113)
 					AND currency <> 20				
@@ -237,10 +241,9 @@ SET NOCOUNT ON
 				,sum(case when a.statusid = 112 then (company_winlost - ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) *actualrate else 0 end) as ourPT_won
 				,sum(case when a.statusid = 113 then (company_winlost- ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) *actualrate else 0 end) as ourPT_lose				
 				,a.sporttype	
-			FROM rmSumWinloss_Old a WITH(NOLOCK)
-			INNER JOIN @tmpSelection b ON a.combo=b.selection
-			INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
-			LEFT JOIN rmSumWinlossExtraPT_Old e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo]
+			FROM rmSumWinloss_old a WITH(NOLOCK)
+				INNER JOIN @tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
+				LEFT JOIN rmSumWinlossExtraPT_Old e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo]
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 				AND a.statusid IN (112,113)
 				AND currency <> 20					
