@@ -3,12 +3,15 @@
 Created: Jacob
 Date: 2018-09-27
 Task: Apply Extra PT and Super Comm to Report.  RedmineID: #100951
-DB: DBRMS/bodb_RMS
+DB: DBARC/bodb_Archive
 		
 Revisions:
     - 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 		
 Parameter's Explanation:
 */
+
+USE bodb_Archive
+GO
 
 SET NOCOUNT ON;
 DECLARE @fromdate SMALLDATETIME;
@@ -183,9 +186,6 @@ WHILE @tempdate <= @todate
                FROM #tmpbettrans b
                     LEFT JOIN #Acc_GroupExtraPTSetting AS a WITH (NOLOCK) ON srecommend = a.SuperId
                                                                              AND winlostdate BETWEEN a.FromDate AND a.Todate
-                                                                             AND a.ProductID = 1
-                                                                             AND a.Sporttype = 0
-                                                                             AND a.SubProduct = ''
                GROUP BY winlostdate,
                         b.custid,
                         transid2,

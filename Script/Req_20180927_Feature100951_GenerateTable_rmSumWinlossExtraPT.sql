@@ -11,6 +11,8 @@ Parameter's Explanation:
 */
 
 USE [bodb02];
+GO
+
 SET NOCOUNT ON;
 DECLARE @fromdate SMALLDATETIME;
 DECLARE @todate SMALLDATETIME;
@@ -195,9 +197,6 @@ WHILE @tempdate <= @todate
                FROM #tmpbettrans b
                     LEFT JOIN #Acc_GroupExtraPTSetting AS a WITH (NOLOCK) ON srecommend = a.SuperId
                                                                              AND winlostdate BETWEEN a.FromDate AND a.Todate
-                                                                             AND a.ProductID = 1
-                                                                             AND a.Sporttype = 0
-                                                                             AND a.SubProduct = ''
                GROUP BY winlostdate,
                         b.custid,
                         transid2,
