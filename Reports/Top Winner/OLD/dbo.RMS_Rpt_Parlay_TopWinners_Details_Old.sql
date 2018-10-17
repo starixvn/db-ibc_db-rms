@@ -1,4 +1,6 @@
-﻿ ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_TopWinners_Details_Old]
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
+
+ ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_TopWinners_Details_Old]
 	@custid			INT,
 	@fromdate		DATETIME,
 	@todate			DATETIME,
@@ -15,6 +17,7 @@
 			- 20130121@Johnson: Move sp from DB06.BODB02 to DBARC.bodb_Archive
 			- 20130225@Johnson: include lose tickets into report
 			- 20130813@Johnson: add combination filter
+			- 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 		
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -63,13 +66,18 @@ SET NOCOUNT ON
 		,liveawayscore
 		,stake
 		,winlost-actual_stake
-		,-(winlost-actual_stake)*(1-tpositiontaking)
+		,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) 
 		,stake*actualrate
 		,(winlost-actual_stake)*actualrate
-		,-(winlost-actual_stake)*(1-tpositiontaking)*actualrate
+		,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate
 		,RIGHT(betcheck,len(betcheck)-1)
 		,modds
 	FROM dbo.bettrans_bk WITH(NOLOCK, INDEX = IX_CustID)
+	LEFT JOIN bodb02.dbo.Acc_GroupExtraPTSetting AS a WITH (NOLOCK) ON srecommend = a.SuperId
+																				AND winlostdate BETWEEN a.FromDate AND a.Todate
+																				AND a.ProductID = 1
+																				AND a.Sporttype = 0
+																				AND a.SubProduct = ''
 	WHERE custid = @custid
 		AND matchid = 9 		
 		AND winlostdate BETWEEN @fromdate AND @todate
@@ -81,4 +89,3 @@ SET NOCOUNT ON
 	ORDER BY transid DESC
 	
 GO
-GRANT EXECUTE ON [dbo].[RMS_Rpt_Parlay_TopWinners_Details_Old] TO [bodbRMSNet]

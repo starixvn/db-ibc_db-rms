@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_TopWinners]
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
+
+ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_TopWinners]
 	@fromdate	DATETIME,
 	@todate		DATETIME,
 	@movebetsday DATETIME,
@@ -20,7 +22,9 @@ AS
 			- 20130315@Johnson: calculate average win odds by formula : Winning Amount/Stake
 			- 20130813@Johnson: add combination filter
 			- 20130918@Johnson: change to use table rmSumWinloss and rmSumWinloss_old instead rmSumWinloss2 and rmSumWinloss_old2 
+			- 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 		
 		Parameter's Explanation:
+		Example: exec [RMS_Rpt_Parlay_TopWinners] @fromdate = '2018-09-01', @todate='2018-10-30', @movebetsday='2018-09-06',@balanceupday='2018-09-28'
 	*/ 
 SET NOCOUNT ON
 	DECLARE @f_date DATETIME,
@@ -75,12 +79,17 @@ SET NOCOUNT ON
 			 ,currency
 			 ,SUM(stake)
 			 ,SUM(winlost - actual_stake)
-			 ,SUM(-(winlost-actual_stake)*(1-tpositiontaking))
+			 ,SUM(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) )
 			 ,SUM(stake*actualrate)
 			 ,SUM((winlost-actual_stake)*actualrate)
-			 ,SUM(-(winlost-actual_stake)*(1-tpositiontaking)*actualrate)
+			 ,SUM((-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate)
 			 ,COUNT(1) as betcount			
 		 FROM rmBettrans WITH(NOLOCK)
+		 LEFT JOIN bodb02.dbo.Acc_GroupExtraPTSetting AS a WITH (NOLOCK) ON srecommend = a.SuperId
+																				AND winlostdate BETWEEN a.FromDate AND a.Todate
+																				AND a.ProductID = 1
+																				AND a.Sporttype = 0
+																				AND a.SubProduct = ''
 		 WHERE winlostdate BETWEEN @f_date AND @t_date
 			AND matchid = 9 
 			AND statusid IN (112,113)
@@ -106,22 +115,23 @@ SET NOCOUNT ON
 				,company_winlost_baseRM
 				,betcount				
 			)
-			SELECT custid
+			SELECT a.custid
 				,username
 				,currency
-				,SUM(stake)
-				,SUM(winlost-stake)
-				,SUM(company_winlost)
-				,SUM(stake*actualrate)
-				,SUM((winlost-stake)*actualrate)
-				,SUM(company_winlost*actualrate)
+				,SUM(a.stake)
+				,SUM(a.winlost-a.stake)
+				,SUM((company_winlost - ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) )
+				,SUM(a.stake*a.actualrate)
+				,SUM((a.winlost-a.stake)*a.actualrate)
+				,SUM((company_winlost - ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) *actualrate )				
 				,SUM(betcount)				
-			FROM rmSumWinloss WITH(NOLOCK)
-			WHERE winlostdate BETWEEN @f_date AND @t_date
-				AND sporttype = ISNULL(@sporttype,sporttype)
-				AND statusid IN (112,113)
-				AND combo IN (SELECT selection FROM @tmpSelection WHERE selection <=6)
-			GROUP BY custid, username, currency
+			FROM rmSumWinloss a WITH(NOLOCK)
+			LEFT JOIN rmSumWinLossExtraPT e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo]
+			WHERE a.winlostdate BETWEEN @f_date AND @t_date
+				AND a.sporttype = ISNULL(@sporttype,a.sporttype)
+				AND a.statusid IN (112,113)
+				AND a.combo IN (SELECT selection FROM @tmpSelection WHERE selection <=6)
+			GROUP BY a.custid, username, currency
 		END
 		IF @fromdate < @balanceupday
 		BEGIN
@@ -139,22 +149,23 @@ SET NOCOUNT ON
 				,company_winlost_baseRM
 				,betcount				
 			)
-			SELECT custid
+			SELECT a.custid
 				,username
 				,currency
-				,SUM(stake)
-				,SUM(winlost-stake)
-				,SUM(company_winlost)
-				,SUM(stake*actualrate)
-				,SUM((winlost-stake)*actualrate)
-				,SUM(company_winlost*actualrate)
+				,SUM(a.stake)
+				,SUM(a.winlost-a.stake)
+				,SUM((company_winlost - ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) )
+				,SUM(a.stake*a.actualrate)
+				,SUM((a.winlost-a.stake)*actualrate)
+				,SUM((company_winlost - ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) *actualrate )				
 				,SUM(betcount)				
-			FROM rmSumWinloss_Old WITH(NOLOCK)
-			WHERE winlostdate BETWEEN @f_date AND @t_date
-				AND sporttype = ISNULL(@sporttype,sporttype)
-				AND statusid IN (112,113)
-				AND combo IN (SELECT selection FROM @tmpSelection WHERE selection <=6)
-			GROUP BY custid, username, currency
+			FROM rmSumWinloss_Old a WITH(NOLOCK)
+			LEFT JOIN rmSumWinLossExtraPT_Old e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo]
+			WHERE a.winlostdate BETWEEN @f_date AND @t_date
+				AND a.sporttype = ISNULL(@sporttype,a.sporttype)
+				AND a.statusid IN (112,113)
+				AND a.combo IN (SELECT selection FROM @tmpSelection WHERE selection <=6)
+			GROUP BY a.custid, username, currency
 		END
 	END
 	
@@ -197,4 +208,3 @@ SET NOCOUNT ON
 	
 	
 GO
-GRANT EXECUTE ON [dbo].[RMS_Rpt_Parlay_TopWinners] TO [bodbRMSNet]

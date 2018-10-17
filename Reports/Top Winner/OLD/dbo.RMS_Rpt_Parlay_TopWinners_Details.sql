@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_TopWinners_Details]
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
+
+ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_TopWinners_Details]
 	@custid			INT,
 	@fromdate		DATETIME,
 	@todate			DATETIME,
@@ -17,6 +19,7 @@ AS
 			- 20130125@Johnson: move bettransParlay from bodb02 to bodb_RMS and rename to rmBettrans
 			- 20130225@Johnson: include lose tickets in report
 			- 20130813@Johnson: add combination filter
+			- 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 		
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -73,13 +76,18 @@ SET NOCOUNT ON
 			,liveawayscore
 			,stake
 			,winlost-actual_stake
-			,-(winlost-actual_stake)*(1-tpositiontaking) as company_winlost
+			,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking)
 			,stake*actualrate
 			,(winlost-actual_stake)*actualrate
-			,-(winlost-actual_stake)*(1-tpositiontaking)*actualrate as company_winlost_baseRM
+			,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate as company_winlost_baseRM
 			,RIGHT(betcheck,len(betcheck)-1)
 			,modds
 		FROM rmBettrans WITH(NOLOCK)
+		LEFT JOIN bodb02.dbo.Acc_GroupExtraPTSetting AS a WITH (NOLOCK) ON srecommend = a.SuperId
+																				AND winlostdate BETWEEN a.FromDate AND a.Todate
+																				AND a.ProductID = 1
+																				AND a.Sporttype = 0
+																				AND a.SubProduct = ''
 		WHERE custid = @custid
 			AND matchid = 9 
 			AND winlostdate BETWEEN @f_date AND @t_date
@@ -106,13 +114,18 @@ SET NOCOUNT ON
 				,liveawayscore
 				,stake
 				,winlost-actual_stake
-				,-(winlost-actual_stake)*(1-tpositiontaking)
+				,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking)
 				,stake*actualrate
 				,(winlost-actual_stake)*actualrate
-				,-(winlost-actual_stake)*(1-tpositiontaking)*actualrate
+				,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate as company_winlost_baseRM
 				,RIGHT(betcheck,len(betcheck)-1)
 				,modds
 			FROM bodb02.dbo.bettrans14 WITH(NOLOCK)
+			LEFT JOIN bodb02.dbo.Acc_GroupExtraPTSetting AS a WITH (NOLOCK) ON srecommend = a.SuperId
+																				AND winlostdate BETWEEN a.FromDate AND a.Todate
+																				AND a.ProductID = 1
+																				AND a.Sporttype = 0
+																				AND a.SubProduct = ''
 			WHERE custid = @custid
 				AND matchid = 9 
 				AND bettype = 9
@@ -126,5 +139,3 @@ SET NOCOUNT ON
 	ORDER BY transid DESC
 	
 GO
-GRANT EXECUTE ON [dbo].[RMS_Rpt_Parlay_TopWinners_Details] TO [bodbRMSNet]
- 
