@@ -24,7 +24,16 @@ FROM dbo.match14 WITH (NOLOCK);
 DECLARE @tempdate SMALLDATETIME;
 SELECT @tempdate = @fromdate;
 
--- 1. Truncate table rmSumWinlossExtraPT
+-- 1.0 Cache data for Acc_GroupExtraPTSetting
+SELECT *
+INTO #Acc_GroupExtraPTSetting
+FROM Acc_GroupExtraPTSetting AS a WITH (NOLOCK)
+WHERE a.ProductID = 1
+      AND a.Sporttype = 0
+      AND a.SubProduct = '';
+CREATE CLUSTERED INDEX IX_SuperId ON #Acc_GroupExtraPTSetting(SuperId);
+
+-- 1.1 Truncate table rmSumWinlossExtraPT
 PRINT 'Starting truncate rmSumWinlossExtraPT';
 TRUNCATE TABLE rmSumWinlossExtraPT;
 -- 2. Loop for each date
@@ -143,19 +152,19 @@ WHILE @tempdate <= @todate
               bb.transid2 = aa.transid2
         FROM #tmpbettrans bb
              INNER JOIN
-(
-    SELECT b.refno,
-           CASE
-               WHEN COUNT(DISTINCT(sporttype)) = 1
-               THEN MIN(sporttype)
-               WHEN COUNT(DISTINCT(sporttype)) <> 1
-                    AND MIN(sporttype) = 1
-               THEN-3
-               ELSE-1
-           END AS transid2
-    FROM #tmpbettransm b
-    GROUP BY b.refno
-) aa ON aa.refno = bb.refno;
+			 (
+				SELECT b.refno,
+					  CASE
+						 WHEN COUNT(DISTINCT(sporttype)) = 1
+						 THEN MIN(sporttype)
+						 WHEN COUNT(DISTINCT(sporttype)) <> 1
+							 AND MIN(sporttype) = 1
+						 THEN-3
+						 ELSE-1
+					  END AS transid2
+				FROM #tmpbettransm b
+				GROUP BY b.refno
+			 ) aa ON aa.refno = bb.refno;
         INSERT INTO #TemprmSumWinloss
                (winlostdate,
                 custid,
@@ -184,11 +193,11 @@ WHILE @tempdate <= @todate
                       SUM(-(winlost - stake) * ISNULL(a.ExtraPT, 0)),
                       SUM(scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking))
                FROM #tmpbettrans b
-                    LEFT JOIN dbo.Acc_GroupExtraPTSetting AS a WITH (NOLOCK) ON srecommend = a.SuperId
-                                                                                AND winlostdate BETWEEN a.FromDate AND a.Todate
-                                                                                AND a.ProductID = 1
-                                                                                AND a.Sporttype = 0
-                                                                                AND a.SubProduct = ''
+                    LEFT JOIN #Acc_GroupExtraPTSetting AS a WITH (NOLOCK) ON srecommend = a.SuperId
+                                                                             AND winlostdate BETWEEN a.FromDate AND a.Todate
+                                                                             AND a.ProductID = 1
+                                                                             AND a.Sporttype = 0
+                                                                             AND a.SubProduct = ''
                GROUP BY winlostdate,
                         b.custid,
                         transid2,
@@ -228,6 +237,7 @@ WHILE @tempdate <= @todate
         DROP TABLE #tmpbettransm;
         SELECT @tempdate = DATEADD(day, 1, @tempdate);
     END;
+DROP TABLE #Acc_GroupExtraPTSetting;
 GO
 
 
