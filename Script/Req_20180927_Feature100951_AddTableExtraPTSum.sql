@@ -12,13 +12,6 @@
 USE [bodb_RMS]
 GO
 
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-
 CREATE TABLE [dbo].[rmSumWinlossExtraPT](
 	[winlostdate] [smalldatetime] NOT NULL,
 	[custid] [int] NOT NULL,
@@ -32,8 +25,6 @@ CREATE TABLE [dbo].[rmSumWinlossExtraPT](
 ) ON [rmSumWinloss]
 GO
 
-
-
 CREATE CLUSTERED INDEX [CIX_rmSumWinlossExtraPT] ON [dbo].[rmSumWinlossExtraPT]
 (
 	[custid] ASC,
@@ -41,10 +32,8 @@ CREATE CLUSTERED INDEX [CIX_rmSumWinlossExtraPT] ON [dbo].[rmSumWinlossExtraPT]
 	[sporttype] ASC,
 	[statusid] ASC,
 	[combo] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [rmSumWinloss]
+) ON [rmSumWinloss]
 GO
-
-
 
 CREATE TABLE [dbo].[rmSumWinlossExtraPT_Old](
 	[winlostdate] [smalldatetime] NOT NULL,
@@ -67,7 +56,7 @@ CREATE CLUSTERED INDEX [CIX_rmSumWinlossExtraPT_OLD] ON [dbo].[rmSumWinlossExtra
 	[sporttype] ASC,
 	[statusid] ASC,
 	[combo] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [rmSumWinlossOld]
+) ON [rmSumWinlossOld]
 GO
 
 
