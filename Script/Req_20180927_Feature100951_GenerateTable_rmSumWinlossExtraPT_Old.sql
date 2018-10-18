@@ -22,6 +22,8 @@ FROM bodb02.dbo.bettrans WITH (NOLOCK)
 WHERE bettype = 20000
       AND matchid = 0
       AND custid = 3;
+SELECT @fromdate = DATEADD(day, -30, @todate);
+
 DECLARE @tempdate SMALLDATETIME;
 SELECT @tempdate = @fromdate;
 
@@ -198,7 +200,7 @@ WHILE @tempdate <= @todate
                             THEN LEN(betteam)
                             ELSE hdp2
                         END;
-        INSERT INTO rmSumWinlossExtraPT_Old
+        INSERT INTO DB052.bodb_RMS.dbo.rmSumWinlossExtraPT_Old
                (winlostdate,
                 custid,
                 sporttype,

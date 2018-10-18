@@ -35,9 +35,6 @@ WHERE a.ProductID = 1
       AND a.SubProduct = '';
 CREATE CLUSTERED INDEX IX_SuperId ON #Acc_GroupExtraPTSetting(SuperId);
 
--- 1.1 Truncate table rmSumWinlossExtraPT
-PRINT 'Starting truncate rmSumWinlossExtraPT';
-TRUNCATE TABLE rmSumWinlossExtraPT;
 -- 2. Loop for each date
 WHILE @tempdate <= @todate
     BEGIN
@@ -209,7 +206,7 @@ WHILE @tempdate <= @todate
                             THEN LEN(betteam)
                             ELSE hdp2
                         END;
-        INSERT INTO rmSumWinlossExtraPT
+        INSERT INTO DB052.bodb_RMS.dbo.rmSumWinlossExtraPT
                (winlostdate,
                 custid,
                 sporttype,
