@@ -26,13 +26,25 @@ FROM dbo.match14 WITH (NOLOCK);
 DECLARE @tempdate SMALLDATETIME;
 SELECT @tempdate = @fromdate;
 
+-- 0.1 Truncate table 
+TRUNCATE TABLE DB052.bodb_RMS.dbo.rmSumWinlossExtraPT
+
 -- 1.0 Cache data for Acc_GroupExtraPTSetting
-SELECT *
-INTO #Acc_GroupExtraPTSetting
-FROM Acc_GroupExtraPTSetting AS a WITH (NOLOCK)
+CREATE TABLE #ExtraPT_Sel( ProductID  INT,
+                        Sporttype  INT,
+                        SubProduct VARCHAR(100),
+                        SuperID    INT,
+				    FromDate DATETIME,
+				    ToDate DATETIME,
+                        ExtraPT    DECIMAL(9, 8));
+INSERT INTO #ExtraPT_Sel
+		  ( ProductID, Sporttype, SubProduct, SuperID, FromDate, ToDate, ExtraPT)
+SELECT ProductID, SportType, SubProduct, SuperId, FromDate, ToDate, SUM(ExtraPT) AS ExtraPT
+FROM Acc_GroupExtraPTSetting a WITH ( NOLOCK )
 WHERE a.ProductID = 1
-      AND a.Sporttype = 0
-      AND a.SubProduct = ''
+    AND a.Sporttype = 0
+    AND a.SubProduct = ''
+GROUP BY ProductID, SportType, SubProduct, SuperId, FromDate, ToDate;
 
 CREATE TABLE #TemprmSumWinloss
                      ([winlostdate]     [SMALLDATETIME] NOT NULL,
@@ -128,7 +140,7 @@ BEGIN
             SELECT a.refno,
                     m.sporttype
             FROM #tmpbettrans b(NOLOCK)
-                INNER JOIN bodb_Archive.dbo.bettransm a(NOLOCK) ON a.refno = b.refno
+                INNER JOIN bodb_Archive.dbo.bettransm a WITH (NOLOCK, INDEX = ix_bettransm) ON a.refno = b.refno
                 INNER JOIN bodb_Archive.dbo.match_bk m(NOLOCK) ON a.matchid = m.matchid
             WHERE m.sporttype <= 99;
 
@@ -198,7 +210,7 @@ BEGIN
                     SUM(-(winlost - stake) * ISNULL(a.ExtraPT, 0)),
                     SUM(scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking))
             FROM #tmpbettrans b
-                LEFT JOIN #Acc_GroupExtraPTSetting AS a WITH (NOLOCK) ON srecommend = a.SuperId
+                LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId
                                                                             AND winlostdate BETWEEN a.FromDate AND a.Todate
             GROUP BY winlostdate,
                     b.custid,
@@ -236,7 +248,7 @@ BEGIN
        
     SELECT @tempdate = DATEADD(day, 1, @tempdate);
 END
-DROP TABLE #Acc_GroupExtraPTSetting;
+DROP TABLE #ExtraPT_Sel;
 GO
 
 

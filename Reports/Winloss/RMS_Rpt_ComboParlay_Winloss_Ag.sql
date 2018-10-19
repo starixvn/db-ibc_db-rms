@@ -91,6 +91,23 @@ SET NOCOUNT ON
 		FROM f_RMS_strSplit (@10up,',')		
 	END
 	
+
+	CREATE TABLE #ExtraPT_Sel( ProductID  INT,
+                                   Sporttype  INT,
+                                   SubProduct VARCHAR(100),
+                                   SuperID    INT,
+							FromDate DATETIME,
+							ToDate DATETIME,
+                                   ExtraPT    DECIMAL(9, 8));
+    INSERT INTO #ExtraPT_Sel
+			 ( ProductID, Sporttype, SubProduct, SuperID, FromDate, ToDate, ExtraPT)
+    SELECT ProductID, SportType, SubProduct, SuperId, FromDate, ToDate, SUM(ExtraPT) AS ExtraPT
+    FROM bodb02.dbo.Acc_GroupExtraPTSetting a WITH ( NOLOCK )
+    WHERE a.ProductID = 1
+	   AND a.Sporttype = 0
+	   AND a.SubProduct = ''
+    GROUP BY ProductID, SportType, SubProduct, SuperId, FromDate, ToDate;
+
 	IF @todate > @movebetsday
 	BEGIN
 		SELECT @f_date = CASE WHEN @fromdate <= @movebetsday THEN DATEADD(dd,1,@movebetsday) ELSE @fromdate END,
@@ -145,11 +162,7 @@ SET NOCOUNT ON
 		 FROM rmBettrans WITH(NOLOCK)
 		 INNER JOIN @tmpSelection b ON CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END =b.selection
 		 INNER JOIN @tmpSport c ON transid2=c.sporttype
-		 LEFT JOIN bodb02.dbo.Acc_GroupExtraPTSetting AS a WITH (NOLOCK) ON srecommend = a.SuperId
-                                                                        AND winlostdate BETWEEN a.FromDate AND a.Todate
-														  AND a.ProductID = 1
-														  AND a.Sporttype = 0
-														  AND a.SubProduct = ''
+		 LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 		 WHERE recommend = @custid 
 			AND winlostdate BETWEEN @f_date AND @t_date
 			AND matchid IN( 9 ,29)
@@ -257,5 +270,5 @@ SET NOCOUNT ON
 	GROUP BY month,username
 	ORDER BY month,username		
 
+	DROP TABLE #ExtraPT_Sel
 GO
-GRANT EXECUTE ON [dbo].[RMS_Rpt_ComboParlay_Winloss_Ag] TO [bodbRMSNet]		
