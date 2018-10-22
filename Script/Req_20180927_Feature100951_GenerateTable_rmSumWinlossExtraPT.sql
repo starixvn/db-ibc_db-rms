@@ -216,8 +216,7 @@ BEGIN
                     SUM(-(winlost - stake) * ISNULL(a.ExtraPT, 0)),
                     SUM(scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking))
             FROM #tmpbettrans b
-                LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId
-                                                                            AND winlostdate BETWEEN a.FromDate AND a.Todate
+                LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
             GROUP BY winlostdate,
                     b.custid,
                     transid2,
@@ -229,7 +228,10 @@ BEGIN
                                 AND betcheck IS NULL
                         THEN LEN(betteam)
                         ELSE hdp2
-                    END;
+                    END,
+					CASE WHEN bettype=9 THEN 1 
+					  WHEN bettype=29 AND betteam='1' THEN 2
+					  ELSE 3 END;
     INSERT INTO DB052.bodb_RMS.dbo.rmSumWinlossExtraPT
             (winlostdate,
             custid,

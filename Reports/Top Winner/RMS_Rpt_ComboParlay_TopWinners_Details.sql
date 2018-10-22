@@ -186,7 +186,7 @@ SET NOCOUNT ON
 				,CASE WHEN bettype=9 OR betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 				,CASE WHEN bettype=9 THEN 1 ELSE NULL END AS TotalCombo
 			FROM bodb02.dbo.bettrans14 WITH(NOLOCK)
-			LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId 
+			LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 			WHERE custid = @custid
 				AND matchid IN(9,29) 
 				AND bettype IN(9,29)

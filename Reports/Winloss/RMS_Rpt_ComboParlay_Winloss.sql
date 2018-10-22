@@ -52,7 +52,6 @@ SET NOCOUNT ON
 	DECLARE @tmpParlayType TABLE (parlaytype tinyint)
 	DECLARE @_ParlayType	TINYINT
 	DECLARE @tmpSport TABLE (sporttype int)
-	DECLARE @tmpSelection_Sport TABLE(selection tinyint, sporttype int)		
 	
 	INSERT INTO @tmpSport (sporttype)
 	SELECT val
@@ -95,7 +94,10 @@ SET NOCOUNT ON
 		FROM f_RMS_strSplit (@10up,',')		
 	END
 	
-	INSERT INTO @tmpSelection_Sport (sporttype, selection)
+	CREATE TABLE  #tmpSelection_Sport (selection tinyint, sporttype int)		
+	CREATE INDEX IX_tmpSelection_Sport ON #tmpSelection_Sport (selection,sporttype)
+		
+	INSERT INTO #tmpSelection_Sport (sporttype, selection)
 	SELECT sporttype, selection
 	FROM @tmpSelection CROSS JOIN @tmpSport	
 
@@ -106,20 +108,19 @@ SET NOCOUNT ON
                                    SuperID    INT,
 							FromDate DATETIME,
 							ToDate DATETIME,
-                                   ExtraPT    DECIMAL(9, 8));
-    INSERT INTO #ExtraPT_Sel
-			 ( ProductID, Sporttype, SubProduct, SuperID, FromDate, ToDate, ExtraPT)
-    SELECT ProductID, SportType, SubProduct, SuperId, FromDate, ToDate, SUM(ExtraPT) AS ExtraPT
-    FROM bodb02.dbo.Acc_GroupExtraPTSetting a WITH ( NOLOCK )
-    WHERE a.ProductID = 1
-	   AND a.Sporttype = 0
-	   AND a.SubProduct = ''
-    GROUP BY ProductID, SportType, SubProduct, SuperId, FromDate, ToDate;
-
+                                   ExtraPT    DECIMAL(9, 8));   
 	IF @todate > @movebetsday
 	BEGIN
 		SELECT @f_date = CASE WHEN @fromdate <= @movebetsday THEN DATEADD(dd,1,@movebetsday) ELSE @fromdate END,
 				@t_date = @todate
+		 INSERT INTO #ExtraPT_Sel
+			 ( ProductID, Sporttype, SubProduct, SuperID, FromDate, ToDate, ExtraPT)
+		SELECT ProductID, SportType, SubProduct, SuperId, FromDate, ToDate, SUM(ExtraPT) AS ExtraPT
+		FROM bodb02.dbo.Acc_GroupExtraPTSetting a WITH ( NOLOCK )
+		WHERE a.ProductID = 1
+		   AND a.Sporttype = 0
+		   AND a.SubProduct = ''
+		GROUP BY ProductID, SportType, SubProduct, SuperId, FromDate, ToDate;
 		
 		INSERT INTO @rptWinloss(
 				winlostdate
@@ -171,7 +172,7 @@ SET NOCOUNT ON
 			    END) AS ourPT_lose
 			,transid2
 		FROM rmBettrans WITH(NOLOCK)
-			INNER JOIN @tmpSelection_Sport b ON CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END =b.selection AND transid2=b.sporttype
+			INNER JOIN #tmpSelection_Sport b ON CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END =b.selection AND transid2=b.sporttype
 			LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 		 WHERE winlostdate BETWEEN @f_date AND @t_date
 			AND matchid IN(9,29) 
@@ -215,7 +216,7 @@ SET NOCOUNT ON
 				,sum(case when a.statusid = 113 then (company_winlost- ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) *actualrate else 0 end) as ourPT_lose		
 				,a.sporttype	
 			FROM rmSumWinloss a WITH(NOLOCK)
-				INNER JOIN @tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
+				INNER JOIN #tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
 				LEFT JOIN rmSumWinLossExtraPT e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo] AND a.[parlaytype] = e.[parlaytype]
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 					AND a.statusid IN (112,113)
@@ -255,7 +256,7 @@ SET NOCOUNT ON
 				,sum(case when a.statusid = 113 then (company_winlost- ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) *actualrate else 0 end) as ourPT_lose				
 				,a.sporttype	
 			FROM rmSumWinloss_old a WITH(NOLOCK)
-				INNER JOIN @tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
+				INNER JOIN #tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
 				LEFT JOIN rmSumWinlossExtraPT_Old e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo] AND a.[parlaytype] = e.[parlaytype]
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 				AND a.statusid IN (112,113)
@@ -298,4 +299,5 @@ SET NOCOUNT ON
 	 ORDER BY winlostdate ASC
 
 	 DROP TABLE #ExtraPT_Sel
+	 DROP TABLE #tmpSelection_Sport
 GO
