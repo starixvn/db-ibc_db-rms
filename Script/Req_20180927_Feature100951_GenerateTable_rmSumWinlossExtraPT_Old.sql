@@ -23,14 +23,12 @@ WHERE bettype = 20000
       AND matchid = 0
       AND custid = 3;
 
-SELECT @fromdate = DATEADD(day, -30, @todate);
+-- SELECT @fromdate = DATEADD(day, -30, @todate);
+SELECT @fromdate = @todate;
 
 DECLARE @tempdate SMALLDATETIME;
 SELECT @tempdate = @fromdate;
 
--- 0.1 Truncate table rmSumWinlossExtraPT_Old
-
-TRUNCATE TABLE DB052.bodb_RMS.dbo.rmSumWinlossExtraPT_Old
 
 -- 1.0 Cache data for Acc_GroupExtraPTSetting
 
