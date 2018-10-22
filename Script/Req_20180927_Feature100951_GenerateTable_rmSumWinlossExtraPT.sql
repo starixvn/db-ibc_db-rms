@@ -53,6 +53,7 @@ CREATE TABLE #TemprmSumWinloss
                       [sporttype]       [SMALLINT] NULL,
                       [statusid]        [TINYINT] NOT NULL,
                       [combo]           [TINYINT] NOT NULL,
+					  [parlaytype] 		[tinyint] NULL,
                       [extraPT_scomm]   [MONEY] NULL,
                       [extraPT_stake]   [MONEY] NULL,
                       [extraPT_winlost] [MONEY] NULL,
@@ -189,6 +190,7 @@ BEGIN
             sporttype,
             statusid,
             combo,
+			parlaytype,
             extraPT_scomm,
             extraPT_stake,
             extraPT_winlost,
@@ -206,6 +208,9 @@ BEGIN
                         THEN LEN(betteam)
                         ELSE hdp2
                     END AS combo,
+					CASE WHEN bettype=9 THEN 1 
+					  WHEN bettype=29 AND betteam='1' THEN 2
+					  ELSE 3 END AS ParlayType,
                     SUM(scomm),
                     SUM(stake * ISNULL(a.ExtraPT, 0)),
                     SUM(-(winlost - stake) * ISNULL(a.ExtraPT, 0)),
@@ -231,6 +236,7 @@ BEGIN
             sporttype,
             statusid,
             combo,
+			parlaytype,
             stake,
             winlost,
             comm,
@@ -241,6 +247,7 @@ BEGIN
                     sporttype,
                     statusid,
                     combo,
+					parlaytype,
                     extraPT_stake,
                     extraPT_winlost,
                     extraPT_comm,

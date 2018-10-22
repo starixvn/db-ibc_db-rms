@@ -216,7 +216,7 @@ SET NOCOUNT ON
 				,a.sporttype	
 			FROM rmSumWinloss a WITH(NOLOCK)
 				INNER JOIN @tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
-				LEFT JOIN rmSumWinLossExtraPT e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo]
+				LEFT JOIN rmSumWinLossExtraPT e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo] AND a.[parlaytype] = e.[parlaytype]
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 					AND a.statusid IN (112,113)
 					AND currency <> 20				
@@ -256,7 +256,7 @@ SET NOCOUNT ON
 				,a.sporttype	
 			FROM rmSumWinloss_old a WITH(NOLOCK)
 				INNER JOIN @tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
-				LEFT JOIN rmSumWinlossExtraPT_Old e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo]
+				LEFT JOIN rmSumWinlossExtraPT_Old e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo] AND a.[parlaytype] = e.[parlaytype]
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 				AND a.statusid IN (112,113)
 				AND currency <> 20					
