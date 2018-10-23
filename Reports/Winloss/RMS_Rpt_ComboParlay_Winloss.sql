@@ -208,16 +208,15 @@ SET NOCOUNT ON
 				,a.combo
 				,sum(case when a.statusid = 112 then betcount else 0 end) as tickets_won
 				,sum(case when a.statusid = 113 then betcount else 0 end) as tickets_lose
-				,sum(case when a.statusid = 112 then company_stake*actualrate - ISNULL(e.stake, 0) * actualrate else 0 end) as stake_won
-				,sum(case when a.statusid = 113 then company_stake*actualrate - ISNULL(e.stake, 0) * actualrate else 0 end) as stake_lose
+				,sum(case when a.statusid = 112 then company_stake*actualrate - ISNULL(a.Extra_stake, 0) * actualrate else 0 end) as stake_won
+				,sum(case when a.statusid = 113 then company_stake*actualrate - ISNULL(a.Extra_stake, 0) * actualrate else 0 end) as stake_lose
 				,sum(case when a.statusid = 112 then -(a.winlost-a.stake)*actualrate else 0 end) as member_won
 				,sum(case when a.statusid = 113 then -(a.winlost-a.stake)*actualrate else 0 end) as member_lose
-				,sum(case when a.statusid = 112 then (company_winlost - ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) *actualrate else 0 end) as ourPT_won
-				,sum(case when a.statusid = 113 then (company_winlost- ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) *actualrate else 0 end) as ourPT_lose		
+				,sum(case when a.statusid = 112 then (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) *actualrate else 0 end) as ourPT_won
+				,sum(case when a.statusid = 113 then (company_winlost- ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) *actualrate else 0 end) as ourPT_lose		
 				,a.sporttype	
 			FROM rmSumWinloss a WITH(NOLOCK)
 				INNER JOIN #tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
-				LEFT JOIN rmSumWinLossExtraPT e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo] AND a.[parlaytype] = e.[parlaytype]
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 					AND a.statusid IN (112,113)
 					AND currency <> 20				
@@ -248,16 +247,15 @@ SET NOCOUNT ON
 				,a.combo
 				,sum(case when a.statusid = 112 then betcount else 0 end) as tickets_won
 				,sum(case when a.statusid = 113 then betcount else 0 end) as tickets_lose
-				,sum(case when a.statusid = 112 then company_stake*actualrate - ISNULL(e.stake, 0) * actualrate else 0 end) as stake_won
-				,sum(case when a.statusid = 113 then company_stake*actualrate - ISNULL(e.stake, 0) * actualrate else 0 end) as stake_lose
+				,sum(case when a.statusid = 112 then company_stake*actualrate - ISNULL(a.Extra_stake, 0) * actualrate else 0 end) as stake_won
+				,sum(case when a.statusid = 113 then company_stake*actualrate - ISNULL(a.Extra_stake, 0) * actualrate else 0 end) as stake_lose
 				,sum(case when a.statusid = 112 then -(a.winlost-a.stake)*actualrate else 0 end) as member_won
 				,sum(case when a.statusid = 113 then -(a.winlost-a.stake)*actualrate else 0 end) as member_lose
-				,sum(case when a.statusid = 112 then (company_winlost - ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) *actualrate else 0 end) as ourPT_won
-				,sum(case when a.statusid = 113 then (company_winlost- ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) *actualrate else 0 end) as ourPT_lose				
+				,sum(case when a.statusid = 112 then (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) *actualrate else 0 end) as ourPT_won
+				,sum(case when a.statusid = 113 then (company_winlost- ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) *actualrate else 0 end) as ourPT_lose				
 				,a.sporttype	
 			FROM rmSumWinloss_old a WITH(NOLOCK)
 				INNER JOIN #tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
-				LEFT JOIN rmSumWinlossExtraPT_Old e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo] AND a.[parlaytype] = e.[parlaytype]
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 				AND a.statusid IN (112,113)
 				AND currency <> 20					

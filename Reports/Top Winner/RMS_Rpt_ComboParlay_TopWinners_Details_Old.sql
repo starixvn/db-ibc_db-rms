@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBARC-bodb_Archive" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
 
  ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details_Old]
 	@custid			INT,

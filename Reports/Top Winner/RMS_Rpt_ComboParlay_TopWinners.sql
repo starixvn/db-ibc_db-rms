@@ -167,13 +167,12 @@ SET NOCOUNT ON
 				,currency
 				,SUM(a.stake)
 				,SUM(a.winlost-a.stake)
-				,SUM((company_winlost - ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) )
+				,SUM((company_winlost - ISNULL(a.extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.extra_comm, 0)) )
 				,SUM(a.stake*actualrate)
 				,SUM((a.winlost-a.stake)*actualrate)
-				,SUM((company_winlost - ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) *actualrate )				
+				,SUM((company_winlost - ISNULL(a.extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.extra_comm, 0)) *actualrate )				
 				,SUM(betcount)				
 			FROM rmSumWinloss a WITH(NOLOCK)
-				LEFT JOIN rmSumWinLossExtraPT e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo] AND a.[parlaytype] = e.[parlaytype]
 				INNER JOIN @tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 				AND a.statusid IN (112,113)	
@@ -202,13 +201,12 @@ SET NOCOUNT ON
 				,currency
 				,SUM(a.stake)
 				,SUM(a.winlost-a.stake)
-				,SUM((company_winlost - ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) )
+				,SUM((company_winlost - ISNULL(a.extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.extra_comm, 0)) )
 				,SUM(a.stake*actualrate)
 				,SUM((a.winlost-a.stake)*actualrate)
-				,SUM((company_winlost - ISNULL(e.winlost, 0) - ISNULL(e.scomm, 0) + ISNULL(e.comm, 0)) *actualrate )				
+				,SUM((company_winlost - ISNULL(a.extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.extra_comm, 0)) *actualrate )				
 				,SUM(betcount)				
 			FROM rmSumWinloss_old a WITH(NOLOCK)
-				LEFT JOIN rmSumWinLossExtraPT_Old e WITH(NOLOCK) ON a.[custid] = e.[custid] AND a.[winlostdate] = e.[winlostdate] AND a.[sporttype] = e.[sporttype] AND a.[statusid] = e.[statusid] AND a.[combo] = e.[combo] AND a.[parlaytype] = e.[parlaytype]
 				INNER JOIN @tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 				AND a.statusid IN (112,113)			
