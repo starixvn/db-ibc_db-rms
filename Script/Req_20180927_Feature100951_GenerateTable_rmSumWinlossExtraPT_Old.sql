@@ -23,8 +23,8 @@ WHERE bettype = 20000
       AND matchid = 0
       AND custid = 3;
 
--- SELECT @fromdate = DATEADD(day, -30, @todate);
-SELECT @fromdate = @todate;
+SELECT @fromdate = DATEADD(day, -366, @todate);
+
 
 DECLARE @tempdate SMALLDATETIME;
 SELECT @tempdate = @fromdate;

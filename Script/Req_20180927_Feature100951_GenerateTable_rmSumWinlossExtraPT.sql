@@ -16,16 +16,14 @@ GO
 SET NOCOUNT ON;
 DECLARE @fromdate SMALLDATETIME;
 DECLARE @todate SMALLDATETIME;
-/* SELECT TOP 1 @fromdate = winlostdate
+SELECT TOP 1 @fromdate = winlostdate
 FROM dbo.bettrans WITH (NOLOCK)
 WHERE bettype = 20000
       AND matchid = 0
       AND custid = 3;
-*/
+
 SELECT @todate = MAX(eventdate)
 FROM dbo.match14 WITH (NOLOCK);
-
-SELECT @fromdate = @todate
 
 DECLARE @tempdate SMALLDATETIME;
 SELECT @tempdate = @fromdate;
