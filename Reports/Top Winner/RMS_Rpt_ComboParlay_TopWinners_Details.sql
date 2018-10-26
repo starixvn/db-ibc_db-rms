@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details]
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
+
+ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details]
 	@custid			INT,
 	@fromdate		DATETIME,
 	@todate			DATETIME,
@@ -16,6 +18,8 @@ AS
 		Revisions:
 		- 20160921@Winnie: Fix bug wrong bettype and fix ticket bettype 29 old format and conflict refno with racing RedmineID: #64286
 		- 20170719@Winnie: Add MuayThai RedmineID: #79500
+		- 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 		
+
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -96,6 +100,22 @@ SET NOCOUNT ON
 		FROM f_RMS_strSplit (@10up,',')		
 	END
 	
+	CREATE TABLE #ExtraPT_Sel( ProductID  INT,
+                                   Sporttype  INT,
+                                   SubProduct VARCHAR(100),
+                                   SuperID    INT,
+							FromDate DATETIME,
+							ToDate DATETIME,
+                                   ExtraPT    DECIMAL(9, 8));
+    INSERT INTO #ExtraPT_Sel
+			 ( ProductID, Sporttype, SubProduct, SuperID, FromDate, ToDate, ExtraPT)
+    SELECT ProductID, SportType, SubProduct, SuperId, FromDate, ToDate, SUM(ExtraPT) AS ExtraPT
+    FROM bodb02.dbo.Acc_GroupExtraPTSetting a WITH ( NOLOCK )
+    WHERE a.ProductID = 1
+	   AND a.Sporttype = 0
+	   AND a.SubProduct = ''
+    GROUP BY ProductID, SportType, SubProduct, SuperId, FromDate, ToDate;
+
 	IF @todate > @movebetsday
 	BEGIN
 		SELECT @f_date = CASE WHEN @fromdate > @movebetsday THEN @fromdate ELSE dateadd(dd,1,@movebetsday) END,
@@ -118,14 +138,15 @@ SET NOCOUNT ON
 			,transid2
 			,stake
 			,winlost-actual_stake
-			,-(winlost-actual_stake)*(1-tpositiontaking) as company_winlost
+			,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking)
 			,stake*actualrate
 			,(winlost-actual_stake)*actualrate
-			,-(winlost-actual_stake)*(1-tpositiontaking)*actualrate as company_winlost_baseRM
+			,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate
 			,CASE WHEN bettype=9 THEN RIGHT(betcheck,len(betcheck)-1) ELSE hdp2 END AS combo		
 			,CASE WHEN bettype=9 OR betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 			,CASE WHEN bettype=9 THEN 1 ELSE TotalBet END AS TotalCombo
 		FROM rmBettrans WITH(NOLOCK)
+		LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 		WHERE custid = @custid
 			AND matchid IN(9,29)
 			AND winlostdate BETWEEN @f_date AND @t_date
@@ -155,16 +176,17 @@ SET NOCOUNT ON
 				,liveawayscore
 				,stake
 				,winlost-actual_stake
-				,-(winlost-actual_stake)*(1-tpositiontaking)
+				,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking)
 				,stake*actualrate
 				,(winlost-actual_stake)*actualrate
-				,-(winlost-actual_stake)*(1-tpositiontaking)*actualrate
+				,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate
 				,CASE WHEN bettype=9 THEN RIGHT(betcheck,len(betcheck)-1) 
 					  WHEN bettype=29 AND betcheck IS NULL THEN LEN(betteam)
 					ELSE hdp2 END AS combo
 				,CASE WHEN bettype=9 OR betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 				,CASE WHEN bettype=9 THEN 1 ELSE NULL END AS TotalCombo
 			FROM bodb02.dbo.bettrans14 WITH(NOLOCK)
+			LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 			WHERE custid = @custid
 				AND matchid IN(9,29) 
 				AND bettype IN(9,29)
@@ -239,5 +261,3 @@ SET NOCOUNT ON
 	
 
 GO
-GRANT EXECUTE ON [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details] TO [bodbRMSNet]
- 

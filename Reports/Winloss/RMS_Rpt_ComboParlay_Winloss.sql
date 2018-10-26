@@ -1,6 +1,8 @@
-﻿ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss]
-	@fromdate	DATETIME,
-	@todate		DATETIME,
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
+
+ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss]
+	@fromdate	SMALLDATETIME,
+	@todate		SMALLDATETIME,
 	@movebetsday DATETIME,
 	@balanceUpday DATETIME = NULL,
 	@sporttype VARCHAR(100)='',
@@ -17,6 +19,9 @@ AS
 		
 		Revisions:	
 		- 20170719@Winnie: Add MuayThai RedmineID: #79500		
+		- 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 		
+		- 20181010@Elodie: Enhance performance
+
 		Parameter's Explanation:
 			- @sporttype = '1' : soccer only
 						= '2' : Other sports
@@ -26,8 +31,8 @@ AS
 			
 	*/
 SET NOCOUNT ON
-	DECLARE @f_date DATETIME,
-			@t_date DATETIME
+	DECLARE @f_date SMALLDATETIME,
+			@t_date SMALLDATETIME
 			
 	DECLARE @rptWinloss TABLE(
 		winlostdate DATETIME,
@@ -47,7 +52,6 @@ SET NOCOUNT ON
 	DECLARE @tmpParlayType TABLE (parlaytype tinyint)
 	DECLARE @_ParlayType	TINYINT
 	DECLARE @tmpSport TABLE (sporttype int)
-	
 	
 	INSERT INTO @tmpSport (sporttype)
 	SELECT val
@@ -90,10 +94,33 @@ SET NOCOUNT ON
 		FROM f_RMS_strSplit (@10up,',')		
 	END
 	
+	CREATE TABLE  #tmpSelection_Sport (selection tinyint, sporttype int)		
+	CREATE INDEX IX_tmpSelection_Sport ON #tmpSelection_Sport (selection,sporttype)
+		
+	INSERT INTO #tmpSelection_Sport (sporttype, selection)
+	SELECT sporttype, selection
+	FROM @tmpSelection CROSS JOIN @tmpSport	
+
+
+	CREATE TABLE #ExtraPT_Sel( ProductID  INT,
+                                   Sporttype  INT,
+                                   SubProduct VARCHAR(100),
+                                   SuperID    INT,
+							FromDate DATETIME,
+							ToDate DATETIME,
+                                   ExtraPT    DECIMAL(9, 8));   
 	IF @todate > @movebetsday
 	BEGIN
 		SELECT @f_date = CASE WHEN @fromdate <= @movebetsday THEN DATEADD(dd,1,@movebetsday) ELSE @fromdate END,
 				@t_date = @todate
+		 INSERT INTO #ExtraPT_Sel
+			 ( ProductID, Sporttype, SubProduct, SuperID, FromDate, ToDate, ExtraPT)
+		SELECT ProductID, SportType, SubProduct, SuperId, FromDate, ToDate, SUM(ExtraPT) AS ExtraPT
+		FROM bodb02.dbo.Acc_GroupExtraPTSetting a WITH ( NOLOCK )
+		WHERE a.ProductID = 1
+		   AND a.Sporttype = 0
+		   AND a.SubProduct = ''
+		GROUP BY ProductID, SportType, SubProduct, SuperId, FromDate, ToDate;
 		
 		INSERT INTO @rptWinloss(
 				winlostdate
@@ -112,17 +139,41 @@ SET NOCOUNT ON
 			winlostdate
 			,CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END
 			,sum(case when statusid = 112 then 1 else 0 end) as tickets_won
-			,sum(case when statusid = 113 then 1 else 0 end) as tickets_lose
-			,sum(case when statusid = 112 then stake*actualrate*(1-tpositiontaking) else 0 end) as stake_won
-			,sum(case when statusid = 113 then stake*actualrate*(1-tpositiontaking) else 0 end) as stake_lose
-			,sum(case when statusid = 112 then -(winlost-actual_stake)*actualrate else 0 end) as member_won
-			,sum(case when statusid = 113 then -(winlost-actual_stake)*actualrate else 0 end) as member_lose			
-			,sum(case when statusid = 112 then -(winlost-actual_stake)*actualrate*(1-tpositiontaking) else 0 end) as ourPT_won
-			,sum(case when statusid = 113 then -(winlost-actual_stake)*actualrate*(1-tpositiontaking) else 0 end) as ourPT_lose
+			,sum(case when statusid = 113 then 1 else 0 end) as tickets_lose,
+			SUM(CASE
+				   WHEN statusid = 112
+				   THEN stake * actualrate * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0))
+				   ELSE 0
+			    END) AS stake_won,
+			SUM(CASE
+				   WHEN statusid = 113
+				   THEN stake * actualrate * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0))
+				   ELSE 0
+			    END) AS stake_lose,
+			SUM(CASE
+				   WHEN statusid = 112
+				   THEN-(winlost - actual_stake) * actualrate
+				   ELSE 0
+			    END) AS member_won,
+			SUM(CASE
+				   WHEN statusid = 113
+				   THEN-(winlost - actual_stake) * actualrate
+				   ELSE 0
+			    END) AS member_lose,
+			SUM(CASE
+				   WHEN statusid = 112
+				   THEN(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate
+				   ELSE 0
+			    END) AS ourPT_won,
+			SUM(CASE
+				   WHEN statusid = 113
+				   THEN(-(winlost - actual_stake) * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking)) * actualrate
+				   ELSE 0
+			    END) AS ourPT_lose
 			,transid2
 		FROM rmBettrans WITH(NOLOCK)
-		INNER JOIN @tmpSelection b ON CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END =b.selection
-		INNER JOIN @tmpSport c ON transid2=c.sporttype
+			INNER JOIN #tmpSelection_Sport b ON CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END =b.selection AND transid2=b.sporttype
+			LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 		 WHERE winlostdate BETWEEN @f_date AND @t_date
 			AND matchid IN(9,29) 
 			AND statusid IN (112,113)			
@@ -153,26 +204,25 @@ SET NOCOUNT ON
 				,sporttype
 				)
 			SELECT 
-				winlostdate
-				,combo
-				,sum(case when statusid = 112 then betcount else 0 end) as tickets_won
-				,sum(case when statusid = 113 then betcount else 0 end) as tickets_lose
-				,sum(case when statusid = 112 then company_stake*actualrate else 0 end) as stake_won
-				,sum(case when statusid = 113 then company_stake*actualrate else 0 end) as stake_lose
-				,sum(case when statusid = 112 then -(winlost-stake)*actualrate else 0 end) as member_won
-				,sum(case when statusid = 113 then -(winlost-stake)*actualrate else 0 end) as member_lose
-				,sum(case when statusid = 112 then company_winlost*actualrate else 0 end) as ourPT_won
-				,sum(case when statusid = 113 then company_winlost*actualrate else 0 end) as ourPT_lose		
+				a.winlostdate
+				,a.combo
+				,sum(case when a.statusid = 112 then betcount else 0 end) as tickets_won
+				,sum(case when a.statusid = 113 then betcount else 0 end) as tickets_lose
+				,sum(case when a.statusid = 112 then company_stake*actualrate - ISNULL(a.Extra_stake, 0) * actualrate else 0 end) as stake_won
+				,sum(case when a.statusid = 113 then company_stake*actualrate - ISNULL(a.Extra_stake, 0) * actualrate else 0 end) as stake_lose
+				,sum(case when a.statusid = 112 then -(a.winlost-a.stake)*actualrate else 0 end) as member_won
+				,sum(case when a.statusid = 113 then -(a.winlost-a.stake)*actualrate else 0 end) as member_lose
+				,sum(case when a.statusid = 112 then (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) *actualrate else 0 end) as ourPT_won
+				,sum(case when a.statusid = 113 then (company_winlost- ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) *actualrate else 0 end) as ourPT_lose		
 				,a.sporttype	
 			FROM rmSumWinloss a WITH(NOLOCK)
-			INNER JOIN @tmpSelection b ON a.combo=b.selection
-			INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
-			WHERE winlostdate BETWEEN @f_date AND @t_date				
-					AND statusid IN (112,113)
+				INNER JOIN #tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
+			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
+					AND a.statusid IN (112,113)
 					AND currency <> 20				
 					AND (@_parlayType=0 OR (@_parlayType=1 AND ISNULL(a.parlaytype,1)  IN (1,2)) OR (@_parlayType=2 AND ISNULL(a.parlaytype,1) =3))	
 					
-			GROUP BY winlostdate, combo,a.sporttype
+			GROUP BY a.winlostdate, a.combo,a.sporttype
 		END
 		IF @fromdate < @balanceupday
 		BEGIN
@@ -193,26 +243,25 @@ SET NOCOUNT ON
 				,sporttype
 				)
 			SELECT 
-				winlostdate
-				,combo
-				,sum(case when statusid = 112 then betcount else 0 end) as tickets_won
-				,sum(case when statusid = 113 then betcount else 0 end) as tickets_lose
-				,sum(case when statusid = 112 then company_stake*actualrate else 0 end) as stake_won
-				,sum(case when statusid = 113 then company_stake*actualrate else 0 end) as stake_lose
-				,sum(case when statusid = 112 then -(winlost-stake)*actualrate else 0 end) as member_won
-				,sum(case when statusid = 113 then -(winlost-stake)*actualrate else 0 end) as member_lose
-				,sum(case when statusid = 112 then company_winlost*actualrate else 0 end) as ourPT_won
-				,sum(case when statusid = 113 then company_winlost*actualrate else 0 end) as ourPT_lose		
+				a.winlostdate
+				,a.combo
+				,sum(case when a.statusid = 112 then betcount else 0 end) as tickets_won
+				,sum(case when a.statusid = 113 then betcount else 0 end) as tickets_lose
+				,sum(case when a.statusid = 112 then company_stake*actualrate - ISNULL(a.Extra_stake, 0) * actualrate else 0 end) as stake_won
+				,sum(case when a.statusid = 113 then company_stake*actualrate - ISNULL(a.Extra_stake, 0) * actualrate else 0 end) as stake_lose
+				,sum(case when a.statusid = 112 then -(a.winlost-a.stake)*actualrate else 0 end) as member_won
+				,sum(case when a.statusid = 113 then -(a.winlost-a.stake)*actualrate else 0 end) as member_lose
+				,sum(case when a.statusid = 112 then (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) *actualrate else 0 end) as ourPT_won
+				,sum(case when a.statusid = 113 then (company_winlost- ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) *actualrate else 0 end) as ourPT_lose				
 				,a.sporttype	
-			FROM rmSumWinloss_Old a WITH(NOLOCK)
-			INNER JOIN @tmpSelection b ON a.combo=b.selection
-			INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
-			WHERE winlostdate BETWEEN @f_date AND @t_date				
-				AND statusid IN (112,113)
+			FROM rmSumWinloss_old a WITH(NOLOCK)
+				INNER JOIN #tmpSelection_Sport b ON a.combo=b.selection AND a.sporttype=b.sporttype
+			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
+				AND a.statusid IN (112,113)
 				AND currency <> 20					
 				AND (@_parlayType=0 OR (@_parlayType=1 AND ISNULL(a.parlaytype,1)  IN (1,2)) OR (@_parlayType=2 AND ISNULL(a.parlaytype,1) =3))	
 				
-			GROUP BY winlostdate, combo,a.sporttype		
+			GROUP BY a.winlostdate, a.combo,a.sporttype		
 		END			
 	END
 	
@@ -246,5 +295,7 @@ SET NOCOUNT ON
 	 FROM @rptWinloss
 	 GROUP BY  winlostdate, CASE WHEN sporttype NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE sporttype END
 	 ORDER BY winlostdate ASC
+
+	 DROP TABLE #ExtraPT_Sel
+	 DROP TABLE #tmpSelection_Sport
 GO
-GRANT EXECUTE ON [dbo].[RMS_Rpt_ComboParlay_Winloss] TO [bodbRMSNet]
