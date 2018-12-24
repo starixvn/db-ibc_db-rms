@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_TopWinners_Bet_Details]
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
+
+ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_TopWinners_Bet_Details]
 	@refno BIGINT
 AS
 	/*
@@ -9,6 +11,7 @@ AS
 		
 		Revisions:
 		- -20160926@Winnie: fix issue conflict refno with racing RedmineID: #64286
+		- -20181224@Jacob: Esport 2, Add transdesc for bet list : #103001
 		Parameter's Explanation:
 		
 	*/
@@ -33,7 +36,8 @@ SET NOCOUNT ON
 		matchid int,
 		matchcode nvarchar(50),
 		betstatus nvarchar(50), 
-		betcheck nvarchar(50)
+		betcheck nvarchar(50),
+		transdesc nvarchar(1000)
 	)
 	
 	if exists(select 1 from bodb02.dbo.bettransm with (nolock) where refno = @refno)
@@ -59,10 +63,11 @@ SET NOCOUNT ON
 			match.matchid,
 			match.matchcode,
 			match.betstatus,
-			bettrans.betcheck
+			bettrans.betcheck,
+			bettrans.transdesc
 		from 
 			(SELECT a.matchid,  Bettype, transid,hdp1, hdp2, odds, betteam, statusid,status,
-					a.livehomescore,a.liveawayscore,liveindicator, betcheck
+					a.livehomescore,a.liveawayscore,liveindicator, betcheck, transdesc
 			FROM bodb02.dbo.BettransM a with (nolock)
 			INNER JOIN bodb02.dbo.match m(NOLOCK) ON a.matchid=m.matchid
 			WHERE refno=@refno AND m.sporttype<=99) AS bettrans
@@ -92,10 +97,11 @@ SET NOCOUNT ON
 			match.matchid,
 			match.matchcode,
 			match.betstatus,
-			bettrans.betcheck
+			bettrans.betcheck,
+			bettrans.transdesc
 		from 
 			(SELECT a.matchid, Bettype, transid,hdp1, hdp2, odds, betteam, statusid, status,
-					a.livehomescore,a.liveawayscore,liveindicator, betcheck
+					a.livehomescore,a.liveawayscore,liveindicator, betcheck, transdesc
 			FROM bodb02.dbo.BettransM14 a with (nolock)
 			INNER JOIN bodb02.dbo.match14 m(NOLOCK) ON a.matchid=m.matchid
 			WHERE refno=@refno AND m.sporttype<=99) AS bettrans
@@ -126,10 +132,11 @@ SET NOCOUNT ON
 			match.matchid,
 			match.matchcode,
 			match.betstatus,
-			bettrans.betcheck
+			bettrans.betcheck,
+			bettrans.transdesc
 		from 
 			(SELECT a.matchid, Bettype, transid,hdp1, hdp2, odds, betteam, a.statusid, status,
-					a.livehomescore,a.liveawayscore,a.liveindicator, a.betcheck
+					a.livehomescore,a.liveawayscore,a.liveindicator, a.betcheck, transdesc
 			FROM DBARC.bodb_archive.dbo.BettransM a with (nolock)
 			INNER JOIN DBARC.bodb_archive.dbo.match_bk m(NOLOCK) ON a.matchid=m.matchid
 			WHERE refno=@refno AND m.sporttype<=99) AS bettrans
@@ -139,5 +146,3 @@ SET NOCOUNT ON
 		
 	SELECT * FROM @BetListMP
 	ORDER BY TransID desc
-GO
-GRANT EXECUTE ON  [dbo].[RMS_Rpt_Parlay_TopWinners_Bet_Details] TO [bodbRMSNet]
