@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBCUST-CUSTDB" executers="bodbRMSNet" viewers="vnteam" isFunction="0"></info>*/
+﻿/*<info serverAlias="DBCUST-CUSTDB" executers="bodbRMSNet" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_UserInfoAddNew]
 	@AdminID	INT = 0,	
 	@Username	VARCHAR(50),

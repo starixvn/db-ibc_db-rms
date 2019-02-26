@@ -181,9 +181,7 @@ SET NOCOUNT ON
 				,stake*actualrate
 				,(winlost-actual_stake)*actualrate
 				,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate
-				,CASE WHEN bettype=9 THEN RIGHT(betcheck,len(betcheck)-1) 
-					  WHEN bettype=29 AND betcheck IS NULL THEN LEN(betteam)
-					ELSE hdp2 END AS combo
+				,hdp2
 				,CASE WHEN bettype=9 OR betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 				,CASE WHEN bettype=38 THEN 1 ELSE 0 END AS IsSingleMatchParlay
 				,CASE WHEN bettype=9 OR bettype = 38 THEN 1 ELSE NULL END AS TotalCombo
@@ -205,7 +203,7 @@ SET NOCOUNT ON
 				,refno				
 			FROM bodb02.dbo.bettrans14 WITH(NOLOCK)
 			WHERE custid = @custid				
-				AND bettype =29 AND betcheck IS NOT NULL
+				AND bettype = 29
 				AND winlostdate BETWEEN @f_date AND @t_date
 				AND statusid IN (112,113)					
 		;WITH ParlayTotalBet AS(
