@@ -77,7 +77,7 @@ SET NOCOUNT ON
 		INNER JOIN @tmpSport c ON a.transid2=c.sporttype
 		WHERE recommend = @custid			
 			AND statusid = 0
-			AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid IN(9,29) )OR (@IsMixParlay=1 AND bettype=9 AND matchid IN(9,29)) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid IN(9,29)) OR (@IsSingleMatchParlay=1 AND bettype=38))		
+			AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid = 29 ) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid = 29) OR (@IsSingleMatchParlay=1 AND bettype=38))		
 		GROUP BY custid,username--,CASE WHEN c.SportType NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43) THEN -2 ELSE c.sporttype END
 		ORDER  BY net_win DESC 
 		

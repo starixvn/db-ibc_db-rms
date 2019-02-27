@@ -84,7 +84,7 @@ BEGIN
 	WHERE b.custid = @CustID		
 		AND b.statusid = 0
 		AND currency <> 20	
-		AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid IN(9,29) )OR (@IsMixParlay=1 AND bettype=9 AND matchid IN(9,29)) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid IN(9,29)) OR (@IsSingleMatchParlay=1 AND bettype=38))		
+		AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid = 29 ) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid = 29) OR (@IsSingleMatchParlay=1 AND bettype=38))		
 	ORDER BY b.transdate DESC
 END
 

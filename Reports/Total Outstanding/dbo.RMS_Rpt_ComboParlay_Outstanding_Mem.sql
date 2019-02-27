@@ -83,7 +83,7 @@ SET NOCOUNT ON
 		INNER JOIN @tmpSport c ON a.transid2=c.sporttype
 		WHERE custid = @custid 
 			AND statusid = 0	
-			AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid IN(9,29) )OR (@IsMixParlay=1 AND bettype=9 AND matchid IN(9,29)) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid IN(9,29)) OR (@IsSingleMatchParlay=1 AND bettype=38))		
+			AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid = 29 ) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid = 29) OR (@IsSingleMatchParlay=1 AND bettype=38))		
 		ORDER BY net_win DESC
 	
 GO

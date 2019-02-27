@@ -152,13 +152,13 @@ SET NOCOUNT ON
 				   ELSE 0
 			    END) AS ourPT_lose
 		 FROM rmBettrans WITH(NOLOCK)
-		 INNER JOIN @tmpSelection b ON CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END =b.selection
+		 INNER JOIN @tmpSelection b ON hdp2 =b.selection
 		 INNER JOIN @tmpSport c ON transid2=c.sporttype
 		 LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 		 WHERE custid = @custid 
 			AND winlostdate BETWEEN @f_date AND @t_date			
 			AND statusid IN (112,113)			
-			AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid IN(9,29) )OR (@IsMixParlay=1 AND bettype=9 AND matchid IN(9,29)) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid IN(9,29)) OR (@IsSingleMatchParlay=1 AND bettype=38))		
+			AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid = 29)  OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid = 29) OR (@IsSingleMatchParlay=1 AND bettype=38))		
 			
 		 GROUP BY convert(varchar(7),winlostdate,120)
 	END

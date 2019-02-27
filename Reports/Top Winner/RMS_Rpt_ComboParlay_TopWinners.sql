@@ -130,11 +130,11 @@ SET NOCOUNT ON
 			 ,SUM((-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate)
 			 ,COUNT(1) as betcount			
 		 FROM rmBettrans WITH(NOLOCK)
-			INNER JOIN @tmpSelection_Sport b ON CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END =b.selection AND transid2=b.sporttype
+			INNER JOIN @tmpSelection_Sport b ON hdp2 =b.selection AND transid2=b.sporttype
 			LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 		 WHERE winlostdate BETWEEN @f_date AND @t_date
 			AND statusid IN (112,113)				
-			AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid IN(9,29) )OR (@IsMixParlay=1 AND bettype=9 AND matchid IN(9,29)) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid IN(9,29)) OR (@IsSingleMatchParlay=1 AND bettype=38))		
+			AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid = 29 ) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid = 29) OR (@IsSingleMatchParlay=1 AND bettype=38))		
 		 GROUP BY custid, username, currency
 
 		

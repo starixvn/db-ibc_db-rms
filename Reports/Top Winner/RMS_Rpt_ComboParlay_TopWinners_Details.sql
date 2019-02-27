@@ -141,14 +141,14 @@ SET NOCOUNT ON
 			,stake*actualrate
 			,(winlost-actual_stake)*actualrate
 			,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate
-			,CASE WHEN bettype=9 THEN RIGHT(betcheck,len(betcheck)-1) ELSE hdp2 END AS combo		
-			,CASE WHEN bettype=9 OR betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
+			,hdp2 AS combo		
+			,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 			,CASE WHEN bettype=38 THEN 1 ELSE 0 END
-			,CASE WHEN bettype=9 OR bettype = 38 THEN 1 ELSE TotalBet END AS TotalCombo
+			,CASE WHEN (bettype=29 AND betteam='1') OR bettype = 38 THEN 1 ELSE TotalBet END AS TotalCombo
 		FROM rmBettrans WITH(NOLOCK)
 		LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 		WHERE custid = @custid
-			AND ( ((@IsMixParlay = 1 OR @IsComboParlay = 1 ) AND matchid IN(9,29)) OR @IsSingleMatchParlay = 1 AND bettype = 38)
+			AND ( ((@IsMixParlay = 1 OR @IsComboParlay = 1 ) AND matchid = 29) OR @IsSingleMatchParlay = 1 AND bettype = 38)
 			AND winlostdate BETWEEN @f_date AND @t_date
 			AND statusid IN (112,113)
 
@@ -182,13 +182,13 @@ SET NOCOUNT ON
 				,(winlost-actual_stake)*actualrate
 				,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate
 				,hdp2
-				,CASE WHEN bettype=9 OR betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
-				,CASE WHEN bettype=38 THEN 1 ELSE 0 END AS IsSingleMatchParlay
-				,CASE WHEN bettype=9 OR bettype = 38 THEN 1 ELSE NULL END AS TotalCombo
+				,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
+				,CASE WHEN bettype=38 THEN 1 ELSE 0 END
+				,CASE WHEN (bettype=29 AND betteam='1') OR bettype = 38 THEN 1 ELSE TotalBet END AS TotalCombo
 			FROM bodb02.dbo.bettrans14 WITH(NOLOCK)
 			LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 			WHERE custid = @custid
-				AND ( ((@IsMixParlay = 1 OR @IsComboParlay = 1 ) AND matchid IN(9,29) AND bettype IN(9,29)) OR @IsSingleMatchParlay = 1 AND bettype = 38)				
+				AND ( ((@IsMixParlay = 1 OR @IsComboParlay = 1 ) AND matchid = 29 AND bettype = 29) OR @IsSingleMatchParlay = 1 AND bettype = 38)				
 				AND winlostdate BETWEEN @f_date AND @t_date
 				AND statusid IN (112,113)
 
