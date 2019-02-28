@@ -43,18 +43,19 @@ BEGIN
 
     INSERT INTO @OriginalSMP_Selection(TransId, SelectionType)
     SELECT b.transid, a.SelectionType
-    FROM bodb02.dbo.bettrans b WITH(NOLOCK)
+    FROM rmBettrans b WITH(NOLOCK)
     INNER JOIN DBPRO.bodb02.dbo.SMP_MarketSelection a WITH(NOLOCK) ON b.betcheck = a.MarketId
     WHERE b.transid = @transid
-
+ 
     INSERT INTO @SMP_Selection(TransId, SelectionType)
     SELECT b.transid, a.SelectionType
-    FROM bodb02.dbo.bettrans b WITH(NOLOCK)
+    FROM rmBettrans b WITH(NOLOCK)
     INNER JOIN DBPRO.bodb02.dbo.SMP_MarketSelection a WITH(NOLOCK) ON b.betcheck = a.MarketId
     WHERE b.hdp2 = @combo 		
 	   AND statusid = 0
 	   AND b.matchid = @MatchId
 	   AND transid <> @transid
+        AND winlostdate > @yesterday
 
     INSERT INTO @SMP_result(transid,cnt)
     SELECT s.transid,count(1)
@@ -86,6 +87,7 @@ BEGIN
     SELECT p.transid
 	   ,p.refno
 	   ,p.username
+	   ,p.custid
 	   ,isnull(c.level,0) as level
 	   ,stake*(odds2-1)*actualrate*(1-p.tpositiontaking) as net_win
 	   ,cnt as similar_selection
@@ -174,6 +176,7 @@ BEGIN
     SELECT p.transid
 	   ,p.refno
 	   ,p.username
+	   ,p.custid
 	   ,isnull(c.level,0) as level
 	   ,stake*(odds2-1)*actualrate*(1-p.tpositiontaking) as net_win
 	   ,cnt as similar_selection
