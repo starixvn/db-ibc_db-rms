@@ -84,4 +84,3 @@ SET NOCOUNT ON
 	
 
 GO
-GRANT EXECUTE ON [dbo].[RMS_Rpt_ComboParlay_Outstanding_Ag] TO [bodbRMSNet]

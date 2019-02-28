@@ -78,6 +78,7 @@ BEGIN
 	   ,stake*actualrate*(1-p.tpositiontaking)/TotalBet  as stake
 	   ,stake*(odds2-1)*actualrate*(1-p.tpositiontaking) as net_win		
 	   ,p.hdp2 AS TotalSelection,
+	   0 AS NumberWon,
 	   p.TotalBet AS TotalBet,
 	   @cnt_bets as cnt_bets
     FROM rmBettrans p WITH(NOLOCK) 
@@ -153,7 +154,19 @@ BEGIN
 	   AND refno <> @refno
     GROUP BY refno
     HAVING count(1) >= CASE WHEN @combo =2 THEN @combo ELSE (@combo*1.0/2) END
-    
+     
+	DECLARE @NumberWon INT,@NumberWon14 INT
+     
+	SELECT @NumberWon = COUNT(bm.transid) FROM bodb02.dbo.bettransm bm WITH(NOLOCK) 
+												INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON bm.matchid=m.matchid
+												WHERE @refno = bm.refno AND bm.statusid=112 AND m.sporttype<=99
+	
+
+	SELECT @NumberWon14 = COUNT(bm.transid) FROM bodb02.dbo.bettransm14 bm WITH(NOLOCK) 
+												INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON bm.matchid=m.matchid
+												WHERE @refno = bm.refno AND bm.statusid=112 AND m.sporttype<=99
+
+
     SELECT @cnt_bets = ISNULL(COUNT(1),0) FROM @result
     SELECT transdate
 	   ,transid
@@ -167,6 +180,7 @@ BEGIN
 	   ,stake*actualrate*(1-p.tpositiontaking)/TotalBet  as stake
 	   ,stake*(odds2-1)*actualrate*(1-p.tpositiontaking) as net_win		
 	   ,p.hdp2 AS TotalSelection,
+	   @NumberWon + @NumberWon14 AS NumberWon,
 	   p.TotalBet AS TotalBet,
 	   @cnt_bets as cnt_bets
     FROM rmBettrans p WITH(NOLOCK) 
