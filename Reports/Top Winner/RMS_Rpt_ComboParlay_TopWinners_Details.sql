@@ -144,7 +144,7 @@ SET NOCOUNT ON
 			,hdp2 AS combo		
 			,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 			,CASE WHEN bettype=38 THEN 1 ELSE 0 END
-			,CASE WHEN (bettype=29 AND betteam='1') OR bettype = 38 THEN 1 ELSE TotalBet END AS TotalCombo
+			,TotalBet AS TotalCombo
 		FROM rmBettrans WITH(NOLOCK)
 		LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 		WHERE custid = @custid
@@ -184,7 +184,7 @@ SET NOCOUNT ON
 				,hdp2
 				,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 				,CASE WHEN bettype=38 THEN 1 ELSE 0 END
-				,CASE WHEN (bettype=29 AND betteam='1') OR bettype = 38 THEN 1 ELSE TotalBet END AS TotalCombo
+				,CASE WHEN bettype=38 THEN 1 ELSE 0 END AS TotalCombo
 			FROM bodb02.dbo.bettrans14 WITH(NOLOCK)
 			LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 			WHERE custid = @custid

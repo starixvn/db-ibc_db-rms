@@ -48,7 +48,7 @@ AS
      IF @TableId = 1
          BEGIN
              SELECT SelectionType,
-                    ISNULL(Result, 'RUNNING')
+                    ISNULL(Result, 'RUNNING') Result
              FROM DBPRO.bodb02.dbo.SMP_MarketSelection WITH (NOLOCK)
              WHERE MatchId = @MatchId
                    AND MarketId = @MarketId;
@@ -57,7 +57,7 @@ AS
      IF @TableId = 2
          BEGIN
              SELECT SelectionType,
-                    ISNULL(Result, 'RUNNING')
+                    ISNULL(Result, 'RUNNING') Result
              FROM DBPRO.bodb02.dbo.SMP_MarketSelection14 WITH (NOLOCK)
              WHERE MatchId = @MatchId
                    AND MarketId = @MarketId;
@@ -66,7 +66,7 @@ AS
      IF @TableId = 3
          BEGIN
              SELECT SelectionType,
-                    ISNULL(Result, 'RUNNING')
+                    ISNULL(Result, 'RUNNING') Result
              FROM DBARC.bodb_archive.dbo.SMP_MarketSelection_bk WITH (NOLOCK)
              WHERE MatchId = @MatchId
                    AND MarketId = @MarketId;

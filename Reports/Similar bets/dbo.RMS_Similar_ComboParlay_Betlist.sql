@@ -69,6 +69,8 @@ BEGIN
 	   ,transid
 	   ,refno
 	   ,p.username
+	   ,bettype
+	   ,p.custid
 	   ,isnull(c.level,0) as level
 	   ,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype
 	   ,odds2*TotalBet AS odds
@@ -155,6 +157,8 @@ BEGIN
 	   ,transid
 	   ,refno
 	   ,p.username
+	   ,p.custid
+	   ,bettype
 	   ,isnull(c.level,0) as level
 	   ,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype
 	   ,odds2*TotalBet AS odds
