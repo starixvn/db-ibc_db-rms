@@ -21,7 +21,7 @@ AS
      SELECT @MatchId = matchid,
             @MarketId = betcheck,
             @TableId = 1   -- bettrans  
-     FROM bodb02.dbo.bettrans WITH (NOLOCK)
+     FROM dbo.bettrans WITH (NOLOCK)
      WHERE transid = @TransId
            AND custid = @CustId
            AND bettype = 38;
@@ -30,7 +30,7 @@ AS
              SELECT @MatchId = matchid,
                     @MarketId = betcheck,
                     @TableId = 2   -- bettrans14  
-             FROM bodb02.dbo.bettrans14 WITH (NOLOCK)
+             FROM dbo.bettrans14 WITH (NOLOCK)
              WHERE transid = @TransId
                    AND custid = @CustId
                    AND bettype = 38;
@@ -70,5 +70,12 @@ AS
              FROM DBARC.bodb_archive.dbo.SMP_MarketSelection_bk WITH (NOLOCK)
              WHERE MatchId = @MatchId
                    AND MarketId = @MarketId;
+         END;
+         ELSE
+         BEGIN
+             DECLARE @DummyTable TABLE(Id INT)
+             SELECT 0 AS SelectionType,
+                    'N/A' AS Result
+             FROM @DummyTable
          END;
 GO

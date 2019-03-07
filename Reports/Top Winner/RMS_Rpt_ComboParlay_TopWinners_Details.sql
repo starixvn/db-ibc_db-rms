@@ -31,6 +31,7 @@ SET NOCOUNT ON
 	DECLARE @tmpBettrans TABLE (transid BIGINT PRIMARY KEY
 				,refno BIGINT
 				,sporttype SMALLINT
+				,bettype INT
 				,stake MONEY
 				,winlost MONEY
 				,company_winlost MONEY
@@ -122,6 +123,7 @@ SET NOCOUNT ON
 		INSERT INTO @tmpBettrans (transid
 				,refno
 				,sporttype
+				,bettype
 				,stake
 				,winlost
 				,company_winlost
@@ -135,6 +137,7 @@ SET NOCOUNT ON
 		SELECT transid
 			,refno
 			,transid2
+			,bettype
 			,stake
 			,winlost-actual_stake
 			,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking)
@@ -161,6 +164,7 @@ SET NOCOUNT ON
 			INSERT INTO @tmpBettrans (transid
 				,refno
 				,sporttype
+				,bettype
 				,stake
 				,winlost
 				,company_winlost
@@ -175,6 +179,7 @@ SET NOCOUNT ON
 			SELECT transid
 				,refno
 				,liveawayscore
+				,bettype
 				,stake
 				,winlost-actual_stake
 				,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking)
@@ -223,22 +228,23 @@ SET NOCOUNT ON
 		FROM @tmpBettrans b 
 		INNER JOIN DBARC.bodb_Archive.dbo.bettransm a(NOLOCK) ON a.refno=b.refno
 		INNER JOIN DBARC.bodb_Archive.dbo.match_bk m(NOLOCK) ON a.matchid=m.matchid	
-		WHERE m.sporttype<=99
+		WHERE m.sporttype<=99 AND b.bettype = 29
 		
 		INSERT INTO #tmpbettransm(	refno ,	sporttype)
 		SELECT a.refno,m.sporttype 
 		FROM @tmpBettrans b 
 		INNER JOIN bodb02.dbo.bettransm a(NOLOCK) ON a.refno=b.refno
 		INNER JOIN bodb02.dbo.match m(NOLOCK) ON a.matchid=m.matchid	
-		WHERE m.sporttype<=99
+		WHERE m.sporttype<=99 AND b.bettype = 29
 		
 		INSERT INTO #tmpbettransm(	refno ,	sporttype)
 		SELECT a.refno,m.sporttype 
 		FROM @tmpBettrans b 
 		INNER JOIN bodb02.dbo.bettransm14 a(NOLOCK) ON a.refno=b.refno
 		INNER JOIN bodb02.dbo.match14 m(NOLOCK) ON a.matchid=m.matchid	
-		WHERE m.sporttype<=99
+		WHERE m.sporttype<=99 AND b.bettype = 29
 		
+		-- Join Bettransm to get sporttype(transid2) for bettype = 29
 		UPDATE bb
 		SET bb.sporttype = aa.transid2
 		FROM @tmpBettrans  bb INNER JOIN 
@@ -250,6 +256,9 @@ SET NOCOUNT ON
 		FROM #tmpbettransm b 		
 		GROUP BY b.refno) aa ON aa.refno=bb.refno
 		
+		-- sporttype(transid2) always is 1 for bettype = 38
+		UPDATE @tmpBettrans SET sporttype = 1
+	     WHERE bettype = 38
 	END
 	
 	SELECT a.* FROM @tmpBettrans a
