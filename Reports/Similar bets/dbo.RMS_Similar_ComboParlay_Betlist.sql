@@ -44,13 +44,13 @@ BEGIN
     INSERT INTO @OriginalSMP_Selection(TransId, SelectionType)
     SELECT b.transid, a.SelectionType
     FROM rmBettrans b WITH(NOLOCK)
-    INNER JOIN DBPRO.bodb02.dbo.SMP_MarketSelection a WITH(NOLOCK) ON b.betcheck = a.MarketId
+    INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH(NOLOCK) ON b.betcheck = a.MarketId
     WHERE b.transid = @transid
  
     INSERT INTO @SMP_Selection(TransId, SelectionType)
     SELECT b.transid, a.SelectionType
     FROM rmBettrans b WITH(NOLOCK)
-    INNER JOIN DBPRO.bodb02.dbo.SMP_MarketSelection a WITH(NOLOCK) ON b.betcheck = a.MarketId
+    INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH(NOLOCK) ON b.betcheck = a.MarketId
     WHERE b.hdp2 = @combo 		
 	   AND statusid = 0
 	   AND b.matchid = @MatchId

@@ -49,7 +49,7 @@ AS
          BEGIN
              SELECT SelectionType,
                     ISNULL(Result, 'RUNNING') Result
-             FROM DBPRO.bodb02.dbo.SMP_MarketSelection WITH (NOLOCK)
+             FROM dbo.SMP_MarketSelection WITH (NOLOCK)
              WHERE MatchId = @MatchId
                    AND MarketId = @MarketId;
          END;
@@ -58,7 +58,7 @@ AS
          BEGIN
              SELECT SelectionType,
                     ISNULL(Result, 'RUNNING') Result
-             FROM DBPRO.bodb02.dbo.SMP_MarketSelection14 WITH (NOLOCK)
+             FROM dbo.SMP_MarketSelection14 WITH (NOLOCK)
              WHERE MatchId = @MatchId
                    AND MarketId = @MarketId;
          END;
