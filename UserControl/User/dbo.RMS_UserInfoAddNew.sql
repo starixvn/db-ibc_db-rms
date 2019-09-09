@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBCUST-CUSTDB" executers="bodbRMSNet" isFunction="0"></info>*/
+﻿/*<info serverAlias="DBCUST-CUSTDB" executers="bodbRMSNet" viewers="" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_UserInfoAddNew]
 	@AdminID	INT = 0,	
 	@Username	VARCHAR(50),
@@ -23,6 +23,7 @@ AS
 			- 20130121@Johnson: change linked server DB054 to DBRMS and try catch for writing log
 			- 20130313@Johnson: Fix format log by xml format
 			- 20181011@Dominic: Check existing username/username2 in archive DB  [Redmine:103011]
+			- 20190909@Eden: 3rd party products - Remove InActive Products Phase 2 [Redmine: #118699]
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -67,8 +68,8 @@ SET NOCOUNT ON
 	
 	SELECT @CustID = SCOPE_IDENTITY();
 	
-	INSERT  INTO dbo.custinfo (username, [custid], [currency], [MaxPerMatch], [MaxPerMatch2], [MaxPerMatch3], [MaxPerMatch5], [MaxPerMatch8], [MaxPerMatch10], [MaxPerMatch11], [MaxPerMatch12], [MaxPerMatch99], [Maxpermatch151], [maxpermatch201], [MaxPerMatch161], [MaxPerMatch99MP], [MaxPerBall161], [MaxPerMatch151_OT], [roleid], [mrecommend], [recommend], [dangercust], [autosuspend], [reject], [credit], [MatchLimit], [VirtualMultiplier], [DisableHorseRacing], [DisableFinancial], [DisableCasino], [DisableOutright], [DisableOpenTote], [DisableBingo], [DisableNumber], [SyncCasino], [danger], [danger2], [danger3], [Enabled], [closed])
-	VALUES                   (@username, @custid, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, @roleid, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, @closed);
+	INSERT  INTO dbo.custinfo (username, [custid], [currency], [MaxPerMatch], [MaxPerMatch2], [MaxPerMatch3], [MaxPerMatch5], [MaxPerMatch8], [MaxPerMatch10], [MaxPerMatch11], [MaxPerMatch12], [MaxPerMatch99], [MaxPerMatch161], [MaxPerMatch99MP], [MaxPerBall161], [roleid], [mrecommend], [recommend], [dangercust], [autosuspend], [reject], [credit], [MatchLimit], [VirtualMultiplier], [DisableCasino], [DisableOutright], [DisableNumber], [SyncCasino], [danger], [danger2], [danger3], [Enabled], [closed])
+	VALUES                   (@username, @custid, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, @roleid, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, @closed);
 	
 	IF @@ERROR <> 0
 	BEGIN
@@ -149,7 +150,3 @@ SET NOCOUNT ON
 			@duration = @duration
 	END CATCH
 GO
-GRANT VIEW DEFINITION ON [dbo].[RMS_UserInfoAddNew] TO [vnteam]
-GO
-GRANT EXECUTE ON [dbo].[RMS_UserInfoAddNew] TO [bodbRMSNet]
-	
