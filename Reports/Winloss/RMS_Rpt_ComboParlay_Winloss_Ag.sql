@@ -1,7 +1,7 @@
 ﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
 
   ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss_Ag]
-	@custid		INT,
+	@Recommends		VARCHAR(MAX),
 	@fromdate	DATETIME,
 	@todate		DATETIME,
 	@movebetsday DATETIME,
@@ -11,25 +11,31 @@
 	@ParlayType	VARCHAR(10)=''
 	
 AS
-	/*
-		Created: Winnie	
-		Date: 20160511
-		DB: DBRMS/bodb_RMS
-		Task: Get report win loss for downlines by specific Agent
+/*
+Created: Winnie	
+Date: 20160511
+DB: DBRMS/bodb_RMS
+Task: Get report win loss for downlines by specific Agent
 		
-		Revisions:		
-		- 20170719@Winnie: Add MuayThai RedmineID: #79500	
-		- 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 	
-		- 20190214@Jacob: Add Bet Builder RedmineID: #108694			
-		Parameter's Explanation:
-			- @sporttype = '1' : soccer only
-						= '2' : Other sports
-						= '3' : combined sports
-			- @ParlayType = 1: Mix parlay
-							2: Combo parlay
-							3: Single Match Parlay
-	*/ 
+Revisions:		
+- 20170719@Winnie: Add MuayThai RedmineID: #79500	
+- 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 	
+- 20190214@Jacob: Add Bet Builder RedmineID: #108694	
+- 20191026@Jacob: Winloss by master RedmineID: [#122137]		
+Parameter's Explanation:
+- @sporttype = '1' : soccer only
+		  = '2' : Other sports
+		  = '3' : combined sports
+- @ParlayType = 1: Mix parlay
+			 2: Combo parlay
+			 3: Single Match Parlay
+*/ 
 SET NOCOUNT ON
+
+    DECLARE @Agents TABLE(recommend INT)
+    INSERT INTO @Agents(recommend) 
+    SELECT Val FROM dbo.f_RMS_strSplit(@Recommends,',')
+     
 	DECLARE @f_date DATETIME,
 			@t_date DATETIME
 	
@@ -45,8 +51,7 @@ SET NOCOUNT ON
 		,ourPT_won MONEY
 		,ourPT_lose MONEY
 	)			
-	
-	
+			
 	DECLARE @tmpSelection TABLE(selection tinyint)
 	DECLARE @10UP VARCHAR(500),@all varchar(500)
 	
@@ -157,12 +162,12 @@ SET NOCOUNT ON
 				   THEN(-(winlost - actual_stake) * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking)) * actualrate
 				   ELSE 0
 			    END) AS ourPT_lose
-		 FROM rmBettrans WITH(NOLOCK)
+		 FROM rmBettrans r WITH(NOLOCK)
 		 INNER JOIN @tmpSelection b ON hdp2  =b.selection
 		 INNER JOIN @tmpSport c ON transid2=c.sporttype
 		 LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
-		 WHERE recommend = @custid 
-			AND winlostdate BETWEEN @f_date AND @t_date
+		 INNER JOIN @Agents ag ON ag.recommend = r.recommend
+		 WHERE winlostdate BETWEEN @f_date AND @t_date
 			AND statusid IN (112,113)	
 			AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid = 29 ) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid = 29) OR (@IsSingleMatchParlay=1 AND bettype=38))		
 		 GROUP BY convert(varchar(7),winlostdate,120),username
@@ -201,8 +206,8 @@ SET NOCOUNT ON
 			FROM rmSumWinloss a WITH(NOLOCK)
 			INNER JOIN @tmpSelection b ON a.combo=b.selection
 			INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
-			WHERE recommend = @custid
-					AND a.winlostdate BETWEEN @f_date AND @t_date				
+			INNER JOIN @Agents ag ON ag.recommend = a.recommend
+			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 					AND a.statusid IN (112,113)
 					AND currency <> 20				
 					AND ((@IsMixParlay=1 AND (ISNULL(a.parlaytype,1) IN (1,2))) OR (@IsComboParlay= 1 AND ISNULL(a.parlaytype,1)=3) OR (@IsSingleMatchParlay = 1 AND parlaytype = 4))		
@@ -241,8 +246,8 @@ SET NOCOUNT ON
 			FROM rmSumWinloss_Old a WITH(NOLOCK)
 			INNER JOIN @tmpSelection b ON a.combo=b.selection
 			INNER JOIN @tmpSport c ON a.sporttype=c.sporttype
-			WHERE recommend = @custid
-					AND a.winlostdate BETWEEN @f_date AND @t_date				
+			INNER JOIN @Agents ag ON ag.recommend = a.recommend
+			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 					AND a.statusid IN (112,113)
 					AND currency <> 20						
 					AND ((@IsMixParlay=1 AND (ISNULL(a.parlaytype,1) IN (1,2))) OR (@IsComboParlay= 1 AND ISNULL(a.parlaytype,1)=3) OR (@IsSingleMatchParlay = 1 AND parlaytype = 4))		
