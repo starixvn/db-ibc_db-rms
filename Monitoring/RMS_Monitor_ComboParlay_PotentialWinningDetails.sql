@@ -1,3 +1,4 @@
+/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0"></info>*/
  ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_PotentialWinningDetails]
 	@CustID			INT,
 	@selection		VARCHAR(100) = '',
@@ -12,8 +13,11 @@
 		
 		Revisions:
 			-20170719@Winnie: Add MuayThai RedmineID: #79500
+			-20190214@Jacob: Add Bet Builder RedmineID: #108694
 		Parameter's Explanation:
-		
+		- @ParlayType = 1: Mix parlay
+							2: Combo parlay
+							3: Single Match Parlay
 	*/
 BEGIN
 	SET NOCOUNT ON
@@ -21,20 +25,13 @@ BEGIN
 	DECLARE @tmpSport TABLE (sporttype int)	
 	DECLARE @10up varchar(500)
 	DECLARE @all varchar(500)
-	DECLARE @tmpParlayType TABLE (parlaytype tinyint)
-	DECLARE @_ParlayType	TINYINT
-
+	
 	CREATE TABLE #tmpSelection	(selection INT PRIMARY KEY)
 
-	INSERT INTO @tmpParlayType
-	SELECT val
-	FROM f_RMS_strSplit (@ParlayType,',')
-	IF EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 1 ) AND EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 2)
-		SELECT @_ParlayType=0
-	ELSE IF EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 1 )
-		SELECT @_ParlayType=1
-	ELSE IF EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 2 )
-		SELECT @_ParlayType=2
+	 DECLARE @IsMixParlay BIT = 0, @IsComboParlay BIT = 0, @IsSingleMatchParlay BIT = 0
+	SELECT  @IsMixParlay = CASE WHEN CHARINDEX('1', @ParlayType) > 0 THEN 1 ELSE 0 END,
+		   @IsComboParlay = CASE WHEN CHARINDEX('2', @ParlayType) > 0 THEN 1 ELSE 0 END,
+		   @IsSingleMatchParlay = CASE WHEN CHARINDEX('3', @ParlayType) > 0 THEN 1 ELSE 0 END
 
 	
 	INSERT INTO #tmpSelection
@@ -70,6 +67,7 @@ BEGIN
 	SELECT	b.transdate,
 			b.transid,
 			b.refno,
+			b.bettype,
 			CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype,		
 			(SELECT COUNT(bm.transid) FROM bodb02.dbo.bettransm bm WITH(NOLOCK) WHERE b.refno = bm.refno AND bm.statusid=112) AS NumberWon,
 			b.odds2 *b.TotalBet AS odds,
@@ -84,14 +82,10 @@ BEGIN
 	INNER JOIN @tmpSport c ON b.transid2=c.sporttype
 	INNER JOIN #tmpSelection d ON b.hdp2=d.selection
 	WHERE b.custid = @CustID		
-		AND b.matchid = 29
 		AND b.statusid = 0
 		AND currency <> 20	
-		AND (@_parlayType=0 OR (@_parlayType=1 AND betteam ='1' ) OR (@_parlayType=2 AND betteam <>'1' ))	
+		AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid = 29 ) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid = 29) OR (@IsSingleMatchParlay=1 AND bettype=38))		
 	ORDER BY b.transdate DESC
 END
 
 GO
-GRANT EXECUTE ON [dbo].[RMS_Monitor_ComboParlay_PotentialWinningDetails] TO [bodbRMSNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[RMS_Monitor_ComboParlay_PotentialWinningDetails] TO [vnteam]

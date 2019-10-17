@@ -8,7 +8,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss]
 	@sporttype VARCHAR(100)='',
 	@bettype INT = 9,
 	@selection VARCHAR(100)='',
-	@ParlayType	VARCHAR(10)='',
+	@ParlayType	VARCHAR(20)='',
 	@ReportType TINYINT=1
 AS
 	/*
@@ -21,14 +21,16 @@ AS
 		- 20170719@Winnie: Add MuayThai RedmineID: #79500		
 		- 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 		
 		- 20181010@Elodie: Enhance performance
-
+		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		Parameter's Explanation:
 			- @sporttype = '1' : soccer only
 						= '2' : Other sports
 						= '3' : combined sports
 			-@ReportType = '1' : combo
 						= '2' : Sporttype
-			
+			- @ParlayType = 1: Mix parlay
+							2: Combo parlay
+							3: Single Match Parlay
 	*/
 SET NOCOUNT ON
 	DECLARE @f_date SMALLDATETIME,
@@ -49,8 +51,6 @@ SET NOCOUNT ON
 	)
 	DECLARE @tmpSelection TABLE(selection tinyint)	
 	DECLARE @10UP VARCHAR(500),@all varchar(500)
-	DECLARE @tmpParlayType TABLE (parlaytype tinyint)
-	DECLARE @_ParlayType	TINYINT
 	DECLARE @tmpSport TABLE (sporttype int)
 	
 	INSERT INTO @tmpSport (sporttype)
@@ -62,15 +62,10 @@ SET NOCOUNT ON
 	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
 	END
 
-	INSERT INTO @tmpParlayType
-	SELECT val
-	FROM f_RMS_strSplit (@ParlayType,',')
-	IF EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 1 ) AND EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 2)
-		SELECT @_ParlayType=0
-	ELSE IF EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 1 )
-		SELECT @_ParlayType=1
-	ELSE IF EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 2 )
-		SELECT @_ParlayType=2
+	 DECLARE @IsMixParlay BIT = 0, @IsComboParlay BIT = 0, @IsSingleMatchParlay BIT = 0
+	SELECT  @IsMixParlay = CASE WHEN CHARINDEX('1', @ParlayType) > 0 THEN 1 ELSE 0 END,
+		   @IsComboParlay = CASE WHEN CHARINDEX('2', @ParlayType) > 0 THEN 1 ELSE 0 END,
+		   @IsSingleMatchParlay = CASE WHEN CHARINDEX('3', @ParlayType) > 0 THEN 1 ELSE 0 END
 
 	INSERT INTO @tmpSelection
 	SELECT val
@@ -137,7 +132,7 @@ SET NOCOUNT ON
 		)
 		SELECT 
 			winlostdate
-			,CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END
+			,hdp2
 			,sum(case when statusid = 112 then 1 else 0 end) as tickets_won
 			,sum(case when statusid = 113 then 1 else 0 end) as tickets_lose,
 			SUM(CASE
@@ -172,15 +167,14 @@ SET NOCOUNT ON
 			    END) AS ourPT_lose
 			,transid2
 		FROM rmBettrans WITH(NOLOCK)
-			INNER JOIN #tmpSelection_Sport b ON CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END =b.selection AND transid2=b.sporttype
+			INNER JOIN #tmpSelection_Sport b ON  hdp2  =b.selection AND transid2=b.sporttype
 			LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 		 WHERE winlostdate BETWEEN @f_date AND @t_date
-			AND matchid IN(9,29) 
 			AND statusid IN (112,113)			
 			AND currency <> 20
-			AND (@_parlayType=0 OR (@_parlayType=1 AND betteam ='1' AND bettype=29)OR (@_parlayType=1 AND bettype=9) OR (@_parlayType=2 AND bettype=29 AND betteam <>'1' ))		
+			AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid = 29 ) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid = 29) OR (@IsSingleMatchParlay=1 AND bettype=38))		
 			
-		GROUP BY winlostdate,CASE WHEN bettype=9 THEN right(betcheck,len(betcheck)-1) ELSE hdp2 END,transid2
+		GROUP BY winlostdate,hdp2,transid2
 	END
 	
 	IF @fromdate <= @movebetsday
@@ -220,7 +214,7 @@ SET NOCOUNT ON
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 					AND a.statusid IN (112,113)
 					AND currency <> 20				
-					AND (@_parlayType=0 OR (@_parlayType=1 AND ISNULL(a.parlaytype,1)  IN (1,2)) OR (@_parlayType=2 AND ISNULL(a.parlaytype,1) =3))	
+					AND ((@IsMixParlay=1 AND (ISNULL(a.parlaytype,1) IN (1,2))) OR (@IsComboParlay= 1 AND ISNULL(a.parlaytype,1)=3) OR (@IsSingleMatchParlay = 1 AND parlaytype = 4))		
 					
 			GROUP BY a.winlostdate, a.combo,a.sporttype
 		END
@@ -259,7 +253,7 @@ SET NOCOUNT ON
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 				AND a.statusid IN (112,113)
 				AND currency <> 20					
-				AND (@_parlayType=0 OR (@_parlayType=1 AND ISNULL(a.parlaytype,1)  IN (1,2)) OR (@_parlayType=2 AND ISNULL(a.parlaytype,1) =3))	
+				AND ((@IsMixParlay=1 AND (ISNULL(a.parlaytype,1) IN (1,2))) OR (@IsComboParlay= 1 AND ISNULL(a.parlaytype,1)=3) OR (@IsSingleMatchParlay = 1 AND parlaytype = 4))		
 				
 			GROUP BY a.winlostdate, a.combo,a.sporttype		
 		END			

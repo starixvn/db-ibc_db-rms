@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="vnteam" isFunction="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_PotentialWinning]
 	@selection		VARCHAR(100) = '',
 	@sporttype		VARCHAR(100) = '',
@@ -16,6 +16,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_PotentialWinning]
 		Revisions:
 			-20170719@Winnie: Add MuayThai RedmineID: #79500
 			-20171219@Vicky: Add column currency [RedmineID: #88400]
+			-20190214@Jacob: Add Bet Builder RedmineID: #108694
 		Parameter's Explanation:
 			- @selection:- '2,3': 2,3 selections
 						 - '10': 10 UP
@@ -24,6 +25,9 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_PotentialWinning]
 						= '3' : combined sports
 			- @level:= '0': none
 					 = '1,2,3': level 1,2,3
+			 - @ParlayType = 1: Mix parlay
+							2: Combo parlay
+							3: Single Match Parlay
 		
 	*/
 BEGIN
@@ -35,18 +39,11 @@ BEGIN
 	CREATE TABLE #bettransm(refno BIGINT, transid BIGINT)
 	DECLARE @10up varchar(500)
 	DECLARE @all varchar(500)
-	DECLARE @tmpParlayType TABLE (parlaytype tinyint)
-	DECLARE @_ParlayType	TINYINT
-
-	INSERT INTO @tmpParlayType
-	SELECT val
-	FROM f_RMS_strSplit (@ParlayType,',')
-	IF EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 1 ) AND EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 2)
-		SELECT @_ParlayType=0
-	ELSE IF EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 1 )
-		SELECT @_ParlayType=1
-	ELSE IF EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 2 )
-		SELECT @_ParlayType=2
+	
+	 DECLARE @IsMixParlay BIT = 0, @IsComboParlay BIT = 0, @IsSingleMatchParlay BIT = 0
+	SELECT  @IsMixParlay = CASE WHEN CHARINDEX('1', @ParlayType) > 0 THEN 1 ELSE 0 END,
+		   @IsComboParlay = CASE WHEN CHARINDEX('2', @ParlayType) > 0 THEN 1 ELSE 0 END,
+		   @IsSingleMatchParlay = CASE WHEN CHARINDEX('3', @ParlayType) > 0 THEN 1 ELSE 0 END
 	
 	INSERT INTO @tmpSelection
 	SELECT val
@@ -89,7 +86,7 @@ BEGIN
 	FROM rmBettrans b WITH(NOLOCK) 		
 	INNER JOIN 	@tmpSelection c ON b.hdp2=c.selection	
 	INNER JOIN  @tmpSport     d ON b.transid2=d.sporttype
-	WHERE	b.matchid = 29
+	WHERE ( ((@IsMixParlay = 1 OR @IsComboParlay = 1) AND	b.matchid = 29 ) OR (@IsSingleMatchParlay = 1 AND b.bettype = 38))
 		AND b.statusid = 0
 		AND currency <> 20
 		
@@ -128,7 +125,7 @@ BEGIN
 				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON b.custid = mc.custid AND level IN (SELECT [level] FROM @tmpLevel)
 				INNER JOIN @tmpSport c ON b.transid2=c.sporttype
 			WHERE b.transID >= @MinTransID 
-			AND (@_parlayType=0 OR (@_parlayType=1 AND betteam ='1' ) OR (@_parlayType=2 AND betteam <>'1' ))
+			AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid = 29 ) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid = 29) OR (@IsSingleMatchParlay=1 AND bettype=38))		
 			GROUP BY b.custid, b.username, ISNULL(mc.level,0),b.CurrencyName
 			
 			)r
@@ -169,7 +166,7 @@ BEGIN
 				INNER JOIN @tmpLevel t ON ISNULL(mc.level,0)=t.level
 				INNER JOIN @tmpSport c ON b.transid2=c.sporttype
 			WHERE	b.transID >= @MinTransID  
-			AND (@_parlayType=0 OR (@_parlayType=1 AND betteam ='1' ) OR (@_parlayType=2 AND betteam <>'1' ))
+			AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid = 29 )OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid = 29) OR (@IsSingleMatchParlay=1 AND bettype=38))		
 			GROUP BY b.custid, b.username, ISNULL(mc.level,0),b.CurrencyName
 			
 			)

@@ -18,13 +18,17 @@
 		- 20160921@Winnie: Fix bug wrong bettype and fix ticket bettype 29 old format RedmineID: #64286
 		- 20170719@Winnie: Add MuayThai RedmineID: #79500
 		- 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 		
-
+		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		Parameter's Explanation:
+		- @ParlayType = 1: Mix parlay
+							2: Combo parlay
+							3: Single Match Parlay
 	*/
 SET NOCOUNT ON
 	DECLARE @tmpBettrans TABLE (transid BIGINT PRIMARY KEY
 				,refno BIGINT
 				,sporttype SMALLINT
+				,bettype INT
 				,stake MONEY
 				,winlost MONEY
 				,company_winlost MONEY
@@ -33,6 +37,7 @@ SET NOCOUNT ON
 				,company_winlost_baseRM MONEY
 				,combo TINYINT
 				,IsMixParlay BIT
+				,IsSingleMatchParlay BIT
 				,TotalCombo BIGINT
 			)
 	DECLARE @tmpBettrans2 TABLE (transid BIGINT PRIMARY KEY		
@@ -50,8 +55,7 @@ SET NOCOUNT ON
 	
 	DECLARE @tmpSelection TABLE(selection tinyint)	
 	DECLARE @10up varchar(500),@all varchar(500)
-	DECLARE @tmpParlayType TABLE (parlaytype tinyint)
-	DECLARE @_ParlayType	TINYINT
+	
 	DECLARE @tmpSport TABLE (sporttype int)	
 	
 	INSERT INTO @tmpSport (sporttype)
@@ -63,16 +67,11 @@ SET NOCOUNT ON
 	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
 	END
 
-	INSERT INTO @tmpParlayType
-	SELECT val
-	FROM f_RMS_strSplit (@ParlayType,',')
-	IF EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 1 ) AND EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 2)
-		SELECT @_ParlayType=0
-	ELSE IF EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 1 )
-		SELECT @_ParlayType=1
-	ELSE IF EXISTS(SELECT TOP 1 1 FROM @tmpParlayType WHERE parlaytype = 2 )
-		SELECT @_ParlayType=2
-	
+	 DECLARE @IsMixParlay BIT = 0, @IsComboParlay BIT = 0, @IsSingleMatchParlay BIT = 0
+	SELECT  @IsMixParlay = CASE WHEN CHARINDEX('1', @ParlayType) > 0 THEN 1 ELSE 0 END,
+		   @IsComboParlay = CASE WHEN CHARINDEX('2', @ParlayType) > 0 THEN 1 ELSE 0 END,
+		   @IsSingleMatchParlay = CASE WHEN CHARINDEX('3', @ParlayType) > 0 THEN 1 ELSE 0 END
+
 	INSERT INTO @tmpSelection
 	SELECT val
 	FROM f_RMS_strSplit (@selection,',')
@@ -112,7 +111,8 @@ SET NOCOUNT ON
     GROUP BY ProductID, SportType, SubProduct, SuperId, FromDate, ToDate;
 
 	INSERT INTO @tmpBettrans (transid
-				,refno			
+				,refno
+				,bettype			
 				,stake
 				,winlost
 				,company_winlost
@@ -121,25 +121,26 @@ SET NOCOUNT ON
 				,company_winlost_baseRM
 				,combo
 				,IsMixParlay
+				,IsSingleMatchParlay
 				,TotalCombo)		
 	SELECT transid
-		,refno		
+		,refno
+		,bettype		
 		,stake
 		,winlost-actual_stake
 		,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) 
 		,stake*actualrate
 		,(winlost-actual_stake)*actualrate
-	     ,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate
-		,CASE WHEN bettype=9 THEN RIGHT(betcheck,len(betcheck)-1) 
-					  WHEN bettype=29 AND betcheck IS NULL THEN LEN(betteam)
-					ELSE hdp2 END AS combo
-		,CASE WHEN bettype=9 OR betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
-		,CASE WHEN bettype=9 THEN 1 ELSE NULL END AS IsMixParlay
+	     ,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate		
+		,hdp2 AS combo		
+		,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
+		,CASE WHEN bettype=38 THEN 1 ELSE 0 END AS IsSingleMatchParlay
+	    ,CASE WHEN (bettype=29 AND betteam='1') OR bettype = 38 THEN 1 ELSE NULL END AS TotalCombo
 	FROM dbo.bettrans_bk WITH(NOLOCK)
 		LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 																				
 	WHERE custid = @custid
-		AND matchid IN(9,29) 		
+		AND ( ((@IsMixParlay = 1 OR @IsComboParlay = 1 ) AND matchid = 29 AND bettype = 29) OR @IsSingleMatchParlay = 1 AND bettype = 38)						
 		AND winlostdate BETWEEN @fromdate AND @todate
 		AND statusid IN (112,113)
 
@@ -152,7 +153,7 @@ SET NOCOUNT ON
 				,betteam				
 			FROM dbo.bettrans_bk WITH(NOLOCK)
 			WHERE custid = @custid				
-				AND bettype =29 AND betcheck IS NOT NULL
+				AND bettype = 29 
 				AND winlostdate BETWEEN @fromdate AND @todate
 				AND statusid IN (112,113)					
 		;WITH ParlayTotalBet AS(
@@ -172,22 +173,23 @@ SET NOCOUNT ON
 		FROM @tmpBettrans b 
 		INNER JOIN dbo.bettransm a(NOLOCK) ON a.refno=b.refno
 		INNER JOIN dbo.match_bk m(NOLOCK) ON a.matchid=m.matchid	
-		WHERE m.sporttype<=99
+		WHERE m.sporttype<=99 AND b.bettype = 29
 		
 		INSERT INTO #tmpbettransm(	refno ,	sporttype)
 		SELECT a.refno,m.sporttype 
 		FROM @tmpBettrans b 
 		INNER JOIN bodb02.dbo.bettransm a(NOLOCK) ON a.refno=b.refno
 		INNER JOIN bodb02.dbo.match m(NOLOCK) ON a.matchid=m.matchid	
-		WHERE m.sporttype<=99
+		WHERE m.sporttype<=99 AND b.bettype = 29
 		
 		INSERT INTO #tmpbettransm(	refno ,	sporttype)
 		SELECT a.refno,m.sporttype 
 		FROM @tmpBettrans b 
 		INNER JOIN bodb02.dbo.bettransm14 a(NOLOCK) ON a.refno=b.refno
 		INNER JOIN bodb02.dbo.match14 m(NOLOCK) ON a.matchid=m.matchid	
-		WHERE m.sporttype<=99
+		WHERE m.sporttype<=99 AND b.bettype = 29
 		
+		-- Join Bettransm to get sporttype(transid2) for bettype = 29
 		UPDATE bb
 		SET bb.sporttype = aa.transid2
 		FROM @tmpBettrans bb  INNER JOIN 
@@ -199,11 +201,15 @@ SET NOCOUNT ON
 		FROM #tmpbettransm b 		
 		GROUP BY b.refno) aa ON aa.refno=bb.refno
 		
+		-- sporttype(transid2) always is 1 for bettype = 38
+		UPDATE @tmpBettrans SET sporttype = 1
+	     WHERE bettype = 38
+
 
 	SELECT a.* FROM @tmpBettrans a
 	INNER JOIN @tmpSelection b ON a.combo=b.selection
 	INNER JOIN @tmpSport c ON a.sporttype=c.sporttype		
-	AND (@_parlayType=0 OR (@_parlayType=1 AND a.IsMixParlay=1) OR (@_parlayType=2 AND a.IsMixParlay<>1))	
+	WHERE (@IsMixParlay=1 AND a.IsMixParlay=1) OR (@IsComboParlay=1 AND a.IsMixParlay<>1 ) OR (@IsSingleMatchParlay=1 AND IsSingleMatchParlay=1)		
 	ORDER BY transid DESC
 
 	DROP TABLE #ExtraPT_Sel
