@@ -4,6 +4,7 @@
 	DB: DBRMS/bodb_RMS
 */
 
+SET NOCOUNT ON
 
 DECLARE @fromdate DATETIME, @maxdate DATETIME
 DECLARE @msg nvarchar(1000) 
