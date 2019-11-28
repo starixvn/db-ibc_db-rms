@@ -21,6 +21,7 @@ EXEC msdb.dbo.sp_update_jobstep
 EXEC sp_rename 	'RMS_Similar_Parlay_Betlist_xtest',	'RMS_Similar_Parlay_Betlist_xtest_DEL'
 EXEC sp_rename 	'RMS_Similar_Parlay_Betlist',	'RMS_Similar_Parlay_Betlist_DEL'
 EXEC sp_rename 	'Task_RMS_TransactionIns',	'Task_RMS_TransactionIns_DEL'
+EXEC sp_rename 	'Task_RMS_TransactionInsLoop',	'Task_RMS_TransactionInsLoop_DEL'
 EXEC sp_rename 	'Task_RMS_Transaction_Archive',	'Task_RMS_Transaction_Archive_DEL'
 EXEC sp_rename 	'RMS_Monitor_Parlay_Betlist_xpre',	'RMS_Monitor_Parlay_Betlist_xpre_DEL'
 EXEC sp_rename 	'RMS_Similar_Parlay_Betlist_xpre',	'RMS_Similar_Parlay_Betlist_xpre_DEL'

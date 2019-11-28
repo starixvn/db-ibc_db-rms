@@ -8,6 +8,7 @@
 DROP PROC 	RMS_Similar_Parlay_Betlist_xtest_DEL
 DROP PROC 	RMS_Similar_Parlay_Betlist_DEL
 DROP PROC 	Task_RMS_TransactionIns_DEL
+DROP PROC 	Task_RMS_TransactionInsLoop_DEL
 DROP PROC 	Task_RMS_Transaction_Archive_DEL
 DROP PROC 	RMS_Monitor_Parlay_Betlist_xpre_DEL
 DROP PROC 	RMS_Similar_Parlay_Betlist_xpre_DEL
