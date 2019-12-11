@@ -27,8 +27,6 @@ AS
 							3: Single Match Parlay
 	*/
 SET NOCOUNT ON
-	DECLARE @ExtraPTCutDate SMALLDATETIME
-	SELECT  @ExtraPTCutDate = CONVERT(SMALLDATETIME, VValue) FROM bodb02.dbo.SystemSettings WITH (NOLOCK) WHERE VName = 'ExtraPTCutDate'
 	DECLARE @f_date DATETIME,
 			@t_date DATETIME			
 	DECLARE @tmpBettrans TABLE (transid BIGINT PRIMARY KEY
@@ -184,16 +182,15 @@ SET NOCOUNT ON
 				,bettype
 				,stake
 				,winlost-actual_stake
-				,-(winlost - actual_stake)  * (1 - tpositiontaking - CASE WHEN transdate < @ExtraPTCutDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END) - scomm  + scomm * CASE WHEN transdate < @ExtraPTCutDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END / (1 - tpositiontaking)
+				,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(epositiontaking,0)) - scomm  + scomm * ISNULL(epositiontaking,0) / (1 - tpositiontaking)
 				,stake*actualrate
 				,(winlost-actual_stake)*actualrate
-				,(-(winlost - actual_stake)  * (1 - tpositiontaking - CASE WHEN transdate < @ExtraPTCutDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END) - scomm  + scomm * CASE WHEN transdate < @ExtraPTCutDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END / (1 - tpositiontaking) ) * actualrate
+				,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(epositiontaking,0)) - scomm  + scomm * ISNULL(epositiontaking,0) / (1 - tpositiontaking) ) * actualrate
 				,hdp2
 				,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 				,CASE WHEN bettype=38 THEN 1 ELSE 0 END
 				,CASE WHEN bettype=38 THEN 1 ELSE 0 END AS TotalCombo
 			FROM bodb02.dbo.bettrans14 WITH(NOLOCK)
-			LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 			WHERE custid = @custid
 				AND ( ((@IsMixParlay = 1 OR @IsComboParlay = 1 ) AND matchid = 29 AND bettype = 29) OR @IsSingleMatchParlay = 1 AND bettype = 38)				
 				AND winlostdate BETWEEN @f_date AND @t_date
