@@ -20,12 +20,15 @@ AS
 		- 20170719@Winnie: Add MuayThai RedmineID: #79500
 		- 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 		
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
+		- 20191211@Jacob: Extra PT - Add new structure to support extra pt column on bettrans table #124194
 		Parameter's Explanation:
 		- @ParlayType = 1: Mix parlay
 							2: Combo parlay
 							3: Single Match Parlay
 	*/
 SET NOCOUNT ON
+	DECLARE @ExtraPTCutDate SMALLDATETIME
+	SELECT  @ExtraPTCutDate = CONVERT(SMALLDATETIME, VValue) FROM bodb02.dbo.SystemSettings WITH (NOLOCK) WHERE VName = 'ExtraPTCutDate'
 	DECLARE @f_date DATETIME,
 			@t_date DATETIME			
 	DECLARE @tmpBettrans TABLE (transid BIGINT PRIMARY KEY
@@ -140,16 +143,15 @@ SET NOCOUNT ON
 			,bettype
 			,stake
 			,winlost-actual_stake
-			,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking)
+			,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(epositiontaking, 0)) - scomm  + scomm * ISNULL(epositiontaking, 0) / (1 - tpositiontaking)
 			,stake*actualrate
 			,(winlost-actual_stake)*actualrate
-			,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate
+			,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(epositiontaking, 0)) - scomm  + scomm * ISNULL(epositiontaking, 0) / (1 - tpositiontaking) ) * actualrate
 			,hdp2 AS combo		
 			,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 			,CASE WHEN bettype=38 THEN 1 ELSE 0 END
 			,TotalBet AS TotalCombo
 		FROM rmBettrans WITH(NOLOCK)
-		LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 		WHERE custid = @custid
 			AND ( ((@IsMixParlay = 1 OR @IsComboParlay = 1 ) AND matchid = 29) OR @IsSingleMatchParlay = 1 AND bettype = 38)
 			AND winlostdate BETWEEN @f_date AND @t_date
@@ -160,7 +162,7 @@ SET NOCOUNT ON
 	BEGIN
 		SELECT @f_date = @fromdate, 
 			@t_date = CASE WHEN @todate > @MoveBetsDay THEN @MoveBetsDay ELSE @todate END
-			
+						
 			INSERT INTO @tmpBettrans (transid
 				,refno
 				,sporttype
@@ -182,10 +184,10 @@ SET NOCOUNT ON
 				,bettype
 				,stake
 				,winlost-actual_stake
-				,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking)
+				,-(winlost - actual_stake)  * (1 - tpositiontaking - CASE WHEN transdate < @ExtraPTCutDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END) - scomm  + scomm * CASE WHEN transdate < @ExtraPTCutDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END / (1 - tpositiontaking)
 				,stake*actualrate
 				,(winlost-actual_stake)*actualrate
-				,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate
+				,(-(winlost - actual_stake)  * (1 - tpositiontaking - CASE WHEN transdate < @ExtraPTCutDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END) - scomm  + scomm * CASE WHEN transdate < @ExtraPTCutDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END / (1 - tpositiontaking) ) * actualrate
 				,hdp2
 				,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 				,CASE WHEN bettype=38 THEN 1 ELSE 0 END

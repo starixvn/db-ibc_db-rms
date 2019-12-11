@@ -21,7 +21,8 @@ Revisions:
 - 20170719@Winnie: Add MuayThai RedmineID: #79500	
 - 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 	
 - 20190214@Jacob: Add Bet Builder RedmineID: #108694	
-- 20191026@Jacob: Winloss by master RedmineID: [#122137]		
+- 20191026@Jacob: Winloss by master RedmineID: [#122137]	
+- 20191211@Jacob: Extra PT - Add new structure to support extra pt column on bettrans table #124194
 Parameter's Explanation:
 - @sporttype = '1' : soccer only
 		  = '2' : Other sports
@@ -94,23 +95,6 @@ SET NOCOUNT ON
 		FROM f_RMS_strSplit (@10up,',')		
 	END
 	
-
-	CREATE TABLE #ExtraPT_Sel( ProductID  INT,
-                                   Sporttype  INT,
-                                   SubProduct VARCHAR(100),
-                                   SuperID    INT,
-							FromDate DATETIME,
-							ToDate DATETIME,
-                                   ExtraPT    DECIMAL(9, 8));
-    INSERT INTO #ExtraPT_Sel
-			 ( ProductID, Sporttype, SubProduct, SuperID, FromDate, ToDate, ExtraPT)
-    SELECT ProductID, SportType, SubProduct, SuperId, FromDate, ToDate, SUM(ExtraPT) AS ExtraPT
-    FROM bodb02.dbo.Acc_GroupExtraPTSetting a WITH ( NOLOCK )
-    WHERE a.ProductID = 1
-	   AND a.Sporttype = 0
-	   AND a.SubProduct = ''
-    GROUP BY ProductID, SportType, SubProduct, SuperId, FromDate, ToDate;
-
 	IF @todate > @movebetsday
 	BEGIN
 		SELECT @f_date = CASE WHEN @fromdate <= @movebetsday THEN DATEADD(dd,1,@movebetsday) ELSE @fromdate END,
@@ -134,12 +118,12 @@ SET NOCOUNT ON
 			,SUM(case when statusid = 113 then 1 else 0 end) as tickets_lose,
 			SUM(CASE
 				   WHEN statusid = 112
-				   THEN stake * actualrate * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0))
+				   THEN stake * actualrate * (1 - tpositiontaking - ISNULL(epositiontaking, 0))
 				   ELSE 0
 			    END) AS stake_won,
 			SUM(CASE
 				   WHEN statusid = 113
-				   THEN stake * actualrate * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0))
+				   THEN stake * actualrate * (1 - tpositiontaking - ISNULL(epositiontaking, 0))
 				   ELSE 0
 			    END) AS stake_lose,
 			SUM(CASE
@@ -154,18 +138,17 @@ SET NOCOUNT ON
 			    END) AS member_lose,
 			SUM(CASE
 				   WHEN statusid = 112
-				   THEN(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate
+				   THEN(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(epositiontaking, 0)) - scomm  + scomm * ISNULL(epositiontaking, 0) / (1 - tpositiontaking) ) * actualrate
 				   ELSE 0
 			    END) AS ourPT_won,
 			SUM(CASE
 				   WHEN statusid = 113
-				   THEN(-(winlost - actual_stake) * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking)) * actualrate
+				   THEN(-(winlost - actual_stake) * (1 - tpositiontaking - ISNULL(epositiontaking, 0)) - scomm  + scomm * ISNULL(epositiontaking, 0) / (1 - tpositiontaking)) * actualrate
 				   ELSE 0
 			    END) AS ourPT_lose
 		 FROM rmBettrans r WITH(NOLOCK)
 		 INNER JOIN @tmpSelection b ON hdp2  =b.selection
 		 INNER JOIN @tmpSport c ON transid2=c.sporttype
-		 LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 		 INNER JOIN @Agents ag ON ag.recommend = r.recommend
 		 WHERE winlostdate BETWEEN @f_date AND @t_date
 			AND statusid IN (112,113)	
@@ -269,6 +252,4 @@ SET NOCOUNT ON
 	FROM @tmpSum
 	GROUP BY month,username
 	ORDER BY month,username		
-
-	DROP TABLE #ExtraPT_Sel
 GO
