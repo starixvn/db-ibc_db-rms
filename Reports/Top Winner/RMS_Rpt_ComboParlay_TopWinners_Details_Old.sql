@@ -26,8 +26,10 @@
 							3: Single Match Parlay
 	*/
 SET NOCOUNT ON
-	DECLARE @ExtraPTCutDate SMALLDATETIME
-	SELECT  @ExtraPTCutDate = CONVERT(SMALLDATETIME, VValue) FROM bodb02.dbo.SystemSettings WITH (NOLOCK) WHERE VName = 'ExtraPTCutDate'
+
+
+	DECLARE @ExtraPTCutOffDate SMALLDATETIME
+	SELECT  @ExtraPTCutOffDate = bodb02.dbo.f_Get_SystemSettings('CutOffDate_ExtraPT')
 
 	DECLARE @tmpBettrans TABLE (transid BIGINT PRIMARY KEY
 				,refno BIGINT
@@ -132,10 +134,10 @@ SET NOCOUNT ON
 		,bettype		
 		,stake
 		,winlost-actual_stake
-		,-(winlost - actual_stake)  * (1 - tpositiontaking - CASE WHEN transdate < @ExtraPTCutDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END) - scomm  + scomm * CASE WHEN transdate < @ExtraPTCutDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END / (1 - tpositiontaking) 
+		,-(winlost - actual_stake)  * (1 - tpositiontaking - CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END) - scomm  + scomm * CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END / (1 - tpositiontaking) 
 		,stake*actualrate
 		,(winlost-actual_stake)*actualrate
-	     ,(-(winlost - actual_stake)  * (1 - tpositiontaking - CASE WHEN transdate < @ExtraPTCutDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END) - scomm  + scomm * CASE WHEN transdate < @ExtraPTCutDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END / (1 - tpositiontaking) ) * actualrate		
+	     ,(-(winlost - actual_stake)  * (1 - tpositiontaking - CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END) - scomm  + scomm * CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END / (1 - tpositiontaking) ) * actualrate		
 		,hdp2 AS combo		
 		,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 		,CASE WHEN bettype=38 THEN 1 ELSE 0 END AS IsSingleMatchParlay
@@ -212,6 +214,7 @@ SET NOCOUNT ON
 
 	SELECT a.transid
 				,a.refno
+				,a.sporttype
 				,a.bettype			
 				,a.stake
 				,a.winlost
