@@ -134,10 +134,10 @@ SET NOCOUNT ON
 		,bettype		
 		,stake
 		,winlost-actual_stake
-		,-(winlost - actual_stake)  * (1 - tpositiontaking - CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END) - scomm  + scomm * CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END / (1 - tpositiontaking) 
+		,-(winlost - actual_stake)  * (1 - tpositiontaking - CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE CAST(CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) AS DECIMAL(9,8)) END) - scomm  + scomm * CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) END / (1 - tpositiontaking) 
 		,stake*actualrate
 		,(winlost-actual_stake)*actualrate
-	     ,(-(winlost - actual_stake)  * (1 - tpositiontaking - CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END) - scomm  + scomm * CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE ISNULL(epositiontaking,0) END / (1 - tpositiontaking) ) * actualrate		
+	     ,(-(winlost - actual_stake)  * (1 - tpositiontaking - CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) END) - scomm  + scomm * CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) END / (1 - tpositiontaking) ) * actualrate		
 		,hdp2 AS combo		
 		,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 		,CASE WHEN bettype=38 THEN 1 ELSE 0 END AS IsSingleMatchParlay

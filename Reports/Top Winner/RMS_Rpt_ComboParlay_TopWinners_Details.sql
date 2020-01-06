@@ -141,10 +141,10 @@ SET NOCOUNT ON
 			,bettype
 			,stake
 			,winlost-actual_stake
-			,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(epositiontaking, 0)) - scomm  + scomm * ISNULL(epositiontaking, 0) / (1 - tpositiontaking)
+			,-(winlost - actual_stake)  * (1 - tpositiontaking - CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) / (1 - tpositiontaking)
 			,stake*actualrate
 			,(winlost-actual_stake)*actualrate
-			,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(epositiontaking, 0)) - scomm  + scomm * ISNULL(epositiontaking, 0) / (1 - tpositiontaking) ) * actualrate
+			,(-(winlost - actual_stake)  * (1 - tpositiontaking - CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) / (1 - tpositiontaking) ) * actualrate
 			,hdp2 AS combo		
 			,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 			,CASE WHEN bettype=38 THEN 1 ELSE 0 END
@@ -182,10 +182,10 @@ SET NOCOUNT ON
 				,bettype
 				,stake
 				,winlost-actual_stake
-				,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(epositiontaking,0)) - scomm  + scomm * ISNULL(epositiontaking,0) / (1 - tpositiontaking)
+				,-(winlost - actual_stake)  * (1 - tpositiontaking - CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) / (1 - tpositiontaking)
 				,stake*actualrate
 				,(winlost-actual_stake)*actualrate
-				,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(epositiontaking,0)) - scomm  + scomm * ISNULL(epositiontaking,0) / (1 - tpositiontaking) ) * actualrate
+				,(-(winlost - actual_stake)  * (1 - tpositiontaking - CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) / (1 - tpositiontaking) ) * actualrate
 				,hdp2
 				,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 				,CASE WHEN bettype=38 THEN 1 ELSE 0 END

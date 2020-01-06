@@ -109,10 +109,10 @@ SET NOCOUNT ON
 			 ,currency
 			 ,SUM(stake)
 			 ,SUM(winlost - actual_stake)
-			 ,SUM(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(epositiontaking, 0)) - scomm  + scomm * ISNULL(epositiontaking, 0) / (1 - tpositiontaking) )
+			 ,SUM(-(winlost - actual_stake)  * (1 - tpositiontaking - CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) / (1 - tpositiontaking) )
 			 ,SUM(stake*actualrate)
 			 ,SUM((winlost-actual_stake)*actualrate)
-			 ,SUM((-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(epositiontaking, 0)) - scomm  + scomm * ISNULL(epositiontaking, 0) / (1 - tpositiontaking) ) * actualrate)
+			 ,SUM((-(winlost - actual_stake)  * (1 - tpositiontaking - CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) / (1 - tpositiontaking) ) * actualrate)
 			 ,COUNT(1) as betcount			
 		 FROM rmBettrans WITH(NOLOCK)
 			INNER JOIN @tmpSelection_Sport b ON hdp2 =b.selection AND transid2=b.sporttype			

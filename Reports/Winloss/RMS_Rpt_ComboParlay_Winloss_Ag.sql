@@ -118,12 +118,12 @@ SET NOCOUNT ON
 			,SUM(case when statusid = 113 then 1 else 0 end) as tickets_lose,
 			SUM(CASE
 				   WHEN statusid = 112
-				   THEN stake * actualrate * (1 - tpositiontaking - ISNULL(epositiontaking, 0))
+				   THEN stake * actualrate * (1 - tpositiontaking - CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)))
 				   ELSE 0
 			    END) AS stake_won,
 			SUM(CASE
 				   WHEN statusid = 113
-				   THEN stake * actualrate * (1 - tpositiontaking - ISNULL(epositiontaking, 0))
+				   THEN stake * actualrate * (1 - tpositiontaking - CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)))
 				   ELSE 0
 			    END) AS stake_lose,
 			SUM(CASE
@@ -138,12 +138,12 @@ SET NOCOUNT ON
 			    END) AS member_lose,
 			SUM(CASE
 				   WHEN statusid = 112
-				   THEN(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(epositiontaking, 0)) - scomm  + scomm * ISNULL(epositiontaking, 0) / (1 - tpositiontaking) ) * actualrate
+				   THEN(-(winlost - actual_stake)  * (1 - tpositiontaking - CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) / (1 - tpositiontaking) ) * actualrate
 				   ELSE 0
 			    END) AS ourPT_won,
 			SUM(CASE
 				   WHEN statusid = 113
-				   THEN(-(winlost - actual_stake) * (1 - tpositiontaking - ISNULL(epositiontaking, 0)) - scomm  + scomm * ISNULL(epositiontaking, 0) / (1 - tpositiontaking)) * actualrate
+				   THEN(-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate
 				   ELSE 0
 			    END) AS ourPT_lose
 		 FROM rmBettrans r WITH(NOLOCK)
