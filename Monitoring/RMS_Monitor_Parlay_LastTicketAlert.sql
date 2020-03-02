@@ -38,6 +38,7 @@ AS
       totalselection    INT, 
       odds              MONEY, 
       housept           MONEY, 
+      betteam           NVARCHAR(10), 
       numberlose        INT DEFAULT(0)
      );
      INSERT INTO #sumtotal
@@ -50,7 +51,8 @@ AS
       companyloseamount, 
       totalselection, 
       odds, 
-      housept
+      housept, 
+      betteam
      )
             SELECT b.transid, 
                    b.refno, 
@@ -69,7 +71,8 @@ AS
                                                  END * (1 - b.tpositiontaking)) AS CompanyLoseAmount, 
                    b.hdp2 AS TotalSelections, 
                    AVG(b.odds2 * b.TotalBet) AS Odds, 
-                   AVG(1 - b.tpositiontaking) AS HousePT
+                   AVG(1 - b.tpositiontaking) AS HousePT, 
+                   b.betteam AS BetTeam
             FROM rmBettrans AS b WITH(NOLOCK)
             WHERE b.bettype = @BetType
                   AND b.statusid = 0
@@ -82,7 +85,8 @@ AS
                      b.custid, 
                      b.Username, 
                      b.CurrencyName, 
-                     b.hdp2
+                     b.hdp2, 
+                     b.betteam
             HAVING SUM((b.odds2 - 1) * b.stake * CASE
                                                      WHEN @IsTest = 1
                                                      THEN 1
@@ -131,7 +135,11 @@ AS
      SELECT CASE
                 WHEN @IsSMP = 1
                 THEN 'Single Match Parlay'
-                ELSE 'Mix Parlay or Combo Parlay'
+                ELSE CASE
+                         WHEN s.betteam = '1'
+                         THEN 'Mix Parlay'
+                         ELSE 'Combo Parlay'
+                     END
             END AS ParlayType, 
             s.transid AS TransId, 
             s.username AS UserName, 
