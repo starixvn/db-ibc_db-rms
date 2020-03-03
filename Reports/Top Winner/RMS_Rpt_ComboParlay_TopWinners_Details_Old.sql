@@ -19,12 +19,18 @@
 		- 20170719@Winnie: Add MuayThai RedmineID: #79500
 		- 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 		
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
+		- 20191211@Jacob: Extra PT - Add new structure to support extra pt column on bettrans table #124194
 		Parameter's Explanation:
 		- @ParlayType = 1: Mix parlay
 							2: Combo parlay
 							3: Single Match Parlay
 	*/
 SET NOCOUNT ON
+
+
+	DECLARE @ExtraPTCutOffDate SMALLDATETIME
+	SELECT  @ExtraPTCutOffDate = bodb02.dbo.f_Get_SystemSettings('CutOffDate_ExtraPT')
+
 	DECLARE @tmpBettrans TABLE (transid BIGINT PRIMARY KEY
 				,refno BIGINT
 				,sporttype SMALLINT
@@ -128,10 +134,10 @@ SET NOCOUNT ON
 		,bettype		
 		,stake
 		,winlost-actual_stake
-		,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) 
+		,-(winlost - actual_stake)  * (1 - tpositiontaking - CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE CAST(CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) AS DECIMAL(9,8)) END) - scomm  + scomm * CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) END / (1 - tpositiontaking) 
 		,stake*actualrate
 		,(winlost-actual_stake)*actualrate
-	     ,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate		
+	     ,(-(winlost - actual_stake)  * (1 - tpositiontaking - CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) END) - scomm  + scomm * CASE WHEN winlostdate < @ExtraPTCutOffDate THEN ISNULL(a.ExtraPT,0) ELSE CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) END / (1 - tpositiontaking) ) * actualrate		
 		,hdp2 AS combo		
 		,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 		,CASE WHEN bettype=38 THEN 1 ELSE 0 END AS IsSingleMatchParlay
@@ -206,7 +212,21 @@ SET NOCOUNT ON
 	     WHERE bettype = 38
 
 
-	SELECT a.* FROM @tmpBettrans a
+	SELECT a.transid
+				,a.refno
+				,a.sporttype
+				,a.bettype			
+				,a.stake
+				,a.winlost
+				,a.company_winlost
+				,a.stake_baseRM
+				,a.winlost_baseRM
+				,a.company_winlost_baseRM
+				,a.combo
+				,a.IsMixParlay
+				,a.IsSingleMatchParlay
+				,a.TotalCombo 
+	FROM @tmpBettrans a
 	INNER JOIN @tmpSelection b ON a.combo=b.selection
 	INNER JOIN @tmpSport c ON a.sporttype=c.sporttype		
 	WHERE (@IsMixParlay=1 AND a.IsMixParlay=1) OR (@IsComboParlay=1 AND a.IsMixParlay<>1 ) OR (@IsSingleMatchParlay=1 AND IsSingleMatchParlay=1)		

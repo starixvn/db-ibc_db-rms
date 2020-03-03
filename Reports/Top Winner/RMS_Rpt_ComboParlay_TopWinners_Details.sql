@@ -20,6 +20,7 @@ AS
 		- 20170719@Winnie: Add MuayThai RedmineID: #79500
 		- 20180927@Jacob: Apply Extra PT and Super Comm to Report.  RedmineID: #100951 		
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
+		- 20191211@Jacob: Extra PT - Add new structure to support extra pt column on bettrans table #124194
 		Parameter's Explanation:
 		- @ParlayType = 1: Mix parlay
 							2: Combo parlay
@@ -140,16 +141,15 @@ SET NOCOUNT ON
 			,bettype
 			,stake
 			,winlost-actual_stake
-			,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking)
+			,-(winlost - actual_stake)  * (1 - tpositiontaking - CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) / (1 - tpositiontaking)
 			,stake*actualrate
 			,(winlost-actual_stake)*actualrate
-			,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate
+			,(-(winlost - actual_stake)  * (1 - tpositiontaking - CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) / (1 - tpositiontaking) ) * actualrate
 			,hdp2 AS combo		
 			,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 			,CASE WHEN bettype=38 THEN 1 ELSE 0 END
 			,TotalBet AS TotalCombo
 		FROM rmBettrans WITH(NOLOCK)
-		LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 		WHERE custid = @custid
 			AND ( ((@IsMixParlay = 1 OR @IsComboParlay = 1 ) AND matchid = 29) OR @IsSingleMatchParlay = 1 AND bettype = 38)
 			AND winlostdate BETWEEN @f_date AND @t_date
@@ -160,7 +160,7 @@ SET NOCOUNT ON
 	BEGIN
 		SELECT @f_date = @fromdate, 
 			@t_date = CASE WHEN @todate > @MoveBetsDay THEN @MoveBetsDay ELSE @todate END
-			
+						
 			INSERT INTO @tmpBettrans (transid
 				,refno
 				,sporttype
@@ -182,16 +182,15 @@ SET NOCOUNT ON
 				,bettype
 				,stake
 				,winlost-actual_stake
-				,-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking)
+				,-(winlost - actual_stake)  * (1 - tpositiontaking - CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) / (1 - tpositiontaking)
 				,stake*actualrate
 				,(winlost-actual_stake)*actualrate
-				,(-(winlost - actual_stake)  * (1 - tpositiontaking - ISNULL(a.ExtraPT, 0)) - scomm  + scomm * ISNULL(a.ExtraPT, 0) / (1 - tpositiontaking) ) * actualrate
+				,(-(winlost - actual_stake)  * (1 - tpositiontaking - CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking,0) AS DECIMAL(9,8)) / (1 - tpositiontaking) ) * actualrate
 				,hdp2
 				,CASE WHEN bettype=29 AND betteam='1' THEN 1 ELSE 0 END AS IsMixParlay
 				,CASE WHEN bettype=38 THEN 1 ELSE 0 END
 				,CASE WHEN bettype=38 THEN 1 ELSE 0 END AS TotalCombo
 			FROM bodb02.dbo.bettrans14 WITH(NOLOCK)
-			LEFT JOIN #ExtraPT_Sel AS a WITH (NOLOCK) ON srecommend = a.SuperId AND winlostdate BETWEEN a.FromDate AND a.Todate
 			WHERE custid = @custid
 				AND ( ((@IsMixParlay = 1 OR @IsComboParlay = 1 ) AND matchid = 29 AND bettype = 29) OR @IsSingleMatchParlay = 1 AND bettype = 38)				
 				AND winlostdate BETWEEN @f_date AND @t_date
