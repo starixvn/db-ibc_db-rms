@@ -3,7 +3,7 @@
 
 ALTER PROCEDURE [dbo].[RMS_LastTicketAlertIns] @TransId     BIGINT, 
                                                @AlertAmount MONEY, 
-                                               @IsSMP       INT
+                                               @ParlayType  NVARCHAR(50)
 
 /*
 	Created: Franklin
@@ -22,12 +22,12 @@ AS
      ([TransId], 
       [AlertTime], 
       [AlertAmount], 
-      [IsSMP]
+      [ParlayType]
      )
      VALUES
      (@TransId, 
       GETDATE(), 
       @AlertAmount, 
-      @IsSMP
+      @ParlayType
      );
 GO

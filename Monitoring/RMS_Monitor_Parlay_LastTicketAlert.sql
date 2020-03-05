@@ -2,8 +2,7 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE dbo.[RMS_Monitor_Parlay_LastTicketAlert] @IsTest              BIT   = 0, 
-                                                         @IsSMP               BIT   = 0, 
-                                                         @MinPotentialWinning MONEY = 20000
+                                                         @MinPotentialWinning MONEY = 50000
 
 /*
 	Created: Franklin
@@ -19,11 +18,7 @@ Revisions:
 AS
      SET NOCOUNT ON;
      DECLARE @BetType INT;
-     SELECT @BetType = CASE
-                           WHEN @IsSMP = 1
-                           THEN 38
-                           ELSE 29
-                       END;
+     SELECT @BetType = 29;
 
      -- #sumtotal
 
@@ -39,7 +34,8 @@ AS
       odds              MONEY, 
       housept           MONEY, 
       betteam           NVARCHAR(10), 
-      numberlose        INT DEFAULT(0)
+      numberlose        INT DEFAULT(0), 
+      numberrunning     INT DEFAULT(0)
      );
      INSERT INTO #sumtotal
      (transid, 
@@ -102,6 +98,14 @@ AS
               INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON bm.matchid = m.matchid
          WHERE s.refno = bm.refno
                AND bm.statusid = 113
+     ), 
+           numberrunning =
+     (
+         SELECT COUNT(bm.transid)
+         FROM bodb02.dbo.bettransm bm WITH(NOLOCK)
+              INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON bm.matchid = m.matchid
+         WHERE s.refno = bm.refno
+               AND bm.statusid = 0
      )
      FROM #sumtotal s;
      UPDATE s
@@ -113,6 +117,14 @@ AS
               INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON bm.matchid = m.matchid
          WHERE s.refno = bm.refno
                AND bm.statusid = 113
+     ), 
+           numberrunning = s.numberrunning +
+     (
+         SELECT COUNT(bm.transid)
+         FROM bodb02.dbo.bettransm14 bm WITH(NOLOCK)
+              INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON bm.matchid = m.matchid
+         WHERE s.refno = bm.refno
+               AND bm.statusid = 0
      )
      FROM #sumtotal s;
      CREATE TABLE #lastalert
@@ -128,18 +140,12 @@ AS
             SELECT l.TransId, 
                    l.AlertTime, 
                    l.AlertAmount
-            FROM rmLastTicketAlert l WITH(NOLOCK)
-            WHERE l.IsSMP = @IsSMP;
-
+            FROM rmLastTicketAlert l WITH(NOLOCK);
      -- SELECT 
      SELECT CASE
-                WHEN @IsSMP = 1
-                THEN 'Single Match Parlay'
-                ELSE CASE
-                         WHEN s.betteam = '1'
-                         THEN 'Mix Parlay'
-                         ELSE 'Combo Parlay'
-                     END
+                WHEN s.betteam = '1'
+                THEN 'Mix Parlay'
+                ELSE 'Combo Parlay'
             END AS ParlayType, 
             s.transid AS TransId, 
             s.username AS UserName, 
@@ -152,7 +158,8 @@ AS
             ISNULL(p.AlertAmount, 0) AS AlertAmount
      FROM #sumtotal s
           LEFT JOIN #lastalert p ON s.transid = p.transid
-     WHERE s.numberlose = 0;
+     WHERE s.numberlose = 0
+           AND s.numberrunning = 1;
      DROP TABLE #sumtotal;
      DROP TABLE #lastalert;
 	 GO
