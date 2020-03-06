@@ -85,7 +85,7 @@ BEGIN
 				FROM bodb02.dbo.bettransm14 WITH (NOLOCK)
                 WHERE refno = @refno
             ) AS b
-                INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
+                INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON b.matchid = m.matchid
                 INNER JOIN bodb02.dbo.bettrans r WITH (NOLOCK) ON r.refno = b.refno
             WHERE r.transid = @transid
 		END
@@ -108,7 +108,7 @@ BEGIN
 				FROM bodb02.dbo.bettransm WITH (NOLOCK)
                 WHERE refno = @refno
             ) AS b
-                INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON b.matchid = m.matchid
+                INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
                 INNER JOIN bodb02.dbo.bettrans14 r WITH (NOLOCK) ON r.refno = b.refno
             WHERE r.transid = @transid
 		END
@@ -150,7 +150,7 @@ BEGIN
 				FROM DBARC.bodb_Archive.dbo.bettransm WITH (NOLOCK)
                 WHERE refno = @refno
             ) AS b
-                INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON b.matchid = m.matchid
+                INNER JOIN DBARC.bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON b.matchid = m.matchid
                 INNER JOIN bodb02.dbo.bettrans14 r WITH (NOLOCK) ON r.refno = b.refno
             WHERE r.transid = @transid
 		END
@@ -173,7 +173,7 @@ BEGIN
 				FROM bodb02.dbo.bettransm14 WITH (NOLOCK)
                 WHERE refno = @refno
             ) AS b
-                INNER JOIN DBARC.bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON b.matchid = m.matchid
+                INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON b.matchid = m.matchid
                 INNER JOIN DBARC.bodb_Archive.dbo.bettrans_bk r WITH (NOLOCK) ON r.refno = b.refno
             WHERE r.transid = @transid
 		END
