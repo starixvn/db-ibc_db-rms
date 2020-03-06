@@ -36,6 +36,6 @@ BEGIN
 	GROUP BY TransId, Username
 	ORDER BY TransId
 
-	SELECT @TransDate AS TransDate -- new TransDate
+	SELECT CONVERT(VARCHAR(200), @TransDate, 121) AS TransDate -- new TransDate
 END
 GO
