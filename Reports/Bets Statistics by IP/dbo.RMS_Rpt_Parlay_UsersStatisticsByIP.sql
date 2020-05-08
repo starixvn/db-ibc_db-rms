@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_UsersStatisticsByIP]
+ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_UsersStatisticsByIP]
 	@fromdate	DATETIME,
 	@pageIndex	INT = 1,
 	@pageSize	INT = 100,

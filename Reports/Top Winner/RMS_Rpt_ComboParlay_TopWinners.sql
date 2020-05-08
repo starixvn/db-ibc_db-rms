@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners]
 	@fromdate	SMALLDATETIME,

@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_BetsStatisticsByIP]
+ ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_BetsStatisticsByIP]
 	@IP				varchar(30),
 	@fromdate		datetime
  AS
