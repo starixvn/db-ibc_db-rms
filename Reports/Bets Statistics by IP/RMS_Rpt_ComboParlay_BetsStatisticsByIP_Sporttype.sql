@@ -1,32 +1,29 @@
-﻿
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
-
-ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_BetsStatisticsByIP_Sporttype] @fromdate  DATETIME,
-                                                                         @IP        VARCHAR(30),
-                                                                         @custid    INT,
-                                                                         @sporttype TINYINT
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_BetsStatisticsByIP_Sporttype]
+	@fromdate  DATETIME,
+	@IP        VARCHAR(30),
+	@custid    INT,
+	@sporttype TINYINT
 AS
-	
+
 /*
-		Created: Winnie
-		Date: 2016-05-05
-		Task: get bets list of customer by sport
-		DB: DBRMS/bodb_RMS
-		
-	   Revisions:	
-		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
+	Created: 20160505@Winnie
+	DB: DBRMS-bodb_RMS
+	Task: get bets list of customer by sport
+	
+	Revisions:	
+		- 20190214@Jacob: Add Bet Builder [RedmineID: #108694]
+		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 
-		Parameter's Explanation:
-			@sporttype = '1': soccer only
-						= 2: others
-		
-	*/
+	Parameter's Explanation:
+		@sporttype = '1': soccer only
+					= 2: others
+*/
 
+BEGIN
+	SET NOCOUNT ON
 
-     SET NOCOUNT ON;
-     DECLARE @todate DATETIME;
-     SELECT @todate = @fromdate+'23:59:59';
-     SELECT transid,
+	SELECT transid,
             refno,
             transdate,
             bettype,
@@ -48,14 +45,14 @@ AS
             m.awayid,
             ISNULL(m.SettlementStatus, 0) AS SettlementStatus,
             ISNULL(m.IsNeutral, CONVERT(BIT, 0)) AS IsNeutral
-     FROM rmBettrans a WITH (NOLOCK)
-          LEFT JOIN bodb02.dbo.match AS m WITH (NOLOCK) ON m.matchid = a.matchid
-                                                           AND a.bettype = 38
-     WHERE transdate BETWEEN @fromdate AND @todate
-           AND custid = @custid
-           AND IP = @IP
-           AND ((@sporttype = 1
-                 AND transid2 = 1)
-                OR (@sporttype = 2
-                    AND transid2 <> 1));
+     FROM dbo.rmBettrans a WITH (NOLOCK)
+          LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON m.matchid = a.matchid AND a.bettype IN (38, 376)
+     WHERE IP = @IP
+		AND a.custid = @custid
+		AND a.transdate >= @fromdate AND a.transdate < DATEADD(DAY, 1, @fromdate)
+        AND (
+			(@sporttype = 1 AND transid2 = 1)
+            OR (@sporttype = 2 AND transid2 <> 1)
+		)
+END
 GO

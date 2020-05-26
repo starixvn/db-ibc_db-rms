@@ -1,113 +1,186 @@
-﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
-
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Outstanding_Mem]
 	@custid		INT,	
 	@selection	VARCHAR(100) = '',
 	@sporttype	VARCHAR(100) = '',
 	@ParlayType	VARCHAR(10)=''
 AS
-	/*
-		Created: Winnie
-		Date: 2016-04-26
-		Task: Get combo parlay betlist running by member
-		DB: DBRMS/bodb_RMS
+
+/*
+	Created: 20160426@Winnie
+	DB: DBRMS-bodb_RMS
+	Task: Get combo parlay betlist running by member
 		
-		Revisions:		
+	Revisions:		
 		- 20170719@Winnie: Add MuayThai RedmineID: #79500
-		-20190214@Jacob: Add Bet Builder RedmineID: #108694
-		Parameter's Explanation:	
-			-@sporttype = 0 : all sports
-						= 1 : soccer only
-						= 2 : Other sports
-						= 3 : combined sports
-	   - @ParlayType = 1: Mix parlay
-							2: Combo parlay
-							3: Single Match Parlay
-	*/ 
-SET NOCOUNT ON
-	DECLARE @tmpSelection TABLE (selection int)
-	DECLARE @tmpSport TABLE (sporttype int)
-	DECLARE @10up varchar(500)
-	DECLARE @all varchar(500)
-	
-	DECLARE @IsMixParlay BIT = 0, @IsComboParlay BIT = 0, @IsSingleMatchParlay BIT = 0
-	SELECT  @IsMixParlay = CASE WHEN CHARINDEX('1', @ParlayType) > 0 THEN 1 ELSE 0 END,
-		   @IsComboParlay = CASE WHEN CHARINDEX('2', @ParlayType) > 0 THEN 1 ELSE 0 END,
-		   @IsSingleMatchParlay = CASE WHEN CHARINDEX('3', @ParlayType) > 0 THEN 1 ELSE 0 END
+		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
+		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
+		
+	Parameter's Explanation:
+		- @selection:
+					. '2,3': 2,3 selections
+					. '10': 10 UP
+					. '0' : All
+		- @sporttype:
+					. '1': soccer only
+					. '-1': Combined other sports
+					. '-2': Other sports
+					. '-3': Combined sports
+		- @ParlayType:
+					. 1: Mix parlay
+					. 2: Combo parlay
+					. 3: Single Match Parlay
+					. 4: Panalty shootout combo
+*/
 
-	INSERT INTO @tmpSelection
-	SELECT val
-	FROM f_RMS_strSplit (@selection,',')	
-	
-	--Check selection is 10-UP
-	IF EXISTS(SELECT TOP 1 1 FROM @tmpSelection WHERE selection = 0)
+BEGIN
+	SET NOCOUNT ON
+
+	-- selections
 	BEGIN
-		SELECT @all = '2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
-		DELETE FROM @tmpSelection
-		INSERT INTO @tmpSelection
-		SELECT val
-		FROM f_RMS_strSplit (@all,',')		
+		CREATE TABLE #tmpSelection (selection INT)
+
+		-- all selections (2 --> 100)
+		IF ',' + @selection + ',' LIKE '%,0,%'
+		BEGIN
+			SELECT @selection = '2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
+		
+			INSERT INTO #tmpSelection (selection)
+			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
+		END
+		-- 10UP (add 11 --> 100)
+		ELSE IF ',' + @selection + ',' LIKE '%,10,%'
+		BEGIN
+			SELECT @selection = @selection + ',11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
+		
+			INSERT INTO #tmpSelection (selection)
+			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
+		END
+		ELSE
+		BEGIN
+			INSERT INTO #tmpSelection (selection)
+			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
+		END
 	END
-	ELSE IF EXISTS(SELECT TOP 1 1 FROM @tmpSelection WHERE selection = 10)
-	BEGIN
-		SELECT @10up = '11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
 
-		INSERT INTO @tmpSelection
-		SELECT val
-		FROM f_RMS_strSplit (@10up,',')		
-	END	
-	
-	INSERT INTO @tmpSport (sporttype)
-	SELECT val
-	FROM f_RMS_strSplit (@sporttype,',')
-	IF EXISTS (SELECT TOP 1 1 FROM @tmpSport WHERE sporttype=-2)
+	-- sports
 	BEGIN
-	INSERT INTO @tmpSport
-	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
+		CREATE TABLE #tmpSport (sporttype INT)
+		INSERT INTO #tmpSport (sporttype)
+		SELECT val FROM dbo.f_RMS_strSplit(@sporttype, ',')
+
+		IF ',' + @sporttype + ',' LIKE '%,-2,%'
+			INSERT INTO #tmpSport (sporttype)
+			SELECT SportType FROM bodb02.dbo.Sports WITH (NOLOCK)
+			WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
+				AND SportType <= 99
 	END
-	
-    CREATE TABLE #bettransm(refno BIGINT, transid BIGINT, NumberWon INT DEFAULT(0))
-    INSERT INTO #bettransm(refno,transid)
-	SELECT refno, transid
-	FROM rmBettrans b WITH(NOLOCK) 	
-	INNER JOIN 	@tmpSelection s ON b.hdp2=s.selection	
-	INNER JOIN  @tmpSport p ON b.transid2 = p.sporttype	
-	WHERE (@IsMixParlay = 1 OR @IsComboParlay = 1)
-		AND b.matchid = 29
-		AND b.statusid = 0
-		AND b.CustId = @custid
-     UPDATE b
-	SET NumberWon = (SELECT COUNT(bm.transid) FROM bodb02.dbo.bettransm bm WITH(NOLOCK) 
-												INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON bm.matchid=m.matchid
-												WHERE b.refno = bm.refno AND bm.statusid=112 AND m.sporttype<=99)
-	FROM #bettransm b	
 
-	UPDATE b
-	SET NumberWon =b.NumberWon+ (SELECT COUNT(bm.transid) FROM bodb02.dbo.bettransm14 bm WITH(NOLOCK) 
-									INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON bm.matchid=m.matchid
-									WHERE b.refno = bm.refno AND bm.statusid=112  AND m.sporttype<=99)
-	FROM #bettransm b	
+	-- get data
+	BEGIN
+		CREATE TABLE #bettrans
+		(
+			transid		BIGINT
+			,refno		BIGINT
+			,matchid	INT
+			,bettype	SMALLINT
+			,market		TINYINT -- 1: today only, 2: early only, 3: combined
+			,NumberWon	INT DEFAULT(0)
+		)
 
-    SELECT a.transid,
-	   a.refno,
-	   bettype,
-	   transdate,
-	   odds2*TotalBet AS odds,
-	   stake*actualrate/TotalBet stake,
-	   stake*actualrate*(1-tpositiontaking)/TotalBet stakePT,
-	   stake*actualrate*(odds2-1)*(1-tpositiontaking) net_win,
-	   hdp2 AS TotalSelection,
-	   ISNULL(bm.NumberWon,0) NumberWon,
-	   TotalBet AS TotalBet,
-	   CASE WHEN c.sporttype NOT IN(-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE c.sporttype END AS Sporttype
-    FROM rmBettrans a WITH(NOLOCK)
-    LEFT JOIN #bettransm bm ON a.transid = bm.transid
-    INNER JOIN @tmpSelection b ON a.hdp2=b.selection
-    INNER JOIN @tmpSport c ON a.transid2=c.sporttype
-    WHERE custid = @custid 
-	   AND statusid = 0	
-	   AND ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid = 29 ) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid = 29) OR (@IsSingleMatchParlay=1 AND bettype=38))		
-    ORDER BY net_win DESC
-	
-	DROP TABLE #bettransm
+		CREATE TABLE #bettype (bettype SMALLINT)
+
+		-- Combo parlay
+		DECLARE @ComboType TINYINT = 0 -- 1: mix parlay only, 2: combo parlay only, 3: combined
+		
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%'
+		BEGIN
+			INSERT INTO #bettype (bettype)
+			VALUES (29)
+
+			IF (SELECT COUNT(DISTINCT val) FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2)) = 2
+				SELECT @ComboType = 3
+			ELSE IF ',' + @ParlayType + ',' LIKE '%,1,%'
+				SELECT @ComboType = 1
+			ELSE
+				SELECT @ComboType = 2
+		END
+
+		-- Single match parlay
+		IF ',' + @ParlayType + ',' LIKE '%,3,%'
+			INSERT INTO #bettype (bettype)
+			VALUES (38)
+
+		-- Penalty shootout combo
+		IF ',' + @ParlayType + ',' LIKE '%,4,%'
+			INSERT INTO #bettype (bettype)
+			VALUES (376)
+
+		INSERT INTO #bettrans (transid, bettype, refno)
+		SELECT b.transid, b.bettype, b.refno
+		FROM dbo.rmBettrans b WITH (NOLOCK)
+			INNER JOIN #bettype bt ON b.bettype = bt.bettype
+			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+		WHERE b.statusID = 0
+			AND b.custid = @custid
+
+		DROP TABLE #bettype
+		DROP TABLE #tmpSelection
+		DROP TABLE #tmpSport
+
+		CREATE CLUSTERED INDEX CIX_bettype ON #bettrans (bettype)
+
+		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype = 29)
+		BEGIN
+			UPDATE b
+			SET b.NumberWon = ISNULL(b.NumberWon, 0) + bm.NumberWon
+			FROM #bettrans b
+				CROSS APPLY (
+					SELECT COUNT(1) AS NumberWon
+					FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
+					WHERE b.refno = bm.refno AND bm.statusID = 112
+				) bm
+			WHERE b.bettype = 29
+
+			UPDATE b
+			SET b.NumberWon = ISNULL(b.NumberWon, 0) + bm.NumberWon
+			FROM #bettrans b
+				CROSS APPLY (
+					SELECT COUNT(1) AS NumberWon
+					FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
+					WHERE b.refno = bm.refno AND bm.statusID = 112
+				) bm
+			WHERE b.bettype = 29
+		END
+	END
+
+	-- Return data
+	BEGIN
+		SELECT
+			rb.transid
+			,rb.refno
+			,rb.bettype
+			,rb.transdate
+			,rb.odds2 * rb.TotalBet AS odds
+			,rb.stake * rb.actualrate / rb.TotalBet AS stake
+			,rb.stake * rb.actualrate * (1 - rb.tpositiontaking) / rb.TotalBet AS stakePT
+			,rb.stake * rb.actualrate * (rb.odds2 - 1) * (1 - rb.tpositiontaking) AS net_win
+			,rb.hdp2 AS TotalSelection
+			,ISNULL(b.NumberWon, 0) AS NumberWon
+			,rb.TotalBet AS TotalBet
+			,CASE WHEN rb.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE rb.transid2 END AS Sporttype
+		FROM rmBettrans rb WITH(NOLOCK)
+			INNER JOIN #bettrans b ON rb.transid = b.transid
+		WHERE 1 = CASE
+					WHEN rb.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
+						WHEN @ComboType = 1 AND rb.betteam = N'1' THEN 1
+						WHEN @ComboType = 2 AND rb.betteam <> N'1' THEN 1
+						ELSE 0 END
+					ELSE 1 END
+		ORDER BY net_win DESC
+	END
+
+	DROP TABLE #bettrans
+END
 GO

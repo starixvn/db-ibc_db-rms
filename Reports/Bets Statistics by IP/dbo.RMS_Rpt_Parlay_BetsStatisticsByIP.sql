@@ -1,29 +1,29 @@
- ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_BetsStatisticsByIP]
-	@IP				varchar(30),
-	@fromdate		datetime
- AS
-	/*
-		Created: Johnson
-		Date: 2014-04-18
-		Task: Get report customers bets by ip
-		DB: DBRMS/bodb_RMS
-	*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_BetsStatisticsByIP]
+	@IP			VARCHAR(30)
+	,@fromdate	DATETIME
+AS
+
+/*
+	Created: 20140418@Johnson
+	DB: DBRMS/bodb_RMS
+	Task: Get report customers bets by ip
+
+	Revisions:	
+		- 20200510@Percy: Change condition of transdate [RedmineID: #133961]
+*/
+
 BEGIN 
 	SET NOCOUNT ON 
 	
-	declare @todate datetime
-
-	set @todate = @fromdate + '23:59:59.999'
-	
-	SELECT custid
-			,username
-			,SUM(CASE WHEN liveawayscore = 1 THEN 1 ELSE 0 END) as cnt_soccer
-			,SUM(CASE WHEN liveawayscore IN (2,3) THEN 1 ELSE 0 END) as cnt_others
-	FROM rmBettrans WITH(NOLOCK)
-	WHERE transdate between @fromdate and @todate
-		AND IP = @IP
+	SELECT
+		custid
+		,username
+		,SUM(CASE WHEN liveawayscore = 1 THEN 1 ELSE 0 END) as cnt_soccer
+		,SUM(CASE WHEN liveawayscore IN (2,3) THEN 1 ELSE 0 END) as cnt_others
+	FROM dbo.rmBettrans WITH (NOLOCK)
+	WHERE IP = @IP
+		AND transdate >= @fromdate AND transdate < DATEADD(DAY, 1, @fromdate)
 	GROUP BY custid, username
-	
 END
 GO
-GRANT EXECUTE ON [dbo].[RMS_Rpt_Parlay_BetsStatisticsByIP] TO [bodbRMSNet]
