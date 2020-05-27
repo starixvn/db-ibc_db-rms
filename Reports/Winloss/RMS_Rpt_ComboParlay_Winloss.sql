@@ -5,7 +5,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss]
 	@movebetsday	DATETIME,
 	@balanceUpday	DATETIME = NULL,
 	@sporttype		VARCHAR(100) = '',
-	@selection		VARCHAR(100) = '',
+	@selection		VARCHAR(MAX) = '',
 	@ParlayType		VARCHAR(20) = '',
 	@ReportType		TINYINT = 1
 AS

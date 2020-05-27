@@ -5,7 +5,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details]
 	@todate			DATETIME,
 	@sporttype		VARCHAR(100) = '',
 	@movebetsday	DATETIME,
-	@selection		VARCHAR(100) = '',
+	@selection		VARCHAR(MAX) = '',
 	@ParlayType		VARCHAR(10) = ''
 AS
 

@@ -1,7 +1,7 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0"></info>*/
  ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_PotentialWinningDetails]
 	@CustID		INT,
-	@selection	VARCHAR(100) = '',
+	@selection	VARCHAR(MAX) = '',
 	@sporttype	VARCHAR(100) = '',
 	@ParlayType	VARCHAR(10)  = ''
 AS

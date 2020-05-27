@@ -6,7 +6,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners]
 	@balanceUpday	DATETIME = NULL,
 	@limitedRow		INT = 20,
 	@sporttype		VARCHAR(100) = '',
-	@selection		VARCHAR(100) = '',
+	@selection		VARCHAR(MAX) = '',
 	@ParlayType		VARCHAR(20) = ''
 AS
 
@@ -181,7 +181,7 @@ BEGIN
 		END
 
 		-- rmSumWinloss_Old
-		IF @FromDate <= @MoveBetsDay AND @ToDate >= @BalanceUpDay
+		IF @FromDate < @BalanceUpDay
 		BEGIN
 			SELECT	@f_date = @FromDate
 					,@t_date = CASE WHEN @ToDate >= @BalanceUpDay THEN DATEADD(DAY, -1, @BalanceUpDay) ELSE @ToDate END

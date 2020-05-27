@@ -1,6 +1,6 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_Betlist]
-	@selection		VARCHAR(100) = '0',
+	@selection		VARCHAR(MAX) = '0',
 	@sporttype		VARCHAR(100) = '',
 	@level			VARCHAR(100) = '',
 	@Market			VARCHAR(100) = '',

@@ -1,6 +1,6 @@
  ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_PotentialWinningDetails]
 	@CustID			INT,
-	@selection		VARCHAR(100) = '',
+	@selection		VARCHAR(MAX) = '',
 	@sporttype		VARCHAR(100) = ''
  AS
 	/*	

@@ -151,7 +151,7 @@ CREATE TABLE #__tmpByBatch
 
 CREATE INDEX IX_bettype ON #__tmpByBatch (bettype, refno) INCLUDE (transid, stake, betteam, hdp2)
 
-DECLARE @fromdate SMALLDATETIME = '2020-02-01', @todate SMALLDATETIME, @isBreak BIT = 0
+DECLARE @fromdate SMALLDATETIME = '2020-03-01', @todate SMALLDATETIME, @isBreak BIT = 0
 DECLARE @ErrMsg VARCHAR(2000) = ''
 
 WHILE 1 = 1
@@ -197,7 +197,7 @@ BEGIN
 
 	WHILE 1=1
 	BEGIN
-		TRUNCATE TABLE #__rmBettrans_Old
+		TRUNCATE TABLE #__tmpByBatch
 
 		DELETE TOP (5000) FROM #rmBettrans_Old
 		OUTPUT DELETED.*
@@ -297,11 +297,11 @@ BEGIN
 		)
 		SELECT
 			transid,custid,transdate,oddsid,hdp1,hdp2,odds,stake,status,winlost,awinlost,mwinlost,playercomm,comm,acomm
-			,apositiontaking,mpositiontaking,tpositiontaking,playerdiscount,discount,adiscount,livehomescore,CASE WHEN bettype IN (38, 376) THEN 1 ELSE liveawayscore END
+			,apositiontaking,mpositiontaking,tpositiontaking,playerdiscount,discount,adiscount,livehomescore,liveawayscore
 			,liveindicator,betteam,creator,refno,comstatus,winlostdate,betfrom,betcheck,checktime,oddsspread,actualrate,matchid
 			,recommend,mrecommend,ruben,betid,statuswinlost,modds,bettype,betdaqid,actual_stake,currency,ip,transdesc
 			,sdiscount,scomm,spositiontaking,swinlost,srecommend,Username,CurrencyName,virtualrate,oddstype,statusID,currency2
-			,balance,SecAcceptFlag,epositiontaking,1,hdp2,odds,1
+			,balance,SecAcceptFlag,epositiontaking,transid2,combo,odds2,TotalBet
 		FROM #__tmpByBatch
 
 		IF @@ROWCOUNT < 5000

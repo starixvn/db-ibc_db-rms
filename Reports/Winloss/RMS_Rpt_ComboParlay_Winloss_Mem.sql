@@ -6,7 +6,7 @@
 	@movebetsday	DATETIME,
 	@balanceUpday	DATETIME = NULL,
 	@sporttype		VARCHAR(100)='',
-	@selection		VARCHAR(100) = '',
+	@selection		VARCHAR(MAX) = '',
 	@ParlayType		VARCHAR(10)=''
 AS
 
