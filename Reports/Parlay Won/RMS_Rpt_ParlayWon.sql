@@ -168,7 +168,7 @@ BEGIN
 					,b.custid
 					,b.Username
 					,b.bettype
-					,b.odds
+					,(b.winlost - b.actual_stake) / b.stake AS odds
 					,b.stake * b.actualrate AS Stake
 					,b.stake * (1 - b.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0))) * b.actualrate AS StakeAfterPT
 					,(b.winlost - b.actual_stake) * b.actualrate AS WinningAmount
@@ -216,7 +216,7 @@ BEGIN
 					,b.custid
 					,b.Username
 					,b.bettype
-					,b.odds
+					,(b.winlost - b.actual_stake) / b.stake AS odds
 					,b.stake * b.actualrate AS Stake
 					,b.stake * (1 - b.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0))) * b.actualrate AS StakeAfterPT
 					,(b.winlost - b.actual_stake) * b.actualrate AS WinningAmount
