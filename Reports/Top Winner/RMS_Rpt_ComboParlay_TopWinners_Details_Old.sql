@@ -178,6 +178,7 @@ BEGIN
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
 			AND statusID IN (112, 113)
 			AND custid = @custid
+			AND EXISTS (SELECT 1 FROM #bettype bt WHERE b.bettype = bt.bettype)
 			AND 1 = CASE
 						WHEN b.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
 							WHEN @ComboType = 1 AND b.betteam = N'1' THEN 1
