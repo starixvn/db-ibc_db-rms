@@ -1,253 +1,280 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
-
+/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_Betlist]
-	@selection		VARCHAR(100) = '0',
+	@selection		VARCHAR(MAX) = '0',
 	@sporttype		VARCHAR(100) = '',
 	@level			VARCHAR(100) = '',
 	@Market			VARCHAR(100) = '',
-	@stake			MONEY= 0,
-	@maxpayout		MONEY= 0,
+	@stake			MONEY = 0,
+	@maxpayout		MONEY = 0,
 	@ReportType		TINYINT = 1,
 	@max_transid	BIGINT = 0,
 	@limitRowCount	INT = 20,
-	@ParlayType		VARCHAR(20)=''
- AS
-	/*
-		Created: Winnie
-		Date: 20160425
-		Task: Monitoring bets combo parlay of special members
-		DB: DBRMS/bodb_RMS		
-		Revisions:			
-			-20160926@Winnie: fix issue conflict refno with racing RedmineID: #64286
-			-20170719@Winnie: Add MuayThai RedmineID: #79500
-			-20190214@Jacob: Add Bet Builder RedmineID: #108694
-		Parameter's Explanation:
-			- @selection:- '2,3': 2,3 selections
-						 - '10': 10 UP
-						 - '0' - All
-			- @sporttype:= '1' : soccer only
-						= '2' : Other sports
-						= '3' : combined sports
-			- @level:= '0': none
-					 = '1,2,3': level 1,2,3
-			- @ReportType = 1: Filter by stake
-						= 2: filter by net win
-			- @Market = 1: Today only maket
-						2: Early only maket
-						3: Combined	
-			- @ParlayType = 1: Mix parlay
-							2: Combo parlay
-							3: Single Match Parlay
+	@ParlayType		VARCHAR(20) = ''
+AS
 
-	*/
-SET NOCOUNT ON 
-	----Get Sport Bettype Matrix------
-	DECLARE @BetRadar TABLE(ProductID INT, Bettype INT,EventType INT)
-	INSERT INTO @BetRadar
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @Mode = 4, @SubProduct = 'BetRadar'
+/*
+	Created: 20160425@Winnie
+	Task: Monitoring bets combo parlay of special members
+	DB: DBRMS-bodb_RMS
+	
+	Revisions:
+		- 20160926@Winnie: fix issue conflict refno with racing RedmineID: #64286
+		- 20170719@Winnie: Add MuayThai RedmineID: #79500
+		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
+		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
+	
+	Parameter's Explanation:
+		- @selection:
+					. '2,3': 2,3 selections
+					. '10': 10 UP
+					. '0' : All
+		- @sporttype:
+					. '1': soccer only
+					. '-1': Combined other sports
+					. '-2': Other sports
+					. '-3': Combined sports
+		- @level:
+					. '0': none
+					. '1,2,3': level 1,2,3
+		- @ReportType:
+					. 1: Filter by stake
+					. 2: filter by net win
+		- @Market:
+					. 1: Today only maket
+					. 2: Early only maket
+					. 3: Combined	
+		- @ParlayType:
+					. 1: Mix parlay
+					. 2: Combo parlay
+					. 3: Single Match Parlay
+					. 4: Panalty shootout combo
+*/
 
-	DECLARE @tmpSelection TABLE (selection int)
-	DECLARE @tmpSport TABLE (sporttype int)
-	DECLARE @tmpMarket TABLE(type INT)
-	CREATE TABLE #bettransm(refno BIGINT, transid BIGINT, today BIT DEFAULT(0), early BIT DEFAULT(0), type INT, IsBetRadar BIT DEFAULT(0),NumberWon INT DEFAULT(0))
-	CREATE TABLE #bettransmp(refno BIGINT, transid BIGINT, today BIT DEFAULT(0), early BIT DEFAULT(0), type INT, matchid INT)
-	DECLARE @tmpLevel TABLE (level int)
-	DECLARE @10up varchar(500),@all varchar(500), @today DATETIME
-	
+BEGIN
+	SET NOCOUNT ON
 
-	 DECLARE @IsMixParlay BIT = 0, @IsComboParlay BIT = 0, @IsSingleMatchParlay BIT = 0
-	SELECT  @IsMixParlay = CASE WHEN CHARINDEX('1', @ParlayType) > 0 THEN 1 ELSE 0 END,
-		   @IsComboParlay = CASE WHEN CHARINDEX('2', @ParlayType) > 0 THEN 1 ELSE 0 END,
-		   @IsSingleMatchParlay = CASE WHEN CHARINDEX('3', @ParlayType) > 0 THEN 1 ELSE 0 END
-	
-	SELECT @today = CONVERT(VARCHAR(10),GETDATE(),120)
-			
-	INSERT INTO @tmpSelection
-	SELECT val
-	FROM f_RMS_strSplit (@selection,',')
-	
-	--Check selection is 6-UP
-	IF EXISTS(SELECT TOP 1 1 FROM @tmpSelection WHERE selection = 0)
+	DECLARE @today SMALLDATETIME
+	SELECT  @today = CONVERT(DATE, GETDATE())
+
+	-- selections
 	BEGIN
-		SELECT @all = '2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
-		DELETE FROM @tmpSelection
-		INSERT INTO @tmpSelection
-		SELECT val
-		FROM f_RMS_strSplit (@all,',')		
-	END
-	ELSE IF EXISTS(SELECT TOP 1 1 FROM @tmpSelection WHERE selection = 10)
-	BEGIN
-		SELECT @10up = '11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
+		CREATE TABLE #tmpSelection (selection INT)
 
-		INSERT INTO @tmpSelection
-		SELECT val
-		FROM f_RMS_strSplit (@10up,',')		
-	END
-
-	INSERT INTO @tmpSport (sporttype)
-	SELECT val
-	FROM f_RMS_strSplit (@sporttype,',')
-	
-	IF EXISTS (SELECT TOP 1 1 FROM @tmpSport WHERE sporttype=-2)
-	BEGIN
-	INSERT INTO @tmpSport
-	SELECT SportType FROM bodb02.dbo.Sports(NOLOCK) WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
-	END
-	
-	INSERT INTO @tmpLevel (level)
-	SELECT val
-	FROM f_RMS_strSplit (@level,',')
-	
-	INSERT INTO @tmpMarket
-	SELECT val
-	FROM f_RMS_strSplit (@Market,',')
-	
-	INSERT INTO #bettransm(refno,transid)
-	SELECT refno, transid
-	FROM rmBettrans b WITH(NOLOCK) 	
-	INNER JOIN 	@tmpSelection s ON b.hdp2=s.selection	
-	INNER JOIN  @tmpSport p ON b.transid2 = p.sporttype	
-	WHERE	b.transid > @max_transid 						
-		AND (@IsMixParlay = 1 OR @IsComboParlay = 1)
-		AND b.matchid = 29
-		AND b.statusid = 0
-		AND currency <> 20
-	
-	INSERT INTO #bettransmp(refno,transid, matchid)
-	SELECT refno, transid, matchid
-	FROM rmBettrans b WITH(NOLOCK) 	
-	INNER JOIN 	@tmpSelection s ON b.hdp2=s.selection	
-	INNER JOIN  @tmpSport p ON b.transid2 = p.sporttype	
-	WHERE	b.transid > @max_transid 						
-		AND (@IsSingleMatchParlay = 1 AND bettype = 38)
-		AND b.statusid = 0
-		AND currency <> 20
-	
-
-	UPDATE #bettransm
-	SET IsBetRadar = 1
-	FROM #bettransm b
-		INNER JOIN bodb02.dbo.bettransm bm WITH(NOLOCK) ON b.refno = bm.refno
-	WHERE bm.bettype IN (SELECT Bettype FROM @BetRadar)
-
-	UPDATE #bettransm
-	SET IsBetRadar = 1
-	FROM #bettransm b
-		INNER JOIN bodb02.dbo.bettransm14 bm WITH(NOLOCK) ON b.refno = bm.refno
-	WHERE bm.bettype IN (SELECT Bettype FROM @BetRadar)
-
-	UPDATE b
-	SET NumberWon = (SELECT COUNT(bm.transid) FROM bodb02.dbo.bettransm bm WITH(NOLOCK) 
-												INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON bm.matchid=m.matchid
-												WHERE b.refno = bm.refno AND bm.statusid=112 AND m.sporttype<=99)
-	FROM #bettransm b	
-
-	UPDATE b
-	SET NumberWon =b.NumberWon+ (SELECT COUNT(bm.transid) FROM bodb02.dbo.bettransm14 bm WITH(NOLOCK) 
-									INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON bm.matchid=m.matchid
-									WHERE b.refno = bm.refno AND bm.statusid=112  AND m.sporttype<=99)
-	FROM #bettransm b	
-
-	UPDATE #bettransm
-	SET today = 1
-	FROM #bettransm b
-		INNER JOIN bodb02.dbo.bettransm bm WITH(NOLOCK) ON b.refno = bm.refno
-		INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON bm.matchid=m.matchid
-	WHERE matchdate = @today AND m.sporttype<=99
-	
-	UPDATE #bettransm
-	SET early = 1
-	FROM #bettransm b
-		INNER JOIN bodb02.dbo.bettransm bm WITH(NOLOCK) ON b.refno = bm.refno
-		INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON bm.matchid=m.matchid
-	WHERE matchdate <> @today AND m.sporttype<=99
-	
-	UPDATE #bettransm
-	SET early = 1
-	FROM #bettransm b
-		INNER JOIN bodb02.dbo.bettransm14 bm WITH(NOLOCK) ON b.refno = bm.refno
-		INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON bm.matchid=m.matchid
-	WHERE matchdate <> @today AND m.sporttype<=99
-		AND early = 0	
-					
-    UPDATE b SET today = 1 
-    FROM #bettransmp b INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid
-    WHERE eventdate = @today
-    
-    INSERT INTO #bettransm(refno , transid , today , early , IsBetRadar ,NumberWon)
-    SELECT refno, transid, today, 1 - today, 0, 0
-    FROM #bettransmp
-					   
-	UPDATE #bettransm
-	SET type = CASE WHEN today = 1 AND early = 0 THEN 1
-					WHEN today = 0 AND early = 1 THEN 2
-					ELSE 3 END
-
-IF EXISTS(SELECT TOP 1 1 FROM @tmpLevel WHERE level = 0)
-	BEGIN		
+		-- all selections (2 --> 100)
+		IF ',' + @selection + ',' LIKE '%,0,%'
+		BEGIN
+			SELECT @selection = '2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
 		
-			SELECT  top (@limitRowcount)
-				b.custid,
-				b.transdate,
-				b.transid,
-				b.refno, 
-				b.username,		
-				CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype,
-				b.odds2*TotalBet AS odds,				
-				b.stake*b.actualrate*(1-b.tpositiontaking)/TotalBet as stake,
-				(b.odds2-1)*b.stake*actualrate*(1-b.tpositiontaking) as maxpayout,		
-				b.hdp2 AS TotalSelection,
-				b.TotalBet AS TotalBet,
-				b.IP,				
-				ISNULL(mc.level,0) level,
-				bm.IsBetRadar,
-				bm.NumberWon,
-				b.bettype
-			FROM rmBettrans b WITH(NOLOCK) 
-				INNER JOIN #bettransm bm ON b.transid = bm.transid
-				INNER JOIN @tmpMarket m ON bm.type = m.type				
-				LEFT JOIN rmCustomer mc WITH(NOLOCK) ON b.custid = mc.custid AND level IN (SELECT [level] FROM @tmpLevel)						
-			WHERE ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid = 29 ) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid = 29) OR (@IsSingleMatchParlay=1 AND bettype=38))		
-				AND 1= case when @reportType = 1 AND (b.stake*b.actualrate*(1-b.tpositiontaking)/TotalBet) >= @stake then 1
-				when @reportType = 2 AND (b.odds2-1)*b.stake*actualrate*(1-b.tpositiontaking) >= @maxpayout then 1 else 0 end
-			ORDER BY transid DESC
+			INSERT INTO #tmpSelection (selection)
+			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
+		END
+		-- 10UP (add 11 --> 100)
+		ELSE IF ',' + @selection + ',' LIKE '%,10,%'
+		BEGIN
+			SELECT @selection = @selection + ',11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
 		
-		
+			INSERT INTO #tmpSelection (selection)
+			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
+		END
+		ELSE
+		BEGIN
+			INSERT INTO #tmpSelection (selection)
+			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
+		END
 	END
-	ELSE
+
+	-- sports
 	BEGIN
-	
-			SELECT top (@limitRowCount)
-				b.custid,
- 				b.transdate,
-				b.transid,
-				b.refno, 
-				b.username,		
-				CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype,		
-				b.odds2*TotalBet AS odds,
-				b.statusid,
-				b.stake*b.actualrate*(1-b.tpositiontaking)/TotalBet  as stake,
-				(b.odds2-1)*b.stake*actualrate*(1-b.tpositiontaking) as maxpayout,		
-				b.hdp2 AS TotalSelection,
-				b.TotalBet AS TotalBet,		
-				b.IP,	
-				ISNULL(mc.level,0) level,
-				bm.IsBetRadar,
-				bm.NumberWon,
-				b.bettype
-			FROM rmCustomer mc WITH(NOLOCK) 			
-				INNER JOIN rmBettrans b WITH(NOLOCK) ON b.custid = mc.custid
-				INNER JOIN #bettransm bm ON b.transid = bm.transid
-				INNER JOIN @tmpMarket m ON bm.type = m.type				
-				INNER JOIN @tmpLevel l ON ISNULL(mc.level,0) = l.level
-			WHERE ((@IsMixParlay=1 AND betteam ='1' AND bettype=29 AND matchid = 29 ) OR (@IsComboParlay= 1 AND bettype=29 AND betteam <>'1' AND matchid = 29) OR (@IsSingleMatchParlay=1 AND bettype=38))		
-				AND 1= case when @reportType = 1 AND (b.stake*b.actualrate*(1-b.tpositiontaking)/TotalBet) >= @stake then 1
-						when @reportType = 2 AND (b.odds2-1)*b.stake*actualrate*(1-b.tpositiontaking) >= @maxpayout then 1 else 0 end
-				ORDER BY transid DESC
-	
-	END		
+		CREATE TABLE #tmpSport (sporttype INT)
+		INSERT INTO #tmpSport (sporttype)
+		SELECT val FROM dbo.f_RMS_strSplit(@sporttype, ',')
 
+		IF ',' + @sporttype + ',' LIKE '%,-2,%'
+			INSERT INTO #tmpSport (sporttype)
+			SELECT SportType FROM bodb02.dbo.Sports WITH (NOLOCK)
+			WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
+				AND SportType <= 99
+	END
 
-	DROP TABLE #bettransmp
-	DROP TABLE #bettransm
+	-- Blacklist league
+	DECLARE @BlacklistLeagueGroupId INT
+	SELECT  @BlacklistLeagueGroupId = GroupId FROM dbo.rmLeagueGroup WITH (NOLOCK) WHERE GroupName = 'Blacklist'
+
+	-- get data
+	BEGIN
+		CREATE TABLE #bettrans
+		(
+			transid				BIGINT
+			,refno				BIGINT
+			,matchid			INT
+			,bettype			SMALLINT
+			,market				TINYINT -- 1: today only, 2: early only, 3: combined
+			,NumberWon			INT DEFAULT(0)
+			,IsLive				BIT DEFAULT(0)
+			,IsBlacklistLeague	BIT DEFAULT(0)
+		)
+
+		CREATE TABLE #bettype (bettype SMALLINT)
+
+		-- Combo parlay
+		DECLARE @ComboType TINYINT = 0 -- 1: mix parlay only, 2: combo parlay only, 3: combined
+		
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%'
+		BEGIN
+			INSERT INTO #bettype (bettype)
+			VALUES (29)
+
+			IF (SELECT COUNT(DISTINCT val) FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2)) = 2
+				SELECT @ComboType = 3
+			ELSE IF ',' + @ParlayType + ',' LIKE '%,1,%'
+				SELECT @ComboType = 1
+			ELSE
+				SELECT @ComboType = 2
+		END
+
+		-- Single match parlay
+		IF ',' + @ParlayType + ',' LIKE '%,3,%'
+			INSERT INTO #bettype (bettype)
+			VALUES (38)
+
+		-- Penalty shootout combo
+		IF ',' + @ParlayType + ',' LIKE '%,4,%'
+			INSERT INTO #bettype (bettype)
+			VALUES (376)
+
+		INSERT INTO #bettrans (transid, bettype, matchid, refno)
+		SELECT b.transid, b.bettype, b.matchid, b.refno
+		FROM dbo.rmBettrans b WITH (NOLOCK)
+			INNER JOIN #bettype bt ON b.bettype = bt.bettype
+			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+		WHERE b.statusID = 0
+			AND b.currency <> 20
+
+		DROP TABLE #bettype
+		DROP TABLE #tmpSelection
+		DROP TABLE #tmpSport
+
+		CREATE CLUSTERED INDEX CIX_bettype ON #bettrans (bettype)
+
+		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype IN (38, 376))
+		BEGIN
+			UPDATE b
+			SET b.market = CASE
+								WHEN m.eventdate = @today THEN 1 -- today only
+								ELSE 2 END -- early only
+				,b.IsLive = CASE
+								WHEN m.GlobalShowTime < GETDATE() AND m.eventstatus <> 'Completed' THEN 1
+								ELSE 0 END
+				,b.IsBlacklistLeague = CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END
+			FROM #bettrans b
+				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
+				LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
+			WHERE b.bettype IN (38, 376)
+		END
+
+		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype = 29)
+		BEGIN
+			UPDATE b
+			SET b.NumberWon = bm.NumberWon
+				,b.market = CASE
+								WHEN today = 1 AND early = 0 THEN 1 -- today only
+								WHEN today = 0 AND early = 1 THEN 2 -- early only
+								ELSE 3 END -- combined
+				,b.IsLive = bm.IsLive
+				,b.IsBlacklistLeague = bm.IsBlacklistLeague
+			FROM #bettrans b
+				CROSS APPLY (
+					SELECT SUM(NumberWon) AS NumberWon, MAX(today) AS today, MAX(early) AS early, MIN(IsLive) AS IsLive, MAX(IsBlacklistLeague) AS IsBlacklistLeague
+					FROM (
+						SELECT
+							SUM(CASE WHEN bm.StatusID = 112 THEN 1 ELSE 0 END) AS NumberWon
+							,MAX(CASE WHEN bm.matchdate = @today THEN 1 ELSE 0 END) AS today
+							,MAX(CASE WHEN bm.matchdate = @today THEN 0 ELSE 1 END) AS early
+							,MIN(CASE WHEN m.GlobalShowTime < GETDATE() AND m.eventstatus <> 'Completed' THEN 1 ELSE 0 END) AS IsLive
+							,MAX(CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END) AS IsBlacklistLeague
+						FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
+							INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
+							LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
+						WHERE b.refno = bm.refno
+
+						UNION ALL
+						SELECT
+							SUM(CASE WHEN bm.StatusID = 112 THEN 1 ELSE 0 END) AS NumberWon
+							,MAX(CASE WHEN bm.matchdate = @today THEN 1 ELSE 0 END) AS today
+							,MAX(CASE WHEN bm.matchdate = @today THEN 0 ELSE 1 END) AS early
+							,MIN(CASE WHEN m.GlobalShowTime < GETDATE() AND m.eventstatus <> 'Completed' THEN 1 ELSE 0 END) AS IsLive
+							,MAX(CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END) AS IsBlacklistLeague
+						FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
+							INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
+							LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
+						WHERE b.refno = bm.refno
+					) bm
+				) bm
+			WHERE b.bettype = 29
+		END
+
+		-- filter by market
+		BEGIN
+			DECLARE @tmpMarket TABLE (market TINYINT)
+			INSERT INTO @tmpMarket (market)
+			SELECT DISTINCT val FROM dbo.f_RMS_strSplit(@Market, ',')
+
+			IF @@ROWCOUNT < 3
+			BEGIN
+				DELETE b
+				FROM #bettrans b
+					LEFT JOIN @tmpMarket m ON b.market = m.market
+				WHERE m.market IS NULL
+			END
+		END
+	END
+
+	-- Return data
+	BEGIN
+		CREATE TABLE #level (level TINYINT)
+		INSERT INTO #level (level)
+		SELECT DISTINCT val FROM dbo.f_RMS_strSplit(@level, ',')
+
+		SELECT TOP (@limitRowcount)
+			rb.custid
+			,rb.transdate
+			,rb.transid
+			,rb.refno
+			,rb.username
+			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype
+			,rb.odds2 * rb.TotalBet AS odds
+			,rb.statusID
+			,rb.stake * rb.actualrate * (1 - rb.tpositiontaking) / rb.TotalBet AS stake
+			,(rb.odds2 - 1) * rb.stake * rb.actualrate * (1 - rb.tpositiontaking) AS maxpayout
+			,rb.hdp2 AS TotalSelection
+			,rb.TotalBet AS TotalBet
+			,rb.IP
+			,ISNULL(mc.level, 0) AS level
+			,0 AS IsBetRadar
+			,b.NumberWon
+			,rb.bettype
+			,b.IsLive
+			,b.IsBlacklistLeague
+		FROM rmBettrans rb WITH (NOLOCK)
+			INNER JOIN #bettrans b ON rb.transid = b.transid
+			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
+		WHERE
+			ISNULL(mc.level, 0) IN (SELECT level FROM #level)
+			AND 1 = CASE
+					WHEN @reportType = 1 AND (rb.stake * rb.actualrate * (1 - rb.tpositiontaking) / rb.TotalBet) >= @stake THEN 1
+					WHEN @reportType = 2 AND (rb.odds2 - 1) * rb.stake * rb.actualrate * (1 - rb.tpositiontaking) >= @maxpayout THEN 1
+					ELSE 0 END
+			AND 1 = CASE
+					WHEN rb.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
+						WHEN @ComboType = 1 AND rb.betteam = N'1' THEN 1
+						WHEN @ComboType = 2 AND rb.betteam <> N'1' THEN 1
+						ELSE 0 END
+					ELSE 1 END
+		ORDER BY rb.transid DESC
+	END
+	
+	DROP TABLE #bettrans
+	DROP TABLE #level
+END
 GO

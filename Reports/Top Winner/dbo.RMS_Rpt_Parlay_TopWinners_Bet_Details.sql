@@ -5,16 +5,16 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_TopWinners_Bet_Details]
 AS
 
 /*
-	Created: Johnson
-	Date: 2013-08-13
-	DB: DBRMS/bodb_RMS
-	Task: View bet details 
-		
+	Created: 20130813@Johnson
+	DB: DBRMS-bodb_RMS
+	Task: View bet details
+
 	Revisions:
 		- 20160926@Winnie: fix issue conflict refno with racing RedmineID: #64286
 		- 20181224@Jacob: Esport 2, Add transdesc for bet list : #103001
 		- 20191026@Jacob: Winloss by master RedmineID: [#122137]
 		- 20200306@Percy: Fix issue missing data on bettransm/bettransm14/bettransmbk [RedmineID: #129935]
+		- 20200510@Percy: Add Black League [RedmineID: #133961]
 */
 
 BEGIN
@@ -46,166 +46,72 @@ BEGIN
 		,stake			MONEY
     )
 
-	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettrans WITH (NOLOCK) WHERE transid = @transid)
+	-- Blacklist league
+	DECLARE @BlacklistLeagueGroupId INT
+	SELECT  @BlacklistLeagueGroupId = GroupId FROM dbo.rmLeagueGroup WITH (NOLOCK) WHERE GroupName = 'Blacklist'
+	
+	DECLARE @tpositiontaking SMALLMONEY, @actualrate FLOAT, @SQL VARCHAR(MAX)
+	
+	SELECT  @tpositiontaking = tpositiontaking, @actualrate = actualrate
+	FROM bodb02.dbo.bettrans WITH (NOLOCK)
+	WHERE transid = @transid
+
+	IF @@ROWCOUNT = 0
+		SELECT @tpositiontaking = tpositiontaking, @actualrate = actualrate
+		FROM bodb02.dbo.bettrans14 WITH (NOLOCK)
+		WHERE transid = @transid
+
+	IF @@ROWCOUNT = 0
+		SELECT @tpositiontaking = tpositiontaking, @actualrate = actualrate
+		FROM DBARC.bodb_Archive.dbo.bettrans_bk WITH (NOLOCK)
+		WHERE transid = @transid
+
+	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno)
+		INSERT INTO @BetListMP
+        SELECT
+			bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
+			,bm.[status],bm.livehomescore,bm.liveawayscore,bm.liveindicator,m.leagueid,m.sporttype
+			,m.isNeutral,m.matchid,m.matchcode,m.betstatus,bm.betcheck,bm.transdesc,bm.stake
+		FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
+			INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
+		WHERE bm.refno = @refno
+
+	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno)
+		INSERT INTO @BetListMP
+        SELECT
+			bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
+			,bm.[status],bm.livehomescore,bm.liveawayscore,bm.liveindicator,m.leagueid,m.sporttype
+			,m.isNeutral,m.matchid,m.matchcode,m.betstatus,bm.betcheck,bm.transdesc,bm.stake
+		FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
+			INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
+		WHERE bm.refno = @refno
+
+	IF EXISTS (SELECT 1 FROM DBARC.bodb_Archive.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno)
 	BEGIN
-		IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno)
-		BEGIN
-			INSERT INTO @BetListMP
-            SELECT
-				b.transid,b.bettype,m.homeid,m.awayid,b.hdp1,b.hdp2,b.odds,b.betteam
-				,b.statusid,b.[status],b.livehomescore,b.liveawayscore,b.liveindicator
-				,m.leagueid,m.sporttype,m.isNeutral,m.matchid,m.matchcode,m.betstatus,b.betcheck,b.transdesc
-				,(b.stake * (1 - r.tpositiontaking) * r.actualrate) AS stake
-            FROM
-			(
-				SELECT
-					matchid,bettype,transid,hdp1,hdp2,odds,betteam,statusid,[status]
-					,livehomescore,liveawayscore,liveindicator,betcheck,transdesc,refno,stake
-				FROM bodb02.dbo.bettransm WITH (NOLOCK)
-                WHERE refno = @refno
-            ) AS b
-                INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
-                INNER JOIN bodb02.dbo.bettrans r WITH (NOLOCK) ON r.refno = b.refno
-            WHERE r.transid = @transid
-		END
+		SELECT @SQL = 'SELECT transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusid
+							,[status],livehomescore,liveawayscore,liveindicator,leagueid,sporttype
+							,isNeutral,matchid,matchcode,betstatus,betcheck,transdesc,stake
+						FROM OPENQUERY(DBARC, ''SELECT bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
+														,bm.[status],bm.livehomescore,bm.liveawayscore,bm.liveindicator,m.leagueid,m.sporttype
+														,m.isNeutral,m.matchid,m.matchcode,m.betstatus,bm.betcheck,bm.transdesc,bm.stake
+												FROM bodb_Archive.dbo.bettransm bm WITH (NOLOCK)
+													INNER JOIN bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
+												WHERE bm.refno = ' + CONVERT(VARCHAR(50), @refno) + ''')'
 
-		IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno)
-		BEGIN
-			INSERT INTO @BetListMP
-            SELECT
-				b.transid,b.bettype,m.homeid,m.awayid,b.hdp1,b.hdp2,b.odds,b.betteam
-				,b.statusid,b.[status],b.livehomescore,b.liveawayscore,b.liveindicator
-				,m.leagueid,m.sporttype,m.isNeutral,m.matchid,m.matchcode,m.betstatus,b.betcheck,b.transdesc
-				,(b.stake * (1 - r.tpositiontaking) * r.actualrate) AS stake
-            FROM
-			(
-				SELECT
-					matchid,bettype,transid,hdp1,hdp2,odds,betteam,statusid,[status]
-					,livehomescore,liveawayscore,liveindicator,betcheck,transdesc,refno,stake
-				FROM bodb02.dbo.bettransm14 WITH (NOLOCK)
-                WHERE refno = @refno
-            ) AS b
-                INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON b.matchid = m.matchid
-                INNER JOIN bodb02.dbo.bettrans r WITH (NOLOCK) ON r.refno = b.refno
-            WHERE r.transid = @transid
-		END
-	END
-	ELSE IF EXISTS (SELECT 1 FROM bodb02.dbo.bettrans14 WITH (NOLOCK) WHERE transid = @transid)
-	BEGIN
-		IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno)
-		BEGIN
-			INSERT INTO @BetListMP
-            SELECT
-				b.transid,b.bettype,m.homeid,m.awayid,b.hdp1,b.hdp2,b.odds,b.betteam
-				,b.statusid,b.[status],b.livehomescore,b.liveawayscore,b.liveindicator
-				,m.leagueid,m.sporttype,m.isNeutral,m.matchid,m.matchcode,m.betstatus,b.betcheck,b.transdesc
-				,(b.stake * (1 - r.tpositiontaking) * r.actualrate) AS stake
-            FROM
-			(
-				SELECT
-					matchid,bettype,transid,hdp1,hdp2,odds,betteam,statusid,[status]
-					,livehomescore,liveawayscore,liveindicator,betcheck,transdesc,refno,stake
-				FROM bodb02.dbo.bettransm WITH (NOLOCK)
-                WHERE refno = @refno
-            ) AS b
-                INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
-                INNER JOIN bodb02.dbo.bettrans14 r WITH (NOLOCK) ON r.refno = b.refno
-            WHERE r.transid = @transid
-		END
-
-		IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno)
-		BEGIN
-			INSERT INTO @BetListMP
-            SELECT
-				b.transid,b.bettype,m.homeid,m.awayid,b.hdp1,b.hdp2,b.odds,b.betteam
-				,b.statusid,b.[status],b.livehomescore,b.liveawayscore,b.liveindicator
-				,m.leagueid,m.sporttype,m.isNeutral,m.matchid,m.matchcode,m.betstatus,b.betcheck,b.transdesc
-				,(b.stake * (1 - r.tpositiontaking) * r.actualrate) AS stake
-            FROM
-			(
-				SELECT
-					matchid,bettype,transid,hdp1,hdp2,odds,betteam,statusid,[status]
-					,livehomescore,liveawayscore,liveindicator,betcheck,transdesc,refno,stake
-				FROM bodb02.dbo.bettransm14 WITH (NOLOCK)
-                WHERE refno = @refno
-            ) AS b
-                INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON b.matchid = m.matchid
-                INNER JOIN bodb02.dbo.bettrans14 r WITH (NOLOCK) ON r.refno = b.refno
-            WHERE r.transid = @transid
-		END
-
-		IF EXISTS (SELECT 1 FROM DBARC.bodb_Archive.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno)
-		BEGIN
-			INSERT INTO @BetListMP
-            SELECT
-				b.transid,b.bettype,m.homeid,m.awayid,b.hdp1,b.hdp2,b.odds,b.betteam
-				,b.statusid,b.[status],b.livehomescore,b.liveawayscore,b.liveindicator
-				,m.leagueid,m.sporttype,m.isNeutral,m.matchid,m.matchcode,m.betstatus,b.betcheck,b.transdesc
-				,(b.stake * (1 - r.tpositiontaking) * r.actualrate) AS stake
-            FROM
-			(
-				SELECT
-					matchid,bettype,transid,hdp1,hdp2,odds,betteam,statusid,[status]
-					,livehomescore,liveawayscore,liveindicator,betcheck,transdesc,refno,stake
-				FROM DBARC.bodb_Archive.dbo.bettransm WITH (NOLOCK)
-                WHERE refno = @refno
-            ) AS b
-                INNER JOIN DBARC.bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON b.matchid = m.matchid
-                INNER JOIN bodb02.dbo.bettrans14 r WITH (NOLOCK) ON r.refno = b.refno
-            WHERE r.transid = @transid
-		END
-	END
-	ELSE IF EXISTS (SELECT 1 FROM DBARC.bodb_Archive.dbo.bettrans_bk WITH (NOLOCK) WHERE transid = @transid)
-	BEGIN
-		IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno)
-		BEGIN
-			INSERT INTO @BetListMP
-            SELECT
-				b.transid,b.bettype,m.homeid,m.awayid,b.hdp1,b.hdp2,b.odds,b.betteam
-				,b.statusid,b.[status],b.livehomescore,b.liveawayscore,b.liveindicator
-				,m.leagueid,m.sporttype,m.isNeutral,m.matchid,m.matchcode,m.betstatus,b.betcheck,b.transdesc
-				,(b.stake * (1 - r.tpositiontaking) * r.actualrate) AS stake
-            FROM
-			(
-				SELECT
-					matchid,bettype,transid,hdp1,hdp2,odds,betteam,statusid,[status]
-					,livehomescore,liveawayscore,liveindicator,betcheck,transdesc,refno,stake
-				FROM bodb02.dbo.bettransm14 WITH (NOLOCK)
-                WHERE refno = @refno
-            ) AS b
-                INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON b.matchid = m.matchid
-                INNER JOIN DBARC.bodb_Archive.dbo.bettrans_bk r WITH (NOLOCK) ON r.refno = b.refno
-            WHERE r.transid = @transid
-		END
-
-		IF EXISTS (SELECT 1 FROM DBARC.bodb_Archive.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno)
-		BEGIN
-			INSERT INTO @BetListMP
-            SELECT
-				b.transid,b.bettype,m.homeid,m.awayid,b.hdp1,b.hdp2,b.odds,b.betteam
-				,b.statusid,b.[status],b.livehomescore,b.liveawayscore,b.liveindicator
-				,m.leagueid,m.sporttype,m.isNeutral,m.matchid,m.matchcode,m.betstatus,b.betcheck,b.transdesc
-				,(b.stake * (1 - r.tpositiontaking) * r.actualrate) AS stake
-            FROM
-			(
-				SELECT
-					matchid,bettype,transid,hdp1,hdp2,odds,betteam,statusid,[status]
-					,livehomescore,liveawayscore,liveindicator,betcheck,transdesc,refno,stake
-				FROM DBARC.bodb_Archive.dbo.bettransm WITH (NOLOCK)
-                WHERE refno = @refno
-            ) AS b
-                INNER JOIN DBARC.bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON b.matchid = m.matchid
-                INNER JOIN DBARC.bodb_Archive.dbo.bettrans_bk r WITH (NOLOCK) ON r.refno = b.refno
-            WHERE r.transid = @transid
-		END
+		
+		INSERT INTO @BetListMP
+        EXEC (@SQL)
 	END
 
 	-- Return data
 	SELECT
 		transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusid,STATUS
-		,livehomescore,liveawayscore,liveindicator,leagueid,sporttype,isNeutral
-		,matchid,matchcode,betstatus,betcheck,transdesc,stake
-     FROM @BetListMP
+		,livehomescore,liveawayscore,liveindicator,b.leagueid,sporttype,isNeutral
+		,matchid,matchcode,betstatus,betcheck,transdesc
+		,(stake * (1 - @tpositiontaking) * @actualrate) AS stake
+		,CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END AS IsBlacklistLeague
+     FROM @BetListMP b
+		LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON b.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
      ORDER BY TransID DESC
 END
 GO
