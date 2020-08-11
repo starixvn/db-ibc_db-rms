@@ -1,5 +1,6 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_SmallOddsAlert]
+	@IsTest BIT = 0
 AS
 
 /*
@@ -28,9 +29,9 @@ BEGIN
 		,CASE WHEN b.betteam = N'1' THEN 'Mix Parlay' ELSE 'Combo Parlay' END AS ParlayType
 		,b.Username
 		,e.currency
-		,b.stake * b.actualrate AS stake
-		,(b.odds2 - 1) * b.stake * b.actualrate AS WinningAmount
-		,(b.odds2 - 1) * b.stake * b.actualrate * (1 - b.tpositiontaking) AS CompanyLoseAmount
+		,b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END AS stake
+		,(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END AS WinningAmount
+		,(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END * (1 - b.tpositiontaking) AS CompanyLoseAmount
 		,b.hdp2 AS Selection
 		,b.odds2 AS odds
 		,1 - b.tpositiontaking AS HousePT
@@ -45,8 +46,7 @@ BEGIN
 	WHERE b.TransDate > @LastTransDate
 		AND b.matchid = 29
 		AND b.statusID = 0
-		AND b.currency <> 20
-		AND b.stake * b.actualrate >= 10000
+		AND b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= 10000
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 2)
 
 	SELECT CONVERT(VARCHAR(200), @TransDate, 121) AS TransDate -- new TransDate
