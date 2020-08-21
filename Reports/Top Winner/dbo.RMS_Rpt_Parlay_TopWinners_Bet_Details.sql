@@ -15,10 +15,18 @@ AS
 		- 20191026@Jacob: Winloss by master RedmineID: [#122137]
 		- 20200306@Percy: Fix issue missing data on bettransm/bettransm14/bettransmbk [RedmineID: #129935]
 		- 20200510@Percy: Add Black League [RedmineID: #133961]
+		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 */
 
 BEGIN
 	SET NOCOUNT ON
+
+	DECLARE @MBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+	INSERT INTO @MBU (BalanceUpDay, MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	DECLARE @BalanceUpDay SMALLDATETIME, @MoveBetsDay SMALLDATETIME
+	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBU
 
 	DECLARE @BetListMP TABLE
     (
@@ -66,7 +74,7 @@ BEGIN
 		FROM DBARC.bodb_Archive.dbo.bettrans_bk WITH (NOLOCK)
 		WHERE transid = @transid
 
-	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno)
+	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND winlostdate > @MoveBetsDay)
 		INSERT INTO @BetListMP
         SELECT
 			bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
@@ -76,7 +84,7 @@ BEGIN
 			INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 		WHERE bm.refno = @refno
 
-	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno)
+	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno AND winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay)
 		INSERT INTO @BetListMP
         SELECT
 			bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
@@ -86,7 +94,7 @@ BEGIN
 			INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
 		WHERE bm.refno = @refno
 
-	IF EXISTS (SELECT 1 FROM DBARC.bodb_Archive.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno)
+	IF EXISTS (SELECT 1 FROM DBARC.bodb_Archive.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND winlostdate < @BalanceUpDay)
 	BEGIN
 		SELECT @SQL = 'SELECT transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusid
 							,[status],livehomescore,liveawayscore,liveindicator,leagueid,sporttype

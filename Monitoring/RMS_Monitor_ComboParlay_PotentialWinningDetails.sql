@@ -15,6 +15,7 @@ AS
 		- 20170719@Winnie: Add MuayThai RedmineID: #79500
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
+		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 
 	Parameter's Explanation:
 		- @selection:
@@ -35,6 +36,13 @@ AS
 
 BEGIN
 	SET NOCOUNT ON
+
+	DECLARE @MBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+	INSERT INTO @MBU (BalanceUpDay, MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	DECLARE @BalanceUpDay SMALLDATETIME, @MoveBetsDay SMALLDATETIME
+	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBU
 
 	-- selections
 	BEGIN
@@ -116,11 +124,11 @@ BEGIN
 			CROSS APPLY (
 				SELECT COUNT(1) AS NumberWon
 				FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-				WHERE b.refno = bm.refno AND bm.statusID = 112
+				WHERE b.refno = bm.refno AND bm.statusID = 112 AND bm.winlostdate > @MoveBetsDay
 				UNION ALL
 				SELECT COUNT(1) AS NumberWon
 				FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
-				WHERE b.refno = bm.refno AND bm.statusID = 112
+				WHERE b.refno = bm.refno AND bm.statusID = 112 AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 			) bm
 		WHERE custid = @CustID
 			AND statusID = 0
