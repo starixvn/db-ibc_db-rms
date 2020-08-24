@@ -16,7 +16,7 @@ BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @LastTransDate DATETIME, @TransDate DATETIME
-	SELECT	@LastTransDate = bodb02.dbo.f_Get_SystemSettings('SmallOddsAlert_LastTransDate')
+	SELECT	@LastTransDate = dbo.f_RMS_rmSettings('SmallOddsAlert_LastTransDate')
 	SELECT  @TransDate = MAX(TransDate) FROM dbo.rmBettrans WITH (NOLOCK)
 
 	IF @LastTransDate IS NULL

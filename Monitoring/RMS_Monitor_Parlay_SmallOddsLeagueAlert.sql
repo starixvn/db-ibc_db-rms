@@ -23,7 +23,7 @@ BEGIN
 	WHERE lg.GroupName IN ('m3','m4 (a)','m4 (b)','m4 (x)')
 
 	DECLARE @LastTransDate DATETIME, @TransDate DATETIME
-	SELECT	@LastTransDate = bodb02.dbo.f_Get_SystemSettings('SmallOddsLeagueAlert_LastTransDate')
+	SELECT	@LastTransDate = dbo.f_RMS_rmSettings('SmallOddsLeagueAlert_LastTransDate')
 	SELECT  @TransDate = MAX(TransDate) FROM dbo.rmBettrans WITH (NOLOCK)
 
 	IF @LastTransDate IS NULL
