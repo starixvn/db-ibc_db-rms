@@ -229,7 +229,7 @@ BEGIN
 				FROM #tmpBettrans b
 					INNER JOIN bodb02.dbo.bettransm bm WITH (NOLOCK) ON bm.refno = b.refno
 					INNER JOIN bodb02.dbo.match m (NOLOCK) ON bm.matchid = m.matchid
-				WHERE b.bettype = 29 AND b.sporttype = 0 AND bm.winlostdate > @MoveBetsDay
+				WHERE b.bettype = 29 AND b.sporttype = 0 AND (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
 		
 				INSERT INTO #tmpbettransm (refno, sporttype)
 				SELECT bm.refno, m.sporttype

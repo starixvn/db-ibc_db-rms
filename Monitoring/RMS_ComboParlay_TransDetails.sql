@@ -50,7 +50,7 @@ BEGIN
 	)
 
 	-- bettransm
-	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND winlostdate > @MoveBetsDay)
+	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND (statusID IN (0, 1) OR winlostdate > @MoveBetsDay))
 	BEGIN
 		INSERT INTO @bettransm
 		(

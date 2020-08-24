@@ -113,11 +113,14 @@ BEGIN
 		DECLARE @ExtraPTCutOffDate SMALLDATETIME
 		SELECT  @ExtraPTCutOffDate = bodb02.dbo.f_Get_SystemSettings('CutOffDate_ExtraPT')
 
+		DECLARE @SuperID INT
+		SELECT  @SuperID = srecommend FROM bodb02.dbo.Customer WITH (NOLOCK) WHERE custid = @custid
+
 		CREATE TABLE #ExtraPT (SuperID INT, FromDate DATETIME, ToDate DATETIME, ExtraPT DECIMAL(9, 8))
 		INSERT INTO #ExtraPT (SuperID, FromDate, ToDate, ExtraPT)
 		SELECT SuperId, FromDate, ToDate, SUM(ExtraPT) AS ExtraPT
 		FROM bodb02.dbo.Acc_GroupExtraPTSetting WITH (NOLOCK)
-		WHERE ProductID = 1 AND Sporttype = 0 AND SubProduct = ''
+		WHERE SuperID = @SuperID AND ProductID = 1 AND Sporttype = 0 AND SubProduct = ''
 			AND (
 				FromDate BETWEEN @FromDate AND @ToDate
 				OR ToDate BETWEEN @FromDate AND @ToDate

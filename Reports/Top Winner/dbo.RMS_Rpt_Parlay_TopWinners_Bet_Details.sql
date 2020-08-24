@@ -74,7 +74,7 @@ BEGIN
 		FROM DBARC.bodb_Archive.dbo.bettrans_bk WITH (NOLOCK)
 		WHERE transid = @transid
 
-	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND winlostdate > @MoveBetsDay)
+	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND (statusID IN (0, 1) OR winlostdate > @MoveBetsDay))
 		INSERT INTO @BetListMP
         SELECT
 			bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid

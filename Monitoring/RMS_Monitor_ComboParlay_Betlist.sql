@@ -205,7 +205,10 @@ BEGIN
 							INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 							LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
 						WHERE b.refno = bm.refno
-							AND bm.winlostdate > @MoveBetsDay
+							AND (
+								bm.statusID IN (0, 1)
+								OR bm.winlostdate > @MoveBetsDay
+							)
 
 						UNION ALL
 						SELECT
