@@ -13,10 +13,18 @@ AS
 		- 20170719@Winnie: Add MuayThai RedmineID: #79500
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
+		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 */
 
 BEGIN
 	SET NOCOUNT ON
+
+	DECLARE @MBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+	INSERT INTO @MBU (BalanceUpDay, MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	DECLARE @BalanceUpDay SMALLDATETIME, @MoveBetsDay SMALLDATETIME
+	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBU
 
 	DECLARE @bettype INT, @betteam NVARCHAR(10), @matchid INT, @refno BIGINT, @combo INT, @cnt_bets INT, @yesterday DATETIME
 
@@ -37,12 +45,12 @@ BEGIN
 		SELECT a.matchid, a.bettype, a.betteam
 		FROM bodb02.dbo.bettransm a WITH (NOLOCK)
 			INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON a.matchid = m.matchid
-		WHERE a.refno = @refno
+		WHERE a.refno = @refno AND (a.statusID IN (0, 1) OR a.winlostdate > @MoveBetsDay)
 		UNION
 		SELECT a.matchid, a.bettype, a.betteam
 		FROM bodb02.dbo.bettransm14 a WITH (NOLOCK)
 			INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON a.matchid = m.matchid
-		WHERE a.refno = @refno
+		WHERE a.refno = @refno AND a.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 
 		DECLARE @bettrans TABLE (transid BIGINT PRIMARY KEY, refno BIGINT)
 		INSERT INTO @bettrans (transid, refno)
@@ -60,11 +68,11 @@ BEGIN
 			CROSS APPLY (
 				SELECT bm.matchid, bm.bettype, bm.betteam
 				FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-				WHERE bm.refno = b.refno
+				WHERE bm.refno = b.refno AND (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
 				UNION
 				SELECT bm.matchid, bm.bettype, bm.betteam
-				FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-				WHERE bm.refno = b.refno
+				FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
+				WHERE bm.refno = b.refno AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 			) r
 			INNER JOIN @Selection s ON r.matchid = s.matchid AND r.bettype = s.bettype AND r.betteam = s.betteam
 		GROUP BY b.transid
@@ -73,8 +81,8 @@ BEGIN
 		SELECT @cnt_bets = @@ROWCOUNT
      
 		DECLARE @NumberWon INT
-		SELECT  @NumberWon = COUNT(1) FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND statusID = 112
-		SELECT  @NumberWon = @NumberWon + COUNT(1) FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno AND statusID = 112
+		SELECT  @NumberWon = COUNT(1) FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate > @MoveBetsDay
+		SELECT  @NumberWon = @NumberWon + COUNT(1) FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 	END
 	ELSE IF @bettype = 38
 	BEGIN

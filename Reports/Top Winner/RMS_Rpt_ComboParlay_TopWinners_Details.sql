@@ -4,7 +4,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details]
 	@fromdate		DATETIME,
 	@todate			DATETIME,
 	@sporttype		VARCHAR(100) = '',
-	@movebetsday	DATETIME,
+	@MoveBetsDay	DATETIME,
 	@selection		VARCHAR(MAX) = '',
 	@ParlayType		VARCHAR(10) = ''
 AS
@@ -21,6 +21,7 @@ AS
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20191211@Jacob: Extra PT - Add new structure to support extra pt column on bettrans table #124194
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
+		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -32,6 +33,13 @@ AS
 
 BEGIN
 	SET NOCOUNT ON
+
+	DECLARE @MBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+	INSERT INTO @MBU (BalanceUpDay, MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	DECLARE @BalanceUpDay SMALLDATETIME
+	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBU
 
 	-- selections
 	BEGIN
@@ -221,21 +229,21 @@ BEGIN
 				FROM #tmpBettrans b
 					INNER JOIN bodb02.dbo.bettransm bm WITH (NOLOCK) ON bm.refno = b.refno
 					INNER JOIN bodb02.dbo.match m (NOLOCK) ON bm.matchid = m.matchid
-				WHERE b.bettype = 29 AND b.sporttype = 0
+				WHERE b.bettype = 29 AND b.sporttype = 0 AND (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
 		
 				INSERT INTO #tmpbettransm (refno, sporttype)
 				SELECT bm.refno, m.sporttype
 				FROM #tmpBettrans b
 					INNER JOIN bodb02.dbo.bettransm14 bm WITH (NOLOCK) ON bm.refno = b.refno
 					INNER JOIN bodb02.dbo.match14 m (NOLOCK) ON bm.matchid = m.matchid
-				WHERE b.bettype = 29 AND b.sporttype = 0
+				WHERE b.bettype = 29 AND b.sporttype = 0 AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 
 				INSERT INTO #tmpbettransm (refno, sporttype)
 				SELECT bm.refno, m.sporttype
 				FROM #tmpBettrans b
 					INNER JOIN DBARC.bodb_Archive.dbo.bettransm bm WITH (NOLOCK) ON bm.refno = b.refno
 					INNER JOIN DBARC.bodb_Archive.dbo.match_bk m (NOLOCK) ON bm.matchid = m.matchid
-				WHERE b.bettype = 29 AND b.sporttype = 0
+				WHERE b.bettype = 29 AND b.sporttype = 0 AND bm.winlostdate < @BalanceUpDay
 		
 				UPDATE b
 				SET b.sporttype = s.sporttype

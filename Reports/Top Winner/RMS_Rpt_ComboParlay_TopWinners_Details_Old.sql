@@ -20,6 +20,7 @@ AS
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20191211@Jacob: Extra PT - Add new structure to support extra pt column on bettrans table #124194
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
+		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -31,6 +32,13 @@ AS
 
 BEGIN
 	SET NOCOUNT ON
+
+	DECLARE @MBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+	INSERT INTO @MBU (BalanceUpDay, MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	DECLARE @BalanceUpDay SMALLDATETIME, @MoveBetsDay SMALLDATETIME
+	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBU
 
 	-- selections
 	BEGIN
@@ -105,11 +113,14 @@ BEGIN
 		DECLARE @ExtraPTCutOffDate SMALLDATETIME
 		SELECT  @ExtraPTCutOffDate = bodb02.dbo.f_Get_SystemSettings('CutOffDate_ExtraPT')
 
+		DECLARE @SuperID INT
+		SELECT  @SuperID = srecommend FROM bodb02.dbo.Customer WITH (NOLOCK) WHERE custid = @custid
+
 		CREATE TABLE #ExtraPT (SuperID INT, FromDate DATETIME, ToDate DATETIME, ExtraPT DECIMAL(9, 8))
 		INSERT INTO #ExtraPT (SuperID, FromDate, ToDate, ExtraPT)
 		SELECT SuperId, FromDate, ToDate, SUM(ExtraPT) AS ExtraPT
 		FROM bodb02.dbo.Acc_GroupExtraPTSetting WITH (NOLOCK)
-		WHERE ProductID = 1 AND Sporttype = 0 AND SubProduct = ''
+		WHERE SuperID = @SuperID AND ProductID = 1 AND Sporttype = 0 AND SubProduct = ''
 			AND (
 				FromDate BETWEEN @FromDate AND @ToDate
 				OR ToDate BETWEEN @FromDate AND @ToDate
@@ -211,14 +222,14 @@ BEGIN
 			FROM #tmpBettrans b
 				INNER JOIN bodb02.dbo.bettransm14 bm WITH (NOLOCK) ON bm.refno = b.refno
 				INNER JOIN bodb02.dbo.match14 m (NOLOCK) ON bm.matchid = m.matchid
-			WHERE b.bettype = 29 AND b.sporttype = 0
+			WHERE b.bettype = 29 AND b.sporttype = 0 AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 
 			INSERT INTO #tmpbettransm (refno, sporttype)
 			SELECT bm.refno, m.sporttype
 			FROM #tmpBettrans b
 				INNER JOIN DBARC.bodb_Archive.dbo.bettransm bm WITH (NOLOCK) ON bm.refno = b.refno
 				INNER JOIN DBARC.bodb_Archive.dbo.match_bk m (NOLOCK) ON bm.matchid = m.matchid
-			WHERE b.bettype = 29 AND b.sporttype = 0
+			WHERE b.bettype = 29 AND b.sporttype = 0 AND bm.winlostdate < @BalanceUpDay
 		
 			UPDATE b
 			SET b.sporttype = s.sporttype

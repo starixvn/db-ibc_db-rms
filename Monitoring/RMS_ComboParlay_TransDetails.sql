@@ -15,10 +15,18 @@ AS
 		- 20160926@Winnie: fix issue conflict refno with racing RedmineID: #64286
 		- 20191026@Jacob: Show stake on bet details RedmineID: [#122137]
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
+		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 */
 
 BEGIN
 	SET NOCOUNT ON
+
+	DECLARE @MBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+	INSERT INTO @MBU (BalanceUpDay, MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	DECLARE @BalanceUpDay SMALLDATETIME, @MoveBetsDay SMALLDATETIME
+	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBU
 
 	SET @CurrencyName = NULL
 
@@ -42,7 +50,7 @@ BEGIN
 	)
 
 	-- bettransm
-	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno)
+	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND (statusID IN (0, 1) OR winlostdate > @MoveBetsDay))
 	BEGIN
 		INSERT INTO @bettransm
 		(
@@ -67,7 +75,7 @@ BEGIN
 	END
 
 	-- bettransm14
-	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno)
+	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno AND winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay)
 	BEGIN
 		INSERT INTO @bettransm
 		(
