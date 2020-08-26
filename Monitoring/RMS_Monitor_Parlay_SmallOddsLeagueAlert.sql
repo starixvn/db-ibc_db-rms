@@ -1,0 +1,82 @@
+/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_SmallOddsLeagueAlert]
+	@IsTest BIT = 0
+AS
+
+/*
+	Created: 20200703@Percy
+	DB: DBRMS-bodb_RMS
+	Task: Parlay RMS - Get mix parlay tickets which small odds, league for letstalk
+
+	Revisions:
+		- 20200703@Percy: Initialize SP [RedmineID: #137010]
+*/
+
+BEGIN
+	SET NOCOUNT ON
+
+	DECLARE @rmLeague TABLE (leagueId INT)
+	INSERT INTO @rmLeague (leagueId)
+	SELECT l.LeagueId
+	FROM dbo.rmLeague l WITH (NOLOCK)
+		INNER JOIN dbo.rmLeagueGroup lg WITH (NOLOCK) ON l.GroupId = lg.GroupId
+	WHERE lg.GroupName IN ('m3','m4 (a)','m4 (b)','m4 (x)')
+
+	DECLARE @LastTransDate DATETIME, @TransDate DATETIME
+	SELECT	@LastTransDate = dbo.f_RMS_rmSettings('SmallOddsLeagueAlert_LastTransDate')
+	SELECT  @TransDate = MAX(TransDate) FROM dbo.rmBettrans WITH (NOLOCK)
+
+	IF @LastTransDate IS NULL
+		SET @LastTransDate = CONVERT(DATE, GETDATE()) -- from begin today
+	ELSE
+		SET @LastTransDate = DATEADD(HOUR, -1, @LastTransDate)
+
+	-- Mix parlay tickets have 2 selections
+	-- 1. 1 selection: on small league
+	DECLARE @bettrans TABLE (transid BIGINT, refno BIGINT, m_transid BIGINT)
+	INSERT INTO @bettrans (transid, refno, m_transid)
+	SELECT b.TransId, b.refno, bm.transid
+	FROM dbo.rmBettrans b WITH (NOLOCK)
+		CROSS APPLY (
+			SELECT TOP 1 bm.transid
+			FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
+				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
+			WHERE bm.refno = b.refno
+				AND EXISTS (SELECT 1 FROM @rmLeague l WHERE m.leagueid = l.leagueId)
+			ORDER BY CASE WHEN bm.bettype IN (5, 15) THEN 1 ELSE 0 END
+		) bm
+	WHERE b.TransDate > @LastTransDate
+		AND b.matchid = 29
+		AND b.betteam = N'1'
+		AND b.hdp2 = 2
+		AND b.statusID = 0
+		AND (b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= 10000
+		AND b.odds2 BETWEEN 1.01 AND 1.20
+		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 3)
+
+	-- 2. Remaining selection: FT/HT 1x2
+	DELETE b
+	FROM @bettrans b
+	WHERE NOT EXISTS (
+			SELECT 1
+			FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
+			WHERE bm.refno = b.refno
+				AND bm.bettype IN (5, 15)
+				AND bm.transid <> b.m_transid
+		)
+
+	SELECT
+		b.TransId
+		,b.Username
+		,e.currency
+		,(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END AS WinningAmount
+		,(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END * (1 - b.tpositiontaking) AS CompanyLoseAmount
+		,b.odds2 AS odds
+		,(1 - b.tpositiontaking) AS HousePT
+	FROM dbo.rmBettrans b WITH (NOLOCK)
+		INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON b.currency = e.exchangeid
+	WHERE EXISTS (SELECT 1 FROM @bettrans bt WHERE b.transid = bt.transid)
+
+	SELECT CONVERT(VARCHAR(200), @TransDate, 121) AS TransDate -- new TransDate
+END
+GO

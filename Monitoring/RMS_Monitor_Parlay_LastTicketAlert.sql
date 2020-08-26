@@ -1,22 +1,23 @@
-
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
-
-ALTER PROCEDURE dbo.[RMS_Monitor_Parlay_LastTicketAlert] @IsTest              BIT   = 0, 
-                                                         @MinPotentialWinning MONEY = 50000
+/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE dbo.[RMS_Monitor_Parlay_LastTicketAlert]
+	@IsTest              BIT   = 0, 
+	@MinPotentialWinning MONEY = 50000
+AS
 
 /*
 	Created: Franklin
 	Date: 2020-02-26
-	Task: Notify/Alert by Winning Amount
 	DB: DBRMS/bodb_RMS
+	Task: Notify/Alert by Winning Amount
 
-
-Revisions:
-- 20200226@Franklin: Notify/Alert by Winning Amount #129275
+	Revisions:
+		- 20200226@Franklin: Notify/Alert by Winning Amount #129275
+		- 20200703@Percy: Add jobtype to support many jobs [RedmineID: #137010]
 */
 
-AS
+BEGIN
      SET NOCOUNT ON;
+
      DECLARE @BetType INT;
      SELECT @BetType = 29;
 
@@ -140,7 +141,8 @@ AS
             SELECT l.TransId, 
                    l.AlertTime, 
                    l.AlertAmount
-            FROM rmLastTicketAlert l WITH(NOLOCK);
+            FROM rmLastTicketAlert l WITH(NOLOCK)
+			WHERE ISNULL(JobType, 1) = 1;
      -- SELECT 
      SELECT CASE
                 WHEN s.betteam = '1'
@@ -162,4 +164,5 @@ AS
            AND s.numberrunning = 1;
      DROP TABLE #sumtotal;
      DROP TABLE #lastalert;
-	 GO
+END
+GO
