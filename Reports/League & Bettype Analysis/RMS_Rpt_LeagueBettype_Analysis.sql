@@ -89,6 +89,16 @@ BEGIN
 	END
 	ELSE IF @ReportBy = 2 -- view by bettype
 	BEGIN
+		-- all leagues --> leagueid = 0
+		IF EXISTS (SELECT 1 FROM #Leagues WHERE GroupName = 'None')
+			AND (SELECT COUNT(1) FROM  #Leagues WHERE GroupName <> 'None') = (SELECT COUNT(1) FROM dbo.rmLeague l WITH (NOLOCK))
+		BEGIN
+			DELETE #Leagues
+
+			INSERT INTO #Leagues (LeagueId)
+			VALUES (0)
+		END
+
 		SELECT
 			s.Bettype
 			,SUM(BetCount)			AS TotalTickets
@@ -99,7 +109,7 @@ BEGIN
 			,SUM(MainMemberWinloss)	AS MemberWinloss
 			,SUM(MainHouseWinloss)	AS MainHouseWinloss
 		FROM dbo.rmSumByBettype s WITH (NOLOCK)
-			INNER JOIN #Leagues l ON ',' + s.leagueIds + ',' LIKE '%,' + CONVERT(VARCHAR(20), l.LeagueId) + ',%'
+			INNER JOIN #Leagues l ON s.leagueId = l.LeagueId
 		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
 			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
 			AND (@Site = 2 OR s.IsDeposit = @Site)
