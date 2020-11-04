@@ -102,7 +102,6 @@ BEGIN
 
 		CREATE TABLE #rptRiskWLControl
 		(
-			Site Nvarchar(50),
 			CustID int,
 			recommend int,
 			mrecommend int,
@@ -113,8 +112,22 @@ BEGIN
 			Commission money,
 			RealIncome money,
 			RealTurnover money,
-			isLicensee BIT,
 			betCount INT
+		)
+
+		CREATE TABLE #rptRiskWLControl_Summary
+		(
+			Site		NVARCHAR(50),
+			IsDeposit	 BIT,
+			NoMember	INT,
+			MemberWinloss money,
+			SMAwinloss money,
+			ExtraPT money,
+			Commission money,
+			RealIncome money,
+			RealTurnover money,
+			BetCount INT,
+			Margin smallmoney
 		)
 
 		-- rmBettrans
@@ -161,8 +174,6 @@ BEGIN
 								WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
 								ELSE 0 END
 							ELSE 1 END
-
-
 		END
 
 		-- rmSumWinloss
@@ -248,28 +259,76 @@ BEGIN
 				AND statusID IN (111,112, 113)
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), b.ParlayType - 1) + ',%'
 		END
-	END
 
-	-- Return data
-	SELECT		s.site,
-				s.isDeposit,
-				COUNT(distinct b.custid) noMember,
-				SUM(betCount)  betCount,
-				SUM(member_Winloss) member_Winloss,
-				SUM(SMA_winloss) SMA_winloss ,
-				SUM(ExtraPT)  ExtraPT,
-				SUM(Commission)  Commission,
-				SUM(RealIncome) RealIncome ,
-				SUM(RealTurnover) RealTurnover ,
-				CASE WHEN ISNULL(SUM(RealTurnover),0) = 0 THEN 0. ELSE SUM(RealIncome)/ SUM(RealTurnover) * 100 END as Margin
-	FROM #rptRiskWLControl b
-	INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.srecommend = c.custid
-	INNER JOIN bodb02.dbo.Site s  WITH(NOLOCK) ON  c.site = s.site
-	GROUP BY s.site, s.isDeposit
+
+		INSERT INTO #rptRiskWLControl_Summary(Site, IsDeposit, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover, Margin)
+			SELECT		s.site,
+						s.isDeposit,
+						COUNT(distinct b.custid) noMember,
+						SUM(betCount)  betCount,
+						SUM(member_Winloss) member_Winloss,
+						SUM(SMA_winloss) SMA_winloss ,
+						SUM(ExtraPT)  ExtraPT,
+						SUM(Commission)  Commission,
+						SUM(RealIncome) RealIncome ,
+						SUM(RealTurnover) RealTurnover ,
+						CASE WHEN ISNULL(SUM(RealTurnover),0) = 0 THEN 0. ELSE SUM(RealIncome)/ SUM(RealTurnover) * 100 END as Margin
+			FROM #rptRiskWLControl b
+			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.srecommend = c.custid
+			INNER JOIN bodb02.dbo.Site s  WITH(NOLOCK) ON  c.site = s.site
+			GROUP BY s.site, s.isDeposit
+
+	
+	END
+		
+		-- Return data
+		IF @company = '' 
+		BEGIN
+			select	Site as  Username, 
+					IsDeposit, 
+					NoMember, 
+					BetCount, 
+					MemberWinloss, 
+					SMAwinloss, 
+					ExtraPT, 
+					Commission, 
+					RealIncome, 
+					RealTurnover, 
+					Margin
+			FROM #rptRiskWLControl_Summary
+		END
+		else 
+		BEGIN
+			CREATE TABLE #company(Site NVARCHAR(50))
+
+			INSERT INTO #company(Site)
+			select val from  dbo.f_RMS_strSplit(@company, ',')
+
+			select	t.Site as  Username, 
+					t.IsDeposit, 
+					t.NoMember, 
+					t.BetCount, 
+					t.MemberWinloss, 
+					t.SMAwinloss, 
+					t.ExtraPT, 
+					t.Commission, 
+					t.RealIncome, 
+					t.RealTurnover, 
+					t.Margin
+			FROM #rptRiskWLControl_Summary t
+			INNER JOIN #company c ON t.Site = c.Site
+
+			DROP TABLE #company
+			
+		END
+
+	
 	
 	DROP TABLE #MBU
 	DROP TABLE #bettype
+	DROP TABLE #rptRiskWLControl_Summary
 	DROP TABLE #rptRiskWLControl
 	DROP TABLE #tmpSport
 END
 GO
+
