@@ -1,10 +1,10 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE [dbo].[RMS_Rpt_Winloss_Risk_Control]
+ALTER PROCEDURE [dbo].[RMS_Rpt_Winloss_Risk_Control]
 	@fromdate		SMALLDATETIME,
 	@todate			SMALLDATETIME,
 	@movebetsday	DATETIME,
 	@balanceUpday	DATETIME = NULL,
-	@company		VARCHAR(MAX) = '',
+	@company		VARCHAR(MAX) = '', -- '' Get All Company else get exactly company
 	@ParlayType		VARCHAR(20) = '',
 	@sporttype		VARCHAR(100) = '',
 	@ReportBy	TINYINT = 1
@@ -184,13 +184,13 @@ BEGIN
 				b.srecommend,
 				(winlost - stake + playercomm) * actualrate, --member_Winloss
 				(awinlost + comm - playercomm + mwinlost + acomm - comm + swinlost + scomm - acomm)  * actualrate, --SMA_winloss
-				-(extra_Winlost  * actualrate + Extra_comm * actualrate)  ,  --ExtraPT
+				-(ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate)  ,  --ExtraPT
 				-(scomm * actualrate), --Commission
-				company_winlost * actualrate -  scomm * actualrate - (extra_Winlost  * actualrate + Extra_comm * actualrate), --RealIncome
-				(company_stake - Extra_stake)* actualrate, -- Real turnover
+				company_winlost * actualrate -  scomm * actualrate - (ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate), --RealIncome
+				(company_stake - ISNULL(Extra_stake,0))* actualrate, -- Real turnover
 				b.betcount
 			
-			FROM  dbo.rmSumWinloss b WITH (NOLOCK)
+			FROM  dbo.rmSumWinloss_UAT1 b WITH (NOLOCK)
 			INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
@@ -226,13 +226,13 @@ BEGIN
 				b.srecommend,
 				(winlost - stake + playercomm) * actualrate, --member_Winloss
 				(awinlost + comm - playercomm + mwinlost + acomm - comm + swinlost + scomm - acomm)  * actualrate, --SMA_winloss
-				-(extra_Winlost  * actualrate + Extra_comm * actualrate)  ,  --ExtraPT
+				-(ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate)  ,  --ExtraPT
 				-(scomm * actualrate), --Commission
-				company_winlost * actualrate -  scomm * actualrate - (extra_Winlost  * actualrate + Extra_comm * actualrate), --RealIncome
-				(company_stake - Extra_stake)* actualrate, -- Real turnover
+				company_winlost * actualrate -  scomm * actualrate - (ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate), --RealIncome
+				(company_stake - ISNULL(Extra_stake,0))* actualrate, -- Real turnover
 				b.betcount
 			
-			FROM  dbo.rmSumWinloss_Old b WITH (NOLOCK)
+			FROM  dbo.rmSumWinloss_Old_UAT1 b WITH (NOLOCK)
 			INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
@@ -242,7 +242,7 @@ BEGIN
 
 	-- Return data
 	SELECT		s.site,
-				s.isLicensee,
+				s.isDeposit,
 				COUNT(distinct b.custid) noMember,
 				SUM(betCount)  betCount,
 				SUM(member_Winloss) member_Winloss,
@@ -251,11 +251,11 @@ BEGIN
 				SUM(Commission)  Commission,
 				SUM(RealIncome) RealIncome ,
 				SUM(RealTurnover) RealTurnover ,
-				SUM(RealIncome)/ SUM(RealTurnover) * 100 as Margin
+				CASE WHEN ISNULL(SUM(RealTurnover),0) = 0 THEN 0. ELSE SUM(RealIncome)/ SUM(RealTurnover) * 100 END as Margin
 	FROM #rptRiskWLControl b
 	INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.srecommend = c.custid
 	INNER JOIN bodb02.dbo.Site s  WITH(NOLOCK) ON  c.site = s.site
-	GROUP BY s.site, s.isLicensee
+	GROUP BY s.site, s.isDeposit
 	
 	DROP TABLE #bettype
 	DROP TABLE #rptRiskWLControl
