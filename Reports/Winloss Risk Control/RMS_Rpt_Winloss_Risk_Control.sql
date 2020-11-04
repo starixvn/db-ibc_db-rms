@@ -2,8 +2,6 @@
 ALTER PROCEDURE [dbo].[RMS_Rpt_Winloss_Risk_Control]
 	@fromdate		SMALLDATETIME,
 	@todate			SMALLDATETIME,
-	@movebetsday	DATETIME,
-	@balanceUpday	DATETIME = NULL,
 	@company		VARCHAR(MAX) = '', -- '' Get All Company else get exactly company
 	@ParlayType		VARCHAR(20) = '',
 	@sporttype		VARCHAR(100) = '',
@@ -43,6 +41,18 @@ AS
 
 BEGIN
 	SET NOCOUNT ON
+
+	DECLARE @movebetsday	DATETIME
+	DECLARE @balanceUpday	DATETIME 
+
+	create table #MBU (
+	balanceUpday	DATETIME ,
+	movebetsday	DATETIME
+	)
+	insert into #MBU  exec RMS_SelBalanceUpDay
+
+	select @movebetsday = movebetsday, @balanceUpday = balanceUpday FROM #MBU
+
 
 	-- sports
 	BEGIN
@@ -257,6 +267,7 @@ BEGIN
 	INNER JOIN bodb02.dbo.Site s  WITH(NOLOCK) ON  c.site = s.site
 	GROUP BY s.site, s.isDeposit
 	
+	DROP TABLE #MBU
 	DROP TABLE #bettype
 	DROP TABLE #rptRiskWLControl
 	DROP TABLE #tmpSport
