@@ -296,6 +296,8 @@ BEGIN
 					RealTurnover, 
 					Margin
 			FROM #rptRiskWLControl_Summary
+			ORDER BY IsDeposit
+			
 		END
 		else 
 		BEGIN
@@ -317,6 +319,7 @@ BEGIN
 					t.Margin
 			FROM #rptRiskWLControl_Summary t
 			INNER JOIN #company c ON t.Site = c.Site
+			ORDER BY t. IsDeposit
 
 			DROP TABLE #company
 			
