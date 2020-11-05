@@ -1,16 +1,15 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE [dbo].[RMS_Rpt_Winloss_Risk_Control_Agent]
+ALTER PROCEDURE [dbo].[RMS_Rpt_Winloss_Risk_Control_Agent]
 	@fromdate		SMALLDATETIME,
 	@todate			SMALLDATETIME,
-	@movebetsday	DATETIME,
-	@balanceUpday	DATETIME = NULL,
-	@company		VARCHAR(MAX) = '',
-	@CustID			INT = '',
-	@RoleID			INT = '',
-	@isLicensee		INT = '',
+	@custID			INT,
+	@roleID			TINYINT,
 	@ParlayType		VARCHAR(20) = '',
 	@sporttype		VARCHAR(100) = '',
-	@ReportBy	TINYINT = 1
+	@ReportBy		TINYINT = 1,
+	@PageSize		INT = 0,
+	@PageIndex		INT = 0,
+	@TotalRecords   INT =0  OUTPUT
 AS
 
 /*
@@ -47,24 +46,65 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	-- sports
+	DECLARE @movebetsday	DATETIME
+	DECLARE @balanceUpday	DATETIME 
+	DECLARE @f_date SMALLDATETIME, @t_date SMALLDATETIME
+
+	IF (@custID = '' OR @custID IS NULL)
+	RETURN
+
+
+	-- Prepare data for filtering
 	BEGIN
+		-- Get MBU date
+		create table #MBU (
+		balanceUpday	DATETIME ,
+		movebetsday		DATETIME
+		)
+		insert into #MBU  exec RMS_SelBalanceUpDay
+
+		select @movebetsday = movebetsday, @balanceUpday = balanceUpday FROM #MBU
+
+		-- Get custid list following site (get super if credit site, get agent if deposit site)
+		CREATE TABLE #CustList (custID INT)
+		IF @roleID = 4 
+		BEGIN
+			INSERT INTO #CustList(custID)
+			SELECT custid 
+			FROM bodb02.dbo.Customer WITH(NOLOCK)
+			WHERE srecommend = @custID and roleid = 2
+		END
+
+		IF @roleID = 3 
+		BEGIN
+			INSERT INTO #CustList(custID)
+			SELECT custid 
+			FROM bodb02.dbo.Customer WITH(NOLOCK)
+			WHERE mrecommend = @custID and roleid = 2
+		END
+
+		IF @roleID = 2 
+		BEGIN
+			INSERT INTO #CustList(custID)
+			SELECT custid 
+			FROM bodb02.dbo.Customer WITH(NOLOCK)
+			WHERE recommend = @custID and roleid = 2
+		END
+	
 		CREATE TABLE #tmpSport (sporttype INT)
 		INSERT INTO #tmpSport (sporttype)
 		SELECT val FROM dbo.f_RMS_strSplit(@sporttype, ',')
 
+		-- Get Sport
 		IF ',' + @sporttype + ',' LIKE '%,-2,%'
 			INSERT INTO #tmpSport (sporttype)
 			SELECT SportType FROM bodb02.dbo.Sports WITH (NOLOCK)
 			WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
 				AND SportType <= 99
-	END
 
-	-- get data
-	BEGIN
+		-- Get bettype
 		CREATE TABLE #bettype (bettype SMALLINT)
-
-		-- Combo parlay
+			-- Combo parlay
 		DECLARE @ComboType TINYINT = 0 -- 1: mix parlay only, 2: combo parlay only, 3: combined
 		
 		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%'
@@ -80,22 +120,20 @@ BEGIN
 				SELECT @ComboType = 2
 		END
 
-		-- Single match parlay
+			-- Single match parlay
 		IF ',' + @ParlayType + ',' LIKE '%,3,%'
 			INSERT INTO #bettype (bettype)
 			VALUES (38)
 
-		-- Penalty shootout combo
+			-- Penalty shootout combo
 		IF ',' + @ParlayType + ',' LIKE '%,4,%'
 			INSERT INTO #bettype (bettype)
 			VALUES (376)
 
-		DECLARE @f_date SMALLDATETIME, @t_date SMALLDATETIME
-
-
+	END
+	
 		CREATE TABLE #rptRiskWLControl
 		(
-			Site Nvarchar(50),
 			CustID int,
 			recommend int,
 			mrecommend int,
@@ -106,12 +144,27 @@ BEGIN
 			Commission money,
 			RealIncome money,
 			RealTurnover money,
-			isLicensee BIT,
 			betCount INT
 		)
 
+		CREATE TABLE #rptRiskWLControl_Summary
+		(
+			CustID		INT,
+			UserName	NVARCHAR(50),
+			RoleID		TINYINT,
+			NoMember	INT,
+			MemberWinloss money,
+			SMAwinloss money,
+			ExtraPT money,
+			Commission money,
+			RealIncome money,
+			RealTurnover money,
+			BetCount INT,
+			Margin smallmoney
+		)
 
-
+	-- get data Credit
+	BEGIN
 		-- rmBettrans
 		IF @ToDate > @MoveBetsDay
 		BEGIN
@@ -121,9 +174,9 @@ BEGIN
 			INSERT INTO #rptRiskWLControl 
 			(
 				CustID ,
-				recommend ,
-				mrecommend,
-				srecommend,
+				recommend,
+				mrecommend ,
+				srecommend ,
 				member_Winloss ,
 				SMA_winloss ,
 				ExtraPT ,
@@ -136,8 +189,8 @@ BEGIN
 			SELECT	
 				b.custid,
 				b.recommend,
-				b.mrecommend,
-				b.srecommend,
+				b.mrecommend ,
+				b.srecommend ,
 				(winlost - actual_stake + playercomm) * actualrate,
 				(awinlost + comm - playercomm + mwinlost + acomm - comm + swinlost + scomm - acomm)  * actualrate,
 				-((winlost - actual_stake + CASE WHEN tpositiontaking = 1 THEN 0  ELSE scomm / (1 - tpositiontaking) END) * CAST(ISNULL(b.epositiontaking, 0) AS DECIMAL(9,8)) * actualrate),
@@ -148,6 +201,7 @@ BEGIN
 			FROM  rmBettrans b WITH (NOLOCK)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+			INNER JOIN #CustList c ON c.custID = b.recommend
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
 				AND 1 = CASE
@@ -156,8 +210,6 @@ BEGIN
 								WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
 								ELSE 0 END
 							ELSE 1 END
-
-
 		END
 
 		-- rmSumWinloss
@@ -170,9 +222,9 @@ BEGIN
 			INSERT INTO #rptRiskWLControl 
 			(
 				CustID ,
-				recommend ,
-				mrecommend,
-				srecommend,
+				recommend,
+				mrecommend ,
+				srecommend ,
 				member_Winloss,
 				SMA_winloss ,
 				ExtraPT ,
@@ -185,18 +237,19 @@ BEGIN
 			SELECT	
 				b.custid,
 				b.recommend,
-				b.mrecommend,
-				b.srecommend,
+				b.mrecommend ,
+				b.srecommend ,
 				(winlost - stake + playercomm) * actualrate, --member_Winloss
 				(awinlost + comm - playercomm + mwinlost + acomm - comm + swinlost + scomm - acomm)  * actualrate, --SMA_winloss
-				-(extra_Winlost  * actualrate + Extra_comm * actualrate)  ,  --ExtraPT
+				-(ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate)  ,  --ExtraPT
 				-(scomm * actualrate), --Commission
-				company_winlost * actualrate -  scomm * actualrate - (extra_Winlost  * actualrate + Extra_comm * actualrate), --RealIncome
-				(company_stake - Extra_stake)* actualrate, -- Real turnover
+				company_winlost * actualrate -  scomm * actualrate - (ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate), --RealIncome
+				(company_stake - ISNULL(Extra_stake,0))* actualrate, -- Real turnover
 				b.betcount
 			
-			FROM  dbo.rmSumWinloss b WITH (NOLOCK)
+			FROM  dbo.rmSumWinloss_UAT1 b WITH (NOLOCK)
 			INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
+			INNER JOIN #CustList c ON c.custID = b.recommend
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), b.ParlayType - 1) + ',%'
@@ -212,9 +265,9 @@ BEGIN
 			INSERT INTO #rptRiskWLControl 
 			(
 				CustID ,
-				recommend ,
-				mrecommend,
-				srecommend,
+				recommend,
+				mrecommend ,
+				srecommend ,
 				member_Winloss,
 				SMA_winloss ,
 				ExtraPT ,
@@ -227,42 +280,178 @@ BEGIN
 			SELECT	
 				b.custid,
 				b.recommend,
-				b.mrecommend,
-				b.srecommend,
+				b.mrecommend ,
+				b.srecommend ,
 				(winlost - stake + playercomm) * actualrate, --member_Winloss
 				(awinlost + comm - playercomm + mwinlost + acomm - comm + swinlost + scomm - acomm)  * actualrate, --SMA_winloss
-				-(extra_Winlost  * actualrate + Extra_comm * actualrate)  ,  --ExtraPT
+				-(ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate)  ,  --ExtraPT
 				-(scomm * actualrate), --Commission
-				company_winlost * actualrate -  scomm * actualrate - (extra_Winlost  * actualrate + Extra_comm * actualrate), --RealIncome
-				(company_stake - Extra_stake)* actualrate, -- Real turnover
+				company_winlost * actualrate -  scomm * actualrate - (ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate), --RealIncome
+				(company_stake - ISNULL(Extra_stake,0))* actualrate, -- Real turnover
 				b.betcount
 			
-			FROM  dbo.rmSumWinloss_Old b WITH (NOLOCK)
+			FROM  dbo.rmSumWinloss_Old_UAT1 b WITH (NOLOCK)
 			INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
+			INNER JOIN #CustList c ON c.custID = b.recommend
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), b.ParlayType - 1) + ',%'
 		END
+
+	
 	END
 
-	-- Return data
-	SELECT		s.site,
-				s.isLicensee,
-				COUNT(distinct b.custid) noMember,
-				SUM(member_Winloss) member_Winloss,
-				SUM(SMA_winloss) SMA_winloss ,
-				SUM(ExtraPT)  ExtraPT,
-				SUM(Commission)  Commission,
-				SUM(RealIncome) RealIncome ,
-				SUM(RealTurnover) RealTurnover ,
-				SUM(betCount)  betCount
-	FROM #rptRiskWLControl b
-	INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.srecommend = c.custid
-	INNER JOIN bodb02.dbo.Site s  WITH(NOLOCK) ON  c.site = s.site
-	GROUP BY s.site, s.isLicensee
+	IF @roleID = 4
+	BEGIN
+		INSERT INTO #rptRiskWLControl_Summary(
+					CustID,
+					UserName, 
+					RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover, Margin)
+		SELECT		
+					b.mrecommend,
+					c.UserName,
+					c.RoleID,
+					COUNT(distinct b.custid) noMember,
+					SUM(betCount)  betCount,
+					SUM(member_Winloss) member_Winloss,
+					SUM(SMA_winloss) SMA_winloss ,
+					SUM(ExtraPT)  ExtraPT,
+					SUM(Commission)  Commission,
+					SUM(RealIncome) RealIncome ,
+					SUM(RealTurnover) RealTurnover ,
+					CASE WHEN ISNULL(SUM(RealTurnover),0) = 0 THEN 0. ELSE SUM(RealIncome)/ SUM(RealTurnover) * 100 END as Margin
+		FROM		#rptRiskWLControl b
+		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.mrecommend
+		GROUP BY	b.mrecommend,c.UserName,c.RoleID
+
+	END
+
+
+	IF @roleID = 3
+	BEGIN
+		INSERT INTO #rptRiskWLControl_Summary(
+					CustID,
+					UserName, 
+					RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover, Margin)
+		SELECT		
+					b.recommend,
+					c.UserName,
+					c.RoleID,
+					COUNT(distinct b.custid) noMember,
+					SUM(betCount)  betCount,
+					SUM(member_Winloss) member_Winloss,
+					SUM(SMA_winloss) SMA_winloss ,
+					SUM(ExtraPT)  ExtraPT,
+					SUM(Commission)  Commission,
+					SUM(RealIncome) RealIncome ,
+					SUM(RealTurnover) RealTurnover ,
+					CASE WHEN ISNULL(SUM(RealTurnover),0) = 0 THEN 0. ELSE SUM(RealIncome)/ SUM(RealTurnover) * 100 END as Margin
+		FROM		#rptRiskWLControl b
+		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.recommend
+		GROUP BY	b.recommend,c.UserName,c.RoleID
+
+	END
+
+	IF @roleID = 2
+	BEGIN
+		INSERT INTO #rptRiskWLControl_Summary(
+					CustID,
+					UserName, 
+					RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover, Margin)
+		SELECT		
+					b.CustID,
+					c.UserName,
+					c.RoleID,
+					0 noMember,
+					SUM(betCount)  betCount,
+					SUM(member_Winloss) member_Winloss,
+					SUM(SMA_winloss) SMA_winloss ,
+					SUM(ExtraPT)  ExtraPT,
+					SUM(Commission)  Commission,
+					SUM(RealIncome) RealIncome ,
+					SUM(RealTurnover) RealTurnover ,
+					CASE WHEN ISNULL(SUM(RealTurnover),0) = 0 THEN 0. ELSE SUM(RealIncome)/ SUM(RealTurnover) * 100 END as Margin
+		FROM		#rptRiskWLControl b
+		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.CustID
+		GROUP BY	b.CustID,c.UserName,c.RoleID
+
+		IF @PageSize <=0 AND @PageIndex <=0 
+		BEGIN
+			SELECT	CustID,
+				UserName,
+				RoleID, 
+				NoMember, 
+				BetCount, 
+				MemberWinloss, 
+				SMAwinloss, 
+				ExtraPT, 
+				Commission, 
+				RealIncome, 
+				RealTurnover, 
+				Margin
+			FROM #rptRiskWLControl_Summary
+			ORDER BY UserName
+
+			RETURN
+		END
+
+		IF @TotalRecords = 0  
+		BEGIN  
+			SELECT TotalRecords = COUNT(CustID)
+			FROM #rptRiskWLControl_Summary
+		END
+
+		DECLARE @RowStart	INT,
+				@RowEnd		INT
+		
+		SELECT	@PageIndex = @PageIndex - 1,
+				@RowStart = @PageSize * @PageIndex + 1,
+				@RowEnd = @RowStart + @PageSize - 1;
+
+		SELECT wl.*
+		FROM (
+			SELECT	CustID,
+					UserName,
+					RoleID, 
+					NoMember, 
+					BetCount, 
+					MemberWinloss, 
+					SMAwinloss, 
+					ExtraPT, 
+					Commission, 
+					RealIncome, 
+					RealTurnover, 
+					Margin,
+					ROW_NUMBER() over(order by UserName) as RowNum
+				FROM #rptRiskWLControl_Summary
+		) wl
+		WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
+
+		RETURN
+	END
+
+
+	SELECT	CustID,
+			UserName,
+			RoleID, 
+			NoMember, 
+			BetCount, 
+			MemberWinloss, 
+			SMAwinloss, 
+			ExtraPT, 
+			Commission, 
+			RealIncome, 
+			RealTurnover, 
+			Margin
+	FROM #rptRiskWLControl_Summary
+	ORDER BY UserName
 	
+	DROP TABLE #CustList
+	DROP TABLE #MBU
 	DROP TABLE #bettype
+	DROP TABLE #rptRiskWLControl_Summary
 	DROP TABLE #rptRiskWLControl
 	DROP TABLE #tmpSport
 END
 GO
+

@@ -274,7 +274,7 @@ BEGIN
 						SUM(RealTurnover) RealTurnover ,
 						CASE WHEN ISNULL(SUM(RealTurnover),0) = 0 THEN 0. ELSE SUM(RealIncome)/ SUM(RealTurnover) * 100 END as Margin
 			FROM #rptRiskWLControl b
-			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.srecommend = c.custid
+			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.recommend = c.custid
 			INNER JOIN bodb02.dbo.Site s  WITH(NOLOCK) ON  c.site = s.site
 			GROUP BY s.site, s.isDeposit
 
