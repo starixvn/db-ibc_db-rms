@@ -14,6 +14,7 @@ AS
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
+		- 20201105@Percy: Include data from yesterday [RedmineID: #144905]
 */
 
 BEGIN
@@ -59,7 +60,7 @@ BEGIN
 		WHERE bettype = 29
 			AND combo = @combo
 			AND statusID = 0
-			AND winlostdate > @yesterday
+			AND winlostdate >= @yesterday
 			AND refno <> @refno
 
 		INSERT INTO @result (transid, cnt)
@@ -102,7 +103,7 @@ BEGIN
 		WHERE b.hdp2 = @combo 		
 			AND statusid = 0
 			AND a.matchid = @MatchId
-			AND winlostdate > @yesterday
+			AND winlostdate >= @yesterday
 			AND b.transid <> @transid
 
 		INSERT INTO @result (transid, cnt)
@@ -122,7 +123,7 @@ BEGIN
 		WHERE hdp2 = @combo
 			AND statusID = 0
 			AND matchid = @matchid
-			AND winlostdate > @yesterday
+			AND winlostdate >= @yesterday
 			AND transid <> @transid
 
 		;WITH CTE_number AS
