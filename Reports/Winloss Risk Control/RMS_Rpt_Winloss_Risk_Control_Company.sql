@@ -223,7 +223,7 @@ BEGIN
 				b.recommend,
 				b.mrecommend ,
 				b.srecommend ,
-				(winlost - stake + playercomm) * actualrate, --member_Winloss
+				(winlost - actual_stake + playercomm) * actualrate, --member_Winloss
 				(awinlost + comm - playercomm + mwinlost + acomm - comm + swinlost + scomm - acomm)  * actualrate, --SMA_winloss
 				-(ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate)  ,  --ExtraPT
 				-(scomm * actualrate), --Commission
@@ -266,7 +266,7 @@ BEGIN
 				b.recommend,
 				b.mrecommend ,
 				b.srecommend ,
-				(winlost - stake + playercomm) * actualrate, --member_Winloss
+				(winlost - actual_stake + playercomm) * actualrate, --member_Winloss
 				(awinlost + comm - playercomm + mwinlost + acomm - comm + swinlost + scomm - acomm)  * actualrate, --SMA_winloss
 				-(ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate)  ,  --ExtraPT
 				-(scomm * actualrate), --Commission

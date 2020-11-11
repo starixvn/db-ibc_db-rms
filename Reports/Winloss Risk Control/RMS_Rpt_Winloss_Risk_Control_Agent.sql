@@ -21,7 +21,7 @@ AS
 		- 20201030@Danny: Initialize SP [RedmineID: #144471]		
 		
 	
-	Parameter's Explanation:
+	Parameter's Explanation:th
 		- @sporttype:
 					. '1': soccer only
 					. '-1': Combined other sports
