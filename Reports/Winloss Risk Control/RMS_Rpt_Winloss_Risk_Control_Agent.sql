@@ -427,6 +427,8 @@ BEGIN
 		) wl
 		WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
 
+		SELECT @TotalRecords as TotalRecords;
+
 		RETURN
 	END
 
