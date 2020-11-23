@@ -154,7 +154,7 @@ BEGIN
 		BEGIN
 			SELECT	@f_date = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END
 					,@t_date = @ToDate
-			
+
 			INSERT INTO #rptRiskWLControl 
 			(
 				CustID ,
@@ -231,7 +231,7 @@ BEGIN
 				(company_stake - ISNULL(Extra_stake,0))* actualrate, -- Real turnover
 				b.betcount
 			
-			FROM  dbo.rmSumWinloss_UAT1 b WITH (NOLOCK)
+			FROM  dbo.rmSumWinloss b WITH (NOLOCK)
 			INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
 			INNER JOIN #CustList c ON c.custID = b.recommend
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
@@ -274,7 +274,7 @@ BEGIN
 				(company_stake - ISNULL(Extra_stake,0))* actualrate, -- Real turnover
 				b.betcount
 			
-			FROM  dbo.rmSumWinloss_Old_UAT1 b WITH (NOLOCK)
+			FROM  dbo.rmSumWinloss_Old b WITH (NOLOCK)
 			INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
 			INNER JOIN #CustList c ON c.custID = b.recommend
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date

@@ -163,7 +163,7 @@ BEGIN
 				-(winlost - actual_stake + awinlost + mwinlost + swinlost)* actualrate - scomm * actualrate - ((winlost - actual_stake + CASE WHEN tpositiontaking = 1 THEN 0  ELSE scomm / (1 - tpositiontaking) END) * CAST(ISNULL(b.epositiontaking, 0) AS DECIMAL(9,8)) * actualrate),
 				((CASE WHEN b.statusID IN (103) THEN 0   WHEN b.tpositiontaking = 1 THEN 0  ELSE (1- b.tpositiontaking - CAST(ISNULL(b.epositiontaking, 0) AS DECIMAL(9,8))) * b.stake END) * actualrate) ,
 				1
-			FROM  rmBettrans b WITH (NOLOCK)
+			FROM  dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
@@ -211,7 +211,7 @@ BEGIN
 				(company_stake - ISNULL(Extra_stake,0))* actualrate, -- Real turnover
 				b.betcount
 			
-			FROM  dbo.rmSumWinloss_UAT1 b WITH (NOLOCK)
+			FROM  dbo.rmSumWinloss b WITH (NOLOCK)
 			INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
@@ -253,7 +253,7 @@ BEGIN
 				(company_stake - ISNULL(Extra_stake,0))* actualrate, -- Real turnover
 				b.betcount
 			
-			FROM  dbo.rmSumWinloss_Old_UAT1 b WITH (NOLOCK)
+			FROM  dbo.rmSumWinloss_Old b WITH (NOLOCK)
 			INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
