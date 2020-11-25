@@ -1,15 +1,15 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_Betlist]
-	@selection		VARCHAR(MAX) = '0',
-	@sporttype		VARCHAR(100) = '',
-	@level			VARCHAR(100) = '',
-	@Market			VARCHAR(100) = '',
-	@stake			MONEY = 0,
-	@maxpayout		MONEY = 0,
-	@ReportType		TINYINT = 1,
-	@max_transid	BIGINT = 0,
-	@limitRowCount	INT = 20,
-	@ParlayType		VARCHAR(20) = ''
+	@selection		VARCHAR(MAX) = '0'
+	,@sporttype		VARCHAR(100) = ''
+	,@level			VARCHAR(100) = ''
+	,@Market		VARCHAR(100) = ''
+	,@stake			MONEY = 0
+	,@maxpayout		MONEY = 0
+	,@ReportType	TINYINT = 1
+	,@max_transid	BIGINT = 0
+	,@limitRowCount	INT = 2000
+	,@ParlayType	VARCHAR(20) = ''
 AS
 
 /*
@@ -23,6 +23,7 @@ AS
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
+		- 20201124@Percy: Enhance performance to support increase @limitRowcount [RedmineID: #145927]
 	
 	Parameter's Explanation:
 		- @selection:
@@ -150,13 +151,17 @@ BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (376)
 
+		DECLARE @min_transid BIGINT
+		SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans WITH (NOLOCK) WHERE statusID = 0
+
 		INSERT INTO #bettrans (transid, bettype, matchid, refno)
 		SELECT b.transid, b.bettype, b.matchid, b.refno
 		FROM dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
-		WHERE b.statusID = 0
+		WHERE b.transid >= @min_transid
+			AND b.statusID = 0
 			AND b.currency <> 20
 
 		DROP TABLE #bettype
@@ -205,10 +210,7 @@ BEGIN
 							INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 							LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
 						WHERE b.refno = bm.refno
-							AND (
-								bm.statusID IN (0, 1)
-								OR bm.winlostdate > @MoveBetsDay
-							)
+							AND (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
 
 						UNION ALL
 						SELECT
@@ -249,7 +251,34 @@ BEGIN
 		INSERT INTO #level (level)
 		SELECT DISTINCT val FROM dbo.f_RMS_strSplit(@level, ',')
 
-		SELECT TOP (@limitRowcount)
+		CREATE TABLE #Result
+		(
+			custid INT
+			,transdate DATETIME
+			,transid BIGINT
+			,refno BIGINT
+			,username VARCHAR(30)
+			,sporttype INT
+			,odds MONEY
+			,statusId TINYINT
+			,stake MONEY
+			,maxpayout MONEY
+			,TotalSelection INT
+			,TotalBet INT
+			,IP NVARCHAR(15)
+			,level TINYINT
+			,NumberWon INT
+			,bettype INT
+			,IsLive BIT
+			,IsBlacklistLeague BIT
+			,betteam NVARCHAR(10)
+		)
+		INSERT INTO #Result
+		(
+			custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
+			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam
+		)
+		SELECT
 			rb.custid
 			,rb.transdate
 			,rb.transid
@@ -264,30 +293,41 @@ BEGIN
 			,rb.TotalBet AS TotalBet
 			,rb.IP
 			,ISNULL(mc.level, 0) AS level
-			,0 AS IsBetRadar
 			,b.NumberWon
 			,rb.bettype
 			,b.IsLive
 			,b.IsBlacklistLeague
+			,rb.betteam
 		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN #bettrans b ON rb.transid = b.transid
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
-		WHERE
-			ISNULL(mc.level, 0) IN (SELECT level FROM #level)
-			AND 1 = CASE
-					WHEN @reportType = 1 AND (rb.stake * rb.actualrate * (1 - rb.tpositiontaking) / rb.TotalBet) >= @stake THEN 1
-					WHEN @reportType = 2 AND (rb.odds2 - 1) * rb.stake * rb.actualrate * (1 - rb.tpositiontaking) >= @maxpayout THEN 1
-					ELSE 0 END
-			AND 1 = CASE
-					WHEN rb.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
-						WHEN @ComboType = 1 AND rb.betteam = N'1' THEN 1
-						WHEN @ComboType = 2 AND rb.betteam <> N'1' THEN 1
-						ELSE 0 END
-					ELSE 1 END
-		ORDER BY rb.transid DESC
+		WHERE ISNULL(mc.level, 0) IN (SELECT level FROM #level)
+
+		IF @reportType = 1
+			DELETE #Result WHERE stake < @stake
+		ELSE IF @reportType = 2
+			DELETE #Result WHERE maxpayout < @maxpayout
+
+		IF @ComboType = 1
+			DELETE #Result WHERE betteam <> '1'
+		ELSE IF @ComboType = 2
+			DELETE #Result WHERE betteam = '1'
+
+		CREATE INDEX IX_Index ON #Result (transid)
+		
+		SELECT custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
+			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague
+		FROM (
+				SELECT custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
+					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague
+					,ROW_NUMBER() OVER(ORDER BY transid DESC) AS rn
+				FROM #Result
+			) r
+		WHERE rn <= @limitRowCount
 	END
 	
 	DROP TABLE #bettrans
 	DROP TABLE #level
+	DROP TABLE #Result
 END
 GO
