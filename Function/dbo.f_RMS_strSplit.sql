@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="1" isNested="1"></info>*/
+﻿/*<info serverAlias="DBRMS-bodb_RMS" selectors="bodbRMSNet" isFunction="1" isNested="1"></info>*/
  ALTER FUNCTION  [dbo].[f_RMS_strSplit]  
 (
 	@string NVARCHAR(MAX),
