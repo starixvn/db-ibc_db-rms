@@ -281,52 +281,27 @@ BEGIN
 	
 	END
 		
-		-- Return data
-		IF @company = '' 
-		BEGIN
-			select	Site as  Username, 
-					IsDeposit, 
-					NoMember, 
-					BetCount, 
-					MemberWinloss, 
-					SMAwinloss, 
-					ExtraPT, 
-					Commission, 
-					RealIncome, 
-					RealTurnover, 
-					Margin
-			FROM #rptRiskWLControl_Summary
-			ORDER BY IsDeposit
-			
-		END
-		else 
-		BEGIN
-			CREATE TABLE #company(Site NVARCHAR(50))
+	CREATE TABLE #company(Site NVARCHAR(50))
 
-			INSERT INTO #company(Site)
-			select val from  dbo.f_RMS_strSplit(@company, ',')
+	INSERT INTO #company(Site)
+	select val from  dbo.f_RMS_strSplit(@company, ',')
 
-			select	t.Site as  Username, 
-					t.IsDeposit, 
-					t.NoMember, 
-					t.BetCount, 
-					t.MemberWinloss, 
-					t.SMAwinloss, 
-					t.ExtraPT, 
-					t.Commission, 
-					t.RealIncome, 
-					t.RealTurnover, 
-					t.Margin
-			FROM #rptRiskWLControl_Summary t
-			INNER JOIN #company c ON t.Site = c.Site
-			ORDER BY t. IsDeposit
+	select	t.Site as  Username, 
+			t.IsDeposit, 
+			t.NoMember, 
+			t.BetCount, 
+			t.MemberWinloss, 
+			t.SMAwinloss, 
+			t.ExtraPT, 
+			t.Commission, 
+			t.RealIncome, 
+			t.RealTurnover, 
+			t.Margin
+	FROM #rptRiskWLControl_Summary t
+	INNER JOIN #company c ON t.Site = c.Site
+	ORDER BY t. IsDeposit
 
-			DROP TABLE #company
-			
-		END
-
-	
-	
+	DROP TABLE #company
 	DROP TABLE #MBU
 	DROP TABLE #bettype
 	DROP TABLE #rptRiskWLControl_Summary

@@ -1,5 +1,5 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE [dbo].[RMS_SiteByGroupSel]
+ALTER PROCEDURE [dbo].[RMS_SiteByGroupSel]
 	@IsDeposit BIT = ''
 AS
 
@@ -20,6 +20,7 @@ BEGIN
 	SELECT Site, isDeposit 
 	FROM bodb02.dbo.Site WITH(NOLOCK)
 	WHERE isDeposit = CASE WHEN @IsDeposit= '' THEN isDeposit ELSE @IsDeposit END
+	AND isActive = 1
 	ORDER BY isDeposit, Site
 
 END
