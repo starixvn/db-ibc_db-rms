@@ -143,8 +143,7 @@ BEGIN
 			Commission money,
 			RealIncome money,
 			RealTurnover money,
-			BetCount INT,
-			Margin smallmoney
+			BetCount INT
 		)
 
 	-- get data Credit
@@ -175,8 +174,8 @@ BEGIN
 				b.recommend,
 				b.mrecommend ,
 				b.srecommend ,
-				(winlost - actual_stake + playercomm) * actualrate,
-				(awinlost + comm - playercomm + mwinlost + acomm - comm + swinlost + scomm - acomm)  * actualrate,
+				(winlost - actual_stake) * actualrate,
+				(awinlost + mwinlost + swinlost)  * actualrate,
 				-((winlost - actual_stake + CASE WHEN tpositiontaking = 1 THEN 0  ELSE scomm / (1 - tpositiontaking) END) * CAST(ISNULL(b.epositiontaking, 0) AS DECIMAL(9,8)) * actualrate),
 				-(scomm * actualrate),
 				-(winlost - actual_stake + awinlost + mwinlost + swinlost)* actualrate - scomm * actualrate - ((winlost - actual_stake + CASE WHEN tpositiontaking = 1 THEN 0  ELSE scomm / (1 - tpositiontaking) END) * CAST(ISNULL(b.epositiontaking, 0) AS DECIMAL(9,8)) * actualrate),
@@ -223,8 +222,8 @@ BEGIN
 				b.recommend,
 				b.mrecommend ,
 				b.srecommend ,
-				(winlost - actual_stake + playercomm) * actualrate, --member_Winloss
-				(awinlost + comm - playercomm + mwinlost + acomm - comm + swinlost + scomm - acomm)  * actualrate, --SMA_winloss
+				(winlost - actual_stake) * actualrate, --member_Winloss
+				(awinlost + mwinlost + swinlost)  * actualrate, --SMA_winloss
 				-(ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate)  ,  --ExtraPT
 				-(scomm * actualrate), --Commission
 				company_winlost * actualrate -  scomm * actualrate - (ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate), --RealIncome
@@ -266,8 +265,8 @@ BEGIN
 				b.recommend,
 				b.mrecommend ,
 				b.srecommend ,
-				(winlost - actual_stake + playercomm) * actualrate, --member_Winloss
-				(awinlost + comm - playercomm + mwinlost + acomm - comm + swinlost + scomm - acomm)  * actualrate, --SMA_winloss
+				(winlost - actual_stake) * actualrate, --member_Winloss
+				(awinlost + mwinlost + swinlost)  * actualrate, --SMA_winloss
 				-(ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate)  ,  --ExtraPT
 				-(scomm * actualrate), --Commission
 				company_winlost * actualrate -  scomm * actualrate - (ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate), --RealIncome
@@ -290,7 +289,7 @@ BEGIN
 		INSERT INTO #rptRiskWLControl_Summary(
 					CustID,
 					UserName, 
-					RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover, Margin)
+					RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover)
 		SELECT		
 					b.srecommend,
 					c.UserName,
@@ -302,8 +301,7 @@ BEGIN
 					SUM(ExtraPT)  ExtraPT,
 					SUM(Commission)  Commission,
 					SUM(RealIncome) RealIncome ,
-					SUM(RealTurnover) RealTurnover ,
-					CASE WHEN ISNULL(SUM(RealTurnover),0) = 0 THEN 0. ELSE SUM(RealIncome)/ SUM(RealTurnover) * 100 END as Margin
+					SUM(RealTurnover) RealTurnover 
 		FROM		#rptRiskWLControl b
 		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.srecommend
 		GROUP BY	b.srecommend,c.UserName,c.RoleID
@@ -315,7 +313,7 @@ BEGIN
 		INSERT INTO #rptRiskWLControl_Summary(
 				CustID,
 				UserName, 
-				RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover, Margin)
+				RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover)
 		SELECT		
 					b.recommend,
 					c.UserName,
@@ -327,8 +325,7 @@ BEGIN
 					SUM(ExtraPT)  ExtraPT,
 					SUM(Commission)  Commission,
 					SUM(RealIncome) RealIncome ,
-					SUM(RealTurnover) RealTurnover ,
-					CASE WHEN ISNULL(SUM(RealTurnover),0) = 0 THEN 0. ELSE SUM(RealIncome)/ SUM(RealTurnover) * 100 END as Margin
+					SUM(RealTurnover) RealTurnover 
 		FROM	#rptRiskWLControl b
 		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.recommend
 		GROUP BY	b.recommend,c.UserName,c.RoleID
@@ -345,8 +342,7 @@ BEGIN
 			ExtraPT, 
 			Commission, 
 			RealIncome, 
-			RealTurnover, 
-			Margin
+			RealTurnover
 	FROM #rptRiskWLControl_Summary
 	ORDER BY UserName
 	
