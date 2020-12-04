@@ -214,21 +214,23 @@ BEGIN
 			WHERE b.bettype = 29 AND b.sporttype = 0
 		
 			-- Update sporttype
-			CREATE TABLE #tmpBettransm (refno BIGINT, sporttype INT)
+			CREATE TABLE #tmpBettransm (refno BIGINT, sporttype INT, Saba INT)
 			CREATE CLUSTERED INDEX IX_refno ON #tmpBettransm (refno)
 
-			INSERT INTO #tmpbettransm (refno, sporttype)
-			SELECT bm.refno, m.sporttype
+			INSERT INTO #tmpbettransm (refno, sporttype, Saba)
+			SELECT bm.refno, m.sporttype , CASE WHEN  l.LeagueGroupID IN (42, 74) THEN 1 ELSE -1 END Saba
 			FROM #tmpBettrans b
 				INNER JOIN bodb02.dbo.bettransm14 bm WITH (NOLOCK) ON bm.refno = b.refno
-				INNER JOIN bodb02.dbo.match14 m (NOLOCK) ON bm.matchid = m.matchid
+				INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
+				INNER JOIN bodb02.dbo.League l WITH(NOLOCK) ON m.leagueid = l.leagueid
 			WHERE b.bettype = 29 AND b.sporttype = 0 AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 
-			INSERT INTO #tmpbettransm (refno, sporttype)
-			SELECT bm.refno, m.sporttype
+			INSERT INTO #tmpbettransm (refno, sporttype, Saba)
+			SELECT bm.refno, m.sporttype, CASE WHEN  l.LeagueGroupID IN (42, 74) THEN 1 ELSE -1 END Saba
 			FROM #tmpBettrans b
 				INNER JOIN DBARC.bodb_Archive.dbo.bettransm bm WITH (NOLOCK) ON bm.refno = b.refno
-				INNER JOIN DBARC.bodb_Archive.dbo.match_bk m (NOLOCK) ON bm.matchid = m.matchid
+				INNER JOIN DBARC.bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
+				INNER JOIN bodb02.dbo.League l WITH(NOLOCK) ON m.leagueid = l.leagueid
 			WHERE b.bettype = 29 AND b.sporttype = 0 AND bm.winlostdate < @BalanceUpDay
 		
 			UPDATE b
@@ -236,9 +238,20 @@ BEGIN
 			FROM #tmpBettrans b
 				CROSS APPLY (
 					SELECT CASE
-								WHEN COUNT(DISTINCT sporttype) = 1 THEN MIN(sporttype)
+								-------------------------------
+								WHEN COUNT(DISTINCT sporttype) = 1 AND MIN(sporttype) NOT IN (1,2) THEN MIN(sporttype)
+								------------------------------- 
+								WHEN COUNT(DISTINCT sporttype) = 1 AND MIN(sporttype) = 1 AND SUM(DISTINCT Saba) = 0 THEN -3 
+								WHEN COUNT(DISTINCT sporttype) = 1 AND MIN(sporttype) = 1 AND SUM(DISTINCT Saba) > 0 THEN -4
+								WHEN COUNT(DISTINCT sporttype) = 1 AND MIN(sporttype) = 1 AND SUM(DISTINCT Saba) < 0 THEN  1
+								------------------------------
+								WHEN COUNT(DISTINCT sporttype) = 1 AND MIN(sporttype) = 2 AND SUM(DISTINCT Saba) = 0 THEN -1
+								WHEN COUNT(DISTINCT sporttype) = 1 AND MIN(sporttype) = 2 AND SUM(DISTINCT Saba) > 0 THEN -5
+								WHEN COUNT(DISTINCT sporttype) = 1 AND MIN(sporttype) = 2 AND SUM(DISTINCT Saba) < 0 THEN  2
+
+								------------------------------
 								WHEN COUNT(DISTINCT sporttype) <> 1 AND MIN(sporttype) = 1 THEN -3
-								ELSE -1 END AS sporttype
+								ELSE -1 END AS sporttype 
 					FROM #tmpBettransm bm
 					WHERE b.refno = bm.refno
 				) s
