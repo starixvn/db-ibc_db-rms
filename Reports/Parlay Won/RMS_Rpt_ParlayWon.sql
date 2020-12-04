@@ -178,7 +178,7 @@ BEGIN
 					,b.hdp2 AS TotalSelection
 					,b.transid2 AS SportType
 					,b.IP
-				FROM dbo.rmBettrans b WITH (NOLOCK)
+				FROM dbo.rmBettrans_uat b WITH (NOLOCK)
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
 					CROSS APPLY (SELECT TOP 1 sp.sporttype FROM @tmpSport sp WHERE b.transid2 = sp.sporttype) sp
 				WHERE b.winlostdate BETWEEN @FDate AND @TDate
@@ -226,7 +226,7 @@ BEGIN
 					,b.hdp2 AS TotalSelection
 					,b.transid2 AS SportType
 					,b.IP
-				FROM dbo.rmBettrans_Old b WITH (NOLOCK)
+				FROM dbo.rmBettrans_Old_uat b WITH (NOLOCK)
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
 					CROSS APPLY (SELECT TOP 1 sp.sporttype FROM @tmpSport sp WHERE b.transid2 = sp.sporttype) sp
 				WHERE b.winlostdate BETWEEN @FDate AND @TDate
