@@ -166,7 +166,7 @@ BEGIN
 				SUM(stake * actualrate * (1 - tpositiontaking)) AS stakePT,
 				SUM(stake * actualrate * (odds2 - 1) * (1 - tpositiontaking)) AS net_win,
 				COUNT(1) AS betcount
-			FROM rmBettrans rb WITH (NOLOCK)
+		FROM rmBettrans_uat rb WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
 			WHERE recommend = @custid
