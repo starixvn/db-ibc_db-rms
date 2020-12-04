@@ -30,6 +30,8 @@ AS
 					. '-1': Combined other sports
 					. '-2': Other sports
 					. '-3': Combined sports
+					. '-4': Saba soccer
+					. '-5': Saba basketball
 		- @ParlayType:
 					. 1: Mix parlay
 					. 2: Combo parlay
