@@ -1,5 +1,5 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details]
+CREATE PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details]
 	@custid			INT,
 	@fromdate		DATETIME,
 	@todate			DATETIME,
@@ -183,7 +183,10 @@ BEGIN
 			SELECT	@f_date = @FromDate
 					,@t_date = CASE WHEN @ToDate > @MoveBetsDay THEN @MoveBetsDay ELSE @ToDate END
 			
-			INSERT INTO #tmpBettrans(transid, refno, sporttype, bettype, betteam, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM)
+			INSERT INTO #tmpBettrans
+			(
+				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM
+			)
 			SELECT transid, refno, transid2, b.bettype, hdp2 AS combo, TotalBet AS TotalCombo
 				,CASE
 					WHEN b.bettype = 29 AND betteam = N'1' THEN 1
