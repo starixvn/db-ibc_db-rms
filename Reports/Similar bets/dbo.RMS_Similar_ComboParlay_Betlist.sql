@@ -15,6 +15,7 @@ AS
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 		- 20201105@Percy: Include data from yesterday [RedmineID: #144905]
+		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 */
 
 BEGIN
@@ -155,7 +156,7 @@ BEGIN
 		,p.custid
 		,p.bettype
 		,ISNULL(c.level, 0) AS level
-		,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE p.transid2 END AS Sporttype
+		,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE p.transid2 END AS Sporttype
 		,p.odds2 * p.TotalBet AS odds
 		,p.stake * p.actualrate * (1 - p.tpositiontaking) / p.TotalBet		AS stake
 		,p.stake * (p.odds2 - 1) * p.actualrate * (1 - p.tpositiontaking)	AS net_win
@@ -163,7 +164,7 @@ BEGIN
 		,ISNULL(@NumberWon, 0)	AS NumberWon
 		,p.TotalBet	AS TotalBet
 		,@cnt_bets	AS cnt_bets
-	FROM dbo.rmBettrans p WITH (NOLOCK) 
+	FROM dbo.rmBettrans_UAT p WITH (NOLOCK) 
 		LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
 	WHERE transid = @transid
 
