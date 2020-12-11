@@ -10,6 +10,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_Betlist]
 	,@max_transid	BIGINT = 0
 	,@limitRowCount	INT = 2000
 	,@ParlayType	VARCHAR(20) = ''
+	,@IsCornerParlay BIT = 0
 AS
 
 /*
@@ -24,6 +25,7 @@ AS
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 		- 20201124@Percy: Enhance performance to support increase @limitRowcount [RedmineID: #145927]
+		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
 	
 	Parameter's Explanation:
 		- @selection:
@@ -121,6 +123,7 @@ BEGIN
 			,NumberWon			INT DEFAULT(0)
 			,IsLive				BIT DEFAULT(0)
 			,IsBlacklistLeague	BIT DEFAULT(0)
+			,IsCornerParlay		BIT DEFAULT(0)
 		)
 
 		CREATE TABLE #bettype (bettype SMALLINT)
@@ -196,9 +199,10 @@ BEGIN
 								ELSE 3 END -- combined
 				,b.IsLive = bm.IsLive
 				,b.IsBlacklistLeague = bm.IsBlacklistLeague
+				,b.IsCornerParlay = CASE WHEN bm.IsCornerParlay > 0 THEN 1 ELSE 0 END
 			FROM #bettrans b
 				CROSS APPLY (
-					SELECT SUM(NumberWon) AS NumberWon, MAX(today) AS today, MAX(early) AS early, MIN(IsLive) AS IsLive, MAX(IsBlacklistLeague) AS IsBlacklistLeague
+					SELECT SUM(NumberWon) AS NumberWon, MAX(today) AS today, MAX(early) AS early, MIN(IsLive) AS IsLive, MAX(IsBlacklistLeague) AS IsBlacklistLeague, SUM(IsCornerParlay) as IsCornerParlay
 					FROM (
 						SELECT
 							SUM(CASE WHEN bm.StatusID = 112 THEN 1 ELSE 0 END) AS NumberWon
@@ -206,6 +210,7 @@ BEGIN
 							,MAX(CASE WHEN bm.matchdate = @today THEN 0 ELSE 1 END) AS early
 							,MIN(CASE WHEN m.GlobalShowTime < GETDATE() AND m.eventstatus <> 'Completed' THEN 1 ELSE 0 END) AS IsLive
 							,MAX(CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END) AS IsBlacklistLeague
+							,SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS IsCornerParlay
 						FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
 							INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 							LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
@@ -219,6 +224,7 @@ BEGIN
 							,MAX(CASE WHEN bm.matchdate = @today THEN 0 ELSE 1 END) AS early
 							,MIN(CASE WHEN m.GlobalShowTime < GETDATE() AND m.eventstatus <> 'Completed' THEN 1 ELSE 0 END) AS IsLive
 							,MAX(CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END) AS IsBlacklistLeague
+							,SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS IsCornerParlay
 						FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
 							INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
 							LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
@@ -241,6 +247,16 @@ BEGIN
 				FROM #bettrans b
 					LEFT JOIN @tmpMarket m ON b.market = m.market
 				WHERE m.market IS NULL
+			END
+		END
+
+		-- filter by Corner Parlay Tickets
+		BEGIN
+			IF @IsCornerParlay = 1 
+			BEGIN
+				DELETE b
+				FROM #bettrans b
+				WHERE b.IsCornerParlay = 0
 			END
 		END
 	END

@@ -3,7 +3,8 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Outstanding_Mem]
 	@custid		INT,	
 	@selection	VARCHAR(MAX) = '',
 	@sporttype	VARCHAR(100) = '',
-	@ParlayType	VARCHAR(10)=''
+	@ParlayType	VARCHAR(10)='',
+	@IsCornerParlay BIT = 0
 AS
 
 /*
@@ -15,6 +16,7 @@ AS
 		- 20170719@Winnie: Add MuayThai RedmineID: #79500
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
+		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
 		
 	Parameter's Explanation:
 		- @selection:
@@ -86,6 +88,7 @@ BEGIN
 			,bettype	SMALLINT
 			,market		TINYINT -- 1: today only, 2: early only, 3: combined
 			,NumberWon	INT DEFAULT(0)
+			,CornerParlay	 INT DEFAULT(0)
 		)
 
 		CREATE TABLE #bettype (bettype SMALLINT)
@@ -134,25 +137,41 @@ BEGIN
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype = 29)
 		BEGIN
 			UPDATE b
-			SET b.NumberWon = ISNULL(b.NumberWon, 0) + bm.NumberWon
+			SET b.NumberWon = ISNULL(b.NumberWon, 0) + bm.NumberWon,
+				b.CornerParlay = ISNULL(b.CornerParlay, 0) + bm.CornerParlay
 			FROM #bettrans b
 				CROSS APPLY (
-					SELECT COUNT(1) AS NumberWon
+					SELECT	SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END) NumberWon,
+							SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS CornerParlay
 					FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-					WHERE b.refno = bm.refno AND bm.statusID = 112
+					LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
+					WHERE b.refno = bm.refno 
 				) bm
 			WHERE b.bettype = 29
 
 			UPDATE b
-			SET b.NumberWon = ISNULL(b.NumberWon, 0) + bm.NumberWon
+			SET b.NumberWon = ISNULL(b.NumberWon, 0) + bm.NumberWon,
+				b.CornerParlay = ISNULL(b.CornerParlay, 0) + bm.CornerParlay
 			FROM #bettrans b
 				CROSS APPLY (
-					SELECT COUNT(1) AS NumberWon
+					SELECT  SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END) NumberWon,
+							SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS CornerParlay
 					FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
+					LEFT JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
 					WHERE b.refno = bm.refno AND bm.statusID = 112
 				) bm
 			WHERE b.bettype = 29
 		END
+
+		-- filter by Corner Parlay Tickets
+	
+		IF @IsCornerParlay = 1 
+		BEGIN
+			DELETE b
+			FROM #bettrans b
+			WHERE b.CornerParlay = 0
+		END
+		
 	END
 
 	-- Return data
