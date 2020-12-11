@@ -135,7 +135,7 @@ BEGIN
 		BEGIN
 			UPDATE b
 			SET 
-				b.CornerParlay = ISNULL(b.CornerParlay, 0) + bm.CornerParlay
+				b.CornerParlay = ISNULL(b.CornerParlay, 0) + ISNULL(bm.CornerParlay,0)
 			FROM #bettrans b
 				CROSS APPLY (
 					SELECT	SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END) NumberWon,
@@ -147,7 +147,7 @@ BEGIN
 			WHERE b.bettype = 29
 
 			UPDATE b
-			SET b.CornerParlay = ISNULL(b.CornerParlay, 0) + bm.CornerParlay
+			SET b.CornerParlay = ISNULL(b.CornerParlay, 0) +  ISNULL(bm.CornerParlay,0)
 			FROM #bettrans b
 				CROSS APPLY (
 					SELECT  SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END) NumberWon,
