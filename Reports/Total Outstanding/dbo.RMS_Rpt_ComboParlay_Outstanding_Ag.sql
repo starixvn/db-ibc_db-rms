@@ -3,7 +3,8 @@
 	@custid		INT,	
 	@selection	VARCHAR(MAX) = '',
 	@sporttype	VARCHAR(100) = '',
-	@ParlayType	VARCHAR(10)=''
+	@ParlayType	VARCHAR(10)='',
+	@IsCornerParlay BIT = 0
 AS
 
 /*
@@ -16,6 +17,8 @@ AS
 		- 20170719@Winnie: Add MuayThai RedmineID: #79500
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
+		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
+
 	
 	Parameter's Explanation:
 		- @selection:
@@ -110,25 +113,75 @@ BEGIN
 
 	-- Return data
 	BEGIN
-		SELECT
-			custid,
-			username,
-			SUM(stake * actualrate * (1 - tpositiontaking)) AS stakePT,
-			SUM(stake * actualrate * (odds2 - 1) * (1 - tpositiontaking)) AS net_win,
-			COUNT(1) AS betcount
-		FROM rmBettrans rb WITH (NOLOCK)
-			INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
-			INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
-		WHERE recommend = @custid
-			AND statusid = 0
-			AND 1 = CASE
-						WHEN rb.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
-							WHEN @ComboType = 1 AND rb.betteam = N'1' THEN 1
-							WHEN @ComboType = 2 AND rb.betteam <> N'1' THEN 1
-							ELSE 0 END
-						ELSE 1 END
-		GROUP BY custid, username
-		ORDER  BY net_win DESC
+	
+
+		IF @IsCornerParlay = 1
+		BEGIN
+
+			SELECT
+				custid,
+				username,
+				SUM(stake * actualrate * (1 - tpositiontaking)) AS stakePT,
+				SUM(stake * actualrate * (odds2 - 1) * (1 - tpositiontaking)) AS net_win,
+				COUNT(1) AS betcount
+			FROM rmBettrans rb WITH (NOLOCK)
+				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
+				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
+			CROSS APPLY
+			(
+				SELECT SUM(t.CornerParlay) as CornerParlay
+				FROM
+				(
+					SELECT	SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS CornerParlay
+					FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
+					LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
+					WHERE rb.refno = bm.refno 
+					UNION ALL
+					SELECT	SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS CornerParlay
+					FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
+					LEFT JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
+					WHERE rb.refno = bm.refno 
+				)t
+			) t
+			WHERE rb.recommend = @custid
+				AND statusid = 0
+				AND 1 = CASE
+							WHEN rb.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
+								WHEN @ComboType = 1 AND rb.betteam = N'1' THEN 1
+								WHEN @ComboType = 2 AND rb.betteam <> N'1' THEN 1
+								ELSE 0 END
+							ELSE 1 END
+				AND t.CornerParlay > 0
+			GROUP BY custid, username
+			ORDER  BY net_win DESC
+
+
+
+		END
+		ELSE
+		BEGIN
+			SELECT
+				custid,
+				username,
+				SUM(stake * actualrate * (1 - tpositiontaking)) AS stakePT,
+				SUM(stake * actualrate * (odds2 - 1) * (1 - tpositiontaking)) AS net_win,
+				COUNT(1) AS betcount
+			FROM rmBettrans rb WITH (NOLOCK)
+				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
+				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
+			WHERE recommend = @custid
+				AND statusid = 0
+				AND 1 = CASE
+							WHEN rb.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
+								WHEN @ComboType = 1 AND rb.betteam = N'1' THEN 1
+								WHEN @ComboType = 2 AND rb.betteam <> N'1' THEN 1
+								ELSE 0 END
+							ELSE 1 END
+			GROUP BY custid, username
+			ORDER  BY net_win DESC
+		END
+
+		
 	END
 END
 GO
