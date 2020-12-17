@@ -3,7 +3,8 @@
 	@CustID		INT,
 	@selection	VARCHAR(MAX) = '',
 	@sporttype	VARCHAR(100) = '',
-	@ParlayType	VARCHAR(10)  = ''
+	@ParlayType	VARCHAR(10)  = '',
+	@IsCornerParlay BIT = 0
 AS
 
 /*	
@@ -16,6 +17,7 @@ AS
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
+		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
 
 	Parameter's Explanation:
 		- @selection:
@@ -115,56 +117,98 @@ BEGIN
 			VALUES (376)
 	END
 
-	CREATE TABLE #NumberWon (refno BIGINT, NumberWon INT)
+	CREATE TABLE #NumberWon (refno BIGINT, NumberWon INT, CornerParlay	 INT DEFAULT(0))
 
 	IF EXISTS (SELECT 1 FROM #bettype WHERE bettype = 29)
-		INSERT INTO #NumberWon (refno, NumberWon)
-		SELECT refno, SUM(ISNULL(bm.NumberWon, 0))
+		INSERT INTO #NumberWon (refno, NumberWon, CornerParlay)
+		SELECT refno, SUM(ISNULL(bm.NumberWon, 0)), SUM (ISNULL(bm.CornerParlay,0))
 		FROM dbo.rmBettrans b WITH (NOLOCK)
 			CROSS APPLY (
-				SELECT COUNT(1) AS NumberWon
+				SELECT	SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END) as NumberWon,
+						SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS CornerParlay
 				FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-				WHERE b.refno = bm.refno AND bm.statusID = 112 AND bm.winlostdate > @MoveBetsDay
+				LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
+				WHERE b.refno = bm.refno AND bm.winlostdate > @MoveBetsDay
 				UNION ALL
-				SELECT COUNT(1) AS NumberWon
+				SELECT	 SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END) as NumberWon,
+						SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS CornerParlay
 				FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
-				WHERE b.refno = bm.refno AND bm.statusID = 112 AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+				LEFT JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
+				WHERE b.refno = bm.refno AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 			) bm
 		WHERE custid = @CustID
 			AND statusID = 0
 			AND bettype = 29
 		GROUP BY refno
 	
-	SELECT
-		b.transdate
-		,b.transid
-		,b.refno
-		,b.bettype
-		,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype
-		,ISNULL(n.NumberWon, 0) AS NumberWon
-		,b.odds2 * b.TotalBet AS odds
-		,b.stake * b.actualrate / b.TotalBet AS Stake
-		,(b.odds2 - 1) * b.stake * b.actualrate AS WinningAmount
-		,(b.odds2 - 1) * b.stake * b.actualrate * (1 - b.tpositiontaking) AS CompanyLoseAmount
-		,b.ip
-		,(1 - b.tpositiontaking) AS HousePT
-		,b.hdp2 AS TotalSelection
-		,b.TotalBet AS TotalBet
-	FROM dbo.rmBettrans b WITH (NOLOCK)
-		INNER JOIN #bettype bt ON b.bettype = bt.bettype
-		INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
-		INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
-		LEFT JOIN #NumberWon n ON b.refno = n.refno
-	WHERE b.custid = @CustID
-		AND b.statusID = 0
-		AND currency <> 20
-		AND 1 = CASE
-					WHEN b.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
-						WHEN @ComboType = 1 AND b.betteam = N'1' THEN 1
-						WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
-						ELSE 0 END
-					ELSE 1 END
-	ORDER BY b.transdate DESC
+	IF @IsCornerParlay = 0  
+	BEGIN
+		SELECT
+			b.transdate
+			,b.transid
+			,b.refno
+			,b.bettype
+			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype
+			,ISNULL(n.NumberWon, 0) AS NumberWon
+			,b.odds2 * b.TotalBet AS odds
+			,b.stake * b.actualrate / b.TotalBet AS Stake
+			,(b.odds2 - 1) * b.stake * b.actualrate AS WinningAmount
+			,(b.odds2 - 1) * b.stake * b.actualrate * (1 - b.tpositiontaking) AS CompanyLoseAmount
+			,b.ip
+			,(1 - b.tpositiontaking) AS HousePT
+			,b.hdp2 AS TotalSelection
+			,b.TotalBet AS TotalBet
+		FROM dbo.rmBettrans b WITH (NOLOCK)
+			INNER JOIN #bettype bt ON b.bettype = bt.bettype
+			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+			LEFT JOIN #NumberWon n ON b.refno = n.refno
+		WHERE b.custid = @CustID
+			AND b.statusID = 0
+			AND currency <> 20
+			AND 1 = CASE
+						WHEN b.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
+							WHEN @ComboType = 1 AND b.betteam = N'1' THEN 1
+							WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
+							ELSE 0 END
+						ELSE 1 END
+
+		ORDER BY b.transdate DESC
+	END 
+	ELSE 
+	BEGIN
+		SELECT
+			b.transdate
+			,b.transid
+			,b.refno
+			,b.bettype
+			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype
+			,ISNULL(n.NumberWon, 0) AS NumberWon
+			,b.odds2 * b.TotalBet AS odds
+			,b.stake * b.actualrate / b.TotalBet AS Stake
+			,(b.odds2 - 1) * b.stake * b.actualrate AS WinningAmount
+			,(b.odds2 - 1) * b.stake * b.actualrate * (1 - b.tpositiontaking) AS CompanyLoseAmount
+			,b.ip
+			,(1 - b.tpositiontaking) AS HousePT
+			,b.hdp2 AS TotalSelection
+			,b.TotalBet AS TotalBet
+		FROM dbo.rmBettrans b WITH (NOLOCK)
+			INNER JOIN #bettype bt ON b.bettype = bt.bettype
+			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+			INNER JOIN #NumberWon n ON b.refno = n.refno and n.CornerParlay > 0
+		WHERE b.custid = @CustID
+			AND b.statusID = 0
+			AND currency <> 20
+			AND 1 = CASE
+						WHEN b.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
+							WHEN @ComboType = 1 AND b.betteam = N'1' THEN 1
+							WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
+							ELSE 0 END
+						ELSE 1 END
+
+		ORDER BY b.transdate DESC
+	END
 
 	DROP TABLE #bettype
 	DROP TABLE #NumberWon
