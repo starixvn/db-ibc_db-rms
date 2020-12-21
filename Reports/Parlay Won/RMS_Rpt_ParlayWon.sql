@@ -22,6 +22,7 @@ AS
 	
 	Revisions:
 		- 20200512@Percy: Initialize SP [RedmineID: #130275]
+		- 20201216@Danny: Add order by Odds[RedmineID: #146929]
 	
 	Parameter's Explanation:
 		- @selection:
@@ -281,6 +282,7 @@ BEGIN
 									WHEN 4 THEN 'StakeAfterPT'
 									WHEN 5 THEN 'WinningAmount'
 									WHEN 6 THEN 'HouseLoseAmount'
+									WHEN 7 THEN 'odds'
 									ELSE 'transdate' END
 
 		DECLARE @SQL VARCHAR(MAX)
