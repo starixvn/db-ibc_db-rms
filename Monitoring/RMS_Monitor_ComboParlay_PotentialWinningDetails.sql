@@ -185,7 +185,7 @@ BEGIN
 			,b.transid
 			,b.refno
 			,b.bettype
-			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype
+			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype
 			,ISNULL(n.NumberWon, 0) AS NumberWon
 			,b.odds2 * b.TotalBet AS odds
 			,b.stake * b.actualrate / b.TotalBet AS Stake
@@ -195,7 +195,7 @@ BEGIN
 			,(1 - b.tpositiontaking) AS HousePT
 			,b.hdp2 AS TotalSelection
 			,b.TotalBet AS TotalBet
-		FROM dbo.rmBettrans b WITH (NOLOCK)
+		FROM dbo.rmBettrans_uat b WITH (NOLOCK)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype

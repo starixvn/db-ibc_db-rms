@@ -18,7 +18,6 @@ AS
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
-
 	
 	Parameter's Explanation:
 		- @selection:
@@ -113,8 +112,6 @@ BEGIN
 
 	-- Return data
 	BEGIN
-	
-
 		IF @IsCornerParlay = 1
 		BEGIN
 
@@ -124,7 +121,7 @@ BEGIN
 				SUM(stake * actualrate * (1 - tpositiontaking)) AS stakePT,
 				SUM(stake * actualrate * (odds2 - 1) * (1 - tpositiontaking)) AS net_win,
 				COUNT(1) AS betcount
-			FROM rmBettrans rb WITH (NOLOCK)
+			FROM rmBettrans_uat rb WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
 			CROSS APPLY
@@ -154,8 +151,6 @@ BEGIN
 				AND t.CornerParlay > 0
 			GROUP BY custid, username
 			ORDER  BY net_win DESC
-
-
 
 		END
 		ELSE

@@ -158,7 +158,7 @@ BEGIN
 			VALUES (376)
 
 		DECLARE @min_transid BIGINT
-		SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans WITH (NOLOCK) WHERE statusID = 0
+		SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans_uat WITH (NOLOCK) WHERE statusID = 0
 
 		INSERT INTO #bettrans (transid, bettype, matchid, refno)
 		SELECT b.transid, b.bettype, b.matchid, b.refno
