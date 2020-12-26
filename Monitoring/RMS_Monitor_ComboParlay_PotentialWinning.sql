@@ -20,6 +20,7 @@ AS
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
+		- 20201226@Sophia: Workaround for performance issue [RedmineID: #146929] 
 
 	Parameter's Explanation:
 		- @selection:
@@ -130,6 +131,8 @@ BEGIN
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 		WHERE b.statusID = 0
 			AND b.currency <> 20
+		
+		CREATE CLUSTERED INDEX CIX_bettype ON #bettrans (bettype)
 
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype = 29)
 		BEGIN
@@ -137,25 +140,28 @@ BEGIN
 			SET 
 				b.CornerParlay = ISNULL(b.CornerParlay, 0) + ISNULL(bm.CornerParlay,0)
 			FROM #bettrans b
-				CROSS APPLY (
-					SELECT	SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END) NumberWon,
+				INNER JOIN (
+					SELECT	bm.refno, 
+							SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END) NumberWon,
 							SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS CornerParlay
 					FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
 					LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
-					WHERE b.refno = bm.refno 
-				) bm
+					GROUP BY bm.refno					
+				) bm ON b.refno = bm.refno 
 			WHERE b.bettype = 29
 
 			UPDATE b
 			SET b.CornerParlay = ISNULL(b.CornerParlay, 0) +  ISNULL(bm.CornerParlay,0)
 			FROM #bettrans b
-				CROSS APPLY (
-					SELECT  SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END) NumberWon,
+				INNER JOIN (
+					SELECT  bm.refno,
+							SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END) NumberWon,
 							SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS CornerParlay
 					FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
 					LEFT JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
-					WHERE b.refno = bm.refno AND bm.statusID = 112
-				) bm
+					WHERE bm.statusID = 112
+					GROUP BY bm.refno
+				) bm ON b.refno = bm.refno
 			WHERE b.bettype = 29
 		END
 
@@ -172,8 +178,7 @@ BEGIN
 		DROP TABLE #bettype
 		DROP TABLE #tmpSelection
 		DROP TABLE #tmpSport
-
-		CREATE CLUSTERED INDEX CIX_bettype ON #bettrans (bettype)
+		
 	END
 
 	-- Return data
@@ -212,5 +217,7 @@ BEGIN
 		HAVING SUM((rb.odds2 - 1) * rb.stake * rb.actualrate) >= @WinningAmount
 		ORDER BY WinningAmount DESC
 	END
+	
+	DROP TABLE #bettrans
 END
 GO
