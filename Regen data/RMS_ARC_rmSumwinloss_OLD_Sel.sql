@@ -3,10 +3,12 @@ ALTER PROCEDURE RMS_ARC_rmSumwinloss_OLD_Sel
 	@winlostdate SMALLDATETIME
 AS
 /*
-	Created: 20210106@Danny
+	Created: 20210115@Danny
 	DB: DBARC.bodb_Archive
 	Task: PRMS - PRMS - rmSumwinloss_OLD
-	-- Regen data rmSumwinloss_OLD by Winlostdate >
+	-- Regen data rmSumwinloss_OLD by Winlostdate 
+
+	- 20210115@Danny: Regen data rmSumwinloss_OLD by Winlostdate  [RedmineID: #145926]
 */
 BEGIN
 	CREATE TABLE #rmBettrans_Old

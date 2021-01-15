@@ -2,10 +2,12 @@
 ALTER PROCEDURE RMS_rmSumwinloss_OLD_resync
 	@winlostdate SMALLDATETIME
 /* 
-	Created: 20210106@Danny
+	Created: 20210115@Danny
 	DB: DBRMS.bodb_RMS
 	Task: PRMS - PRMS - rmSumwinloss_OLD
-	-- Regen data rmSumwinloss_OLD by Winlostdate >
+	-- Regen data rmSumwinloss_OLD by Winlostdate 
+	Revisions:	
+		- 20210115@Danny: Regen data rmSumwinloss_OLD by Winlostdate  [RedmineID: #145926]
 */
 AS
 
