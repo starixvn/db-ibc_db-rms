@@ -15,7 +15,7 @@ SET NOCOUNT ON
 
 DECLARE @__query NVARCHAR(MAX), @__sqlCmd NVARCHAR(MAX)
 SELECT  @__query = N''		
-SELECT	@__query = @__query + N'EXEC RMS_ARC_rmSumwinloss_OLD_Sel @winlostdate'
+SELECT	@__query = @__query + N'EXEC RMS_ARC_rmSumwinloss_OLD_Sel_UAT1 @winlostdate'
 SELECT	@__sqlCmd = N'EXECUTE DBARC.bodb_archive.dbo.sp_executesql @query, N''@winlostdate SMALLDATETIME'', @winlostdate'
 
 
