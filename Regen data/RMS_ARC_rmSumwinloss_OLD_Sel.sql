@@ -7,7 +7,7 @@ AS
 	DB: DBARC.bodb_Archive
 	Task: PRMS - PRMS - rmSumwinloss_OLD
 	-- Regen data rmSumwinloss_OLD by Winlostdate 
-
+	Revisions:
 	- 20210115@Danny: Regen data rmSumwinloss_OLD by Winlostdate  [RedmineID: #145926]
 */
 BEGIN
