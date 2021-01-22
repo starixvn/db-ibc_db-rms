@@ -57,7 +57,7 @@ BEGIN
 		DECLARE @bettrans TABLE (transid BIGINT PRIMARY KEY, refno BIGINT)
 		INSERT INTO @bettrans (transid, refno)
 		SELECT transid, refno
-		FROM dbo.rmBettrans WITH (NOLOCK)
+		FROM dbo.rmBettrans_uat WITH (NOLOCK)
 		WHERE bettype = 29
 			AND combo = @combo
 			AND statusID = 0
