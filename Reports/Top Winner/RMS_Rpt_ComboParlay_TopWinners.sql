@@ -22,6 +22,7 @@ AS
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20191211@Jacob: Extra PT - Add new structure to support extra pt column on bettrans table #124194
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
+		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -138,7 +139,7 @@ BEGIN
 				 ,SUM((winlost - actual_stake) * actualrate)
 				 ,SUM((-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate)
 				 ,COUNT(1)
-			FROM dbo.rmBettrans_uat b WITH (NOLOCK)
+			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
@@ -171,7 +172,7 @@ BEGIN
 				,SUM((winlost - stake) * actualrate)
 				,SUM((company_winlost - ISNULL(a.extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.extra_comm, 0)) * actualrate)
 				,SUM(betcount)
-			FROM dbo.rmSumWinloss_uat a WITH (NOLOCK)
+			FROM dbo.rmSumWinloss a WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
@@ -198,7 +199,7 @@ BEGIN
 				,SUM((winlost - stake) * actualrate)
 				,SUM((company_winlost - ISNULL(a.extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.extra_comm, 0)) * actualrate)
 				,SUM(betcount)
-			FROM dbo.rmSumWinloss_Old_uat a WITH (NOLOCK)
+			FROM dbo.rmSumWinloss_Old a WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date

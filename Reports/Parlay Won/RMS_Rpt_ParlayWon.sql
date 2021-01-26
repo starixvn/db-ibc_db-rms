@@ -23,6 +23,7 @@ AS
 	Revisions:
 		- 20200512@Percy: Initialize SP [RedmineID: #130275]
 		- 20201216@Danny: Add order by Odds[RedmineID: #146929]
+		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 	
 	Parameter's Explanation:
 		- @selection:
@@ -178,7 +179,7 @@ BEGIN
 					,b.hdp2 AS TotalSelection
 					,b.transid2 AS SportType
 					,b.IP
-				FROM dbo.rmBettrans_uat b WITH (NOLOCK)
+				FROM dbo.rmBettrans b WITH (NOLOCK)
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
 					CROSS APPLY (SELECT TOP 1 sp.sporttype FROM @tmpSport sp WHERE b.transid2 = sp.sporttype) sp
 				WHERE b.winlostdate BETWEEN @FDate AND @TDate
@@ -226,7 +227,7 @@ BEGIN
 					,b.hdp2 AS TotalSelection
 					,b.transid2 AS SportType
 					,b.IP
-				FROM dbo.rmBettrans_Old_uat b WITH (NOLOCK)
+				FROM dbo.rmBettrans_Old b WITH (NOLOCK)
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
 					CROSS APPLY (SELECT TOP 1 sp.sporttype FROM @tmpSport sp WHERE b.transid2 = sp.sporttype) sp
 				WHERE b.winlostdate BETWEEN @FDate AND @TDate

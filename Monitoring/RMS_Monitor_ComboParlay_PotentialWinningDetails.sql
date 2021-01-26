@@ -161,7 +161,7 @@ BEGIN
 			,(1 - b.tpositiontaking) AS HousePT
 			,b.hdp2 AS TotalSelection
 			,b.TotalBet AS TotalBet
-	FROM dbo.rmBettrans_uat b WITH (NOLOCK)
+	FROM dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
@@ -195,7 +195,7 @@ BEGIN
 			,(1 - b.tpositiontaking) AS HousePT
 			,b.hdp2 AS TotalSelection
 			,b.TotalBet AS TotalBet
-		FROM dbo.rmBettrans_uat b WITH (NOLOCK)
+		FROM dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype

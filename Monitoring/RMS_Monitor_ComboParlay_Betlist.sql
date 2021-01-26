@@ -158,11 +158,11 @@ BEGIN
 			VALUES (376)
 
 		DECLARE @min_transid BIGINT
-		SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans_uat WITH (NOLOCK) WHERE statusID = 0
+		SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans WITH (NOLOCK) WHERE statusID = 0
 
 		INSERT INTO #bettrans (transid, bettype, matchid, refno)
 		SELECT b.transid, b.bettype, b.matchid, b.refno
-		FROM dbo.rmBettrans_uat b WITH (NOLOCK)
+		FROM dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
@@ -317,7 +317,7 @@ BEGIN
 			,b.IsLive
 			,b.IsBlacklistLeague
 			,rb.betteam
-		FROM rmBettrans_uat rb WITH (NOLOCK)
+		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN #bettrans b ON rb.transid = b.transid
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
 		WHERE ISNULL(mc.level, 0) IN (SELECT level FROM #level)

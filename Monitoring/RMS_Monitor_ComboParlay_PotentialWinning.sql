@@ -20,7 +20,8 @@ AS
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
-		- 20201226@Sophia: Workaround for performance issue [RedmineID: #146929] 
+		- 20201226@Sophia: Workaround for performance issue [RedmineID: #146929]
+		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 
 	Parameter's Explanation:
 		- @selection:
@@ -125,7 +126,7 @@ BEGIN
 
 		INSERT INTO #bettrans (transid, bettype, refno)
 		SELECT b.transid, b.bettype, b.refno
-		FROM dbo.rmBettrans_uat b WITH (NOLOCK)
+		FROM dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
@@ -198,7 +199,7 @@ BEGIN
 			,COUNT(1) AS TotalBets
 			,ISNULL(mc.level, 0) AS level
 			,rb.CurrencyName AS currency
-		FROM dbo.rmBettrans_uat rb WITH(NOLOCK) 
+		FROM dbo.rmBettrans rb WITH(NOLOCK) 
 			INNER JOIN #bettrans b ON rb.transid = b.transid
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
 		WHERE

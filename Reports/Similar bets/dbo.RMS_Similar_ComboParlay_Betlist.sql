@@ -33,7 +33,7 @@ BEGIN
 	SELECT @yesterday = CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
 
 	SELECT @bettype = bettype, @betteam = betteam, @matchid = matchid, @refno = refno, @combo = hdp2
-	FROM dbo.rmBettrans_uat WITH (NOLOCK) WHERE transid = @transid AND statusID = 0
+	FROM dbo.rmBettrans WITH (NOLOCK) WHERE transid = @transid AND statusID = 0
 
 	IF @@ROWCOUNT = 0
 		RETURN
@@ -57,7 +57,7 @@ BEGIN
 		DECLARE @bettrans TABLE (transid BIGINT PRIMARY KEY, refno BIGINT)
 		INSERT INTO @bettrans (transid, refno)
 		SELECT transid, refno
-		FROM dbo.rmBettrans_uat WITH (NOLOCK)
+		FROM dbo.rmBettrans WITH (NOLOCK)
 		WHERE bettype = 29
 			AND combo = @combo
 			AND statusID = 0
@@ -93,13 +93,13 @@ BEGIN
     
 		INSERT INTO @OriginalSMP_Selection (TransId, SelectionType)
 		SELECT b.transid, a.SelectionType
-		FROM dbo.rmBettrans_uat b WITH (NOLOCK)
+		FROM dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
 		WHERE b.transid = @transid
  
 		INSERT INTO @SMP_Selection (TransId, SelectionType)
 		SELECT b.transid, a.SelectionType
-		FROM dbo.rmBettrans_uat b WITH (NOLOCK)
+		FROM dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
 		WHERE b.hdp2 = @combo 		
 			AND statusid = 0
@@ -120,7 +120,7 @@ BEGIN
 
 		INSERT INTO @Similar_Selection (transid, betteam)
 		SELECT transid, betteam
-		FROM dbo.rmBettrans_uat WITH (NOLOCK)
+		FROM dbo.rmBettrans WITH (NOLOCK)
 		WHERE hdp2 = @combo
 			AND statusID = 0
 			AND matchid = @matchid
@@ -164,7 +164,7 @@ BEGIN
 		,ISNULL(@NumberWon, 0)	AS NumberWon
 		,p.TotalBet	AS TotalBet
 		,@cnt_bets	AS cnt_bets
-	FROM dbo.rmBettrans_UAT p WITH (NOLOCK) 
+	FROM dbo.rmBettrans p WITH (NOLOCK) 
 		LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
 	WHERE transid = @transid
 
@@ -177,7 +177,7 @@ BEGIN
 		,stake * (odds2 - 1) * actualrate * (1 - p.tpositiontaking) AS net_win
 		,cnt AS similar_selection
 	FROM @result r
-		INNER JOIN dbo.rmBettrans_uat p WITH (NOLOCK) ON r.transid = p.transid
+		INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
 		LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
 	ORDER BY cnt DESC
 END

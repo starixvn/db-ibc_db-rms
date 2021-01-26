@@ -125,7 +125,7 @@ BEGIN
 
 		INSERT INTO #bettrans (transid, bettype, refno)
 		SELECT b.transid, b.bettype, b.refno
-		FROM dbo.rmBettrans_uat b WITH (NOLOCK)
+		FROM dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
@@ -193,7 +193,7 @@ BEGIN
 			,ISNULL(b.NumberWon, 0) AS NumberWon
 			,rb.TotalBet AS TotalBet
 			,CASE WHEN rb.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE rb.transid2 END AS Sporttype
-		FROM rmBettrans_uat rb WITH(NOLOCK)
+		FROM rmBettrans rb WITH(NOLOCK)
 			INNER JOIN #bettrans b ON rb.transid = b.transid
 		WHERE 1 = CASE
 					WHEN rb.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
