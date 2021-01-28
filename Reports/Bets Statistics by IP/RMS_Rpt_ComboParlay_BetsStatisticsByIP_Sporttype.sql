@@ -14,6 +14,8 @@ AS
 	Revisions:	
 		- 20190214@Jacob: Add Bet Builder [RedmineID: #108694]
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
+		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
+
 
 	Parameter's Explanation:
 		@sporttype = '1': soccer only
@@ -51,7 +53,7 @@ BEGIN
 		AND a.custid = @custid
 		AND a.transdate >= @fromdate AND a.transdate < DATEADD(DAY, 1, @fromdate)
         AND (
-			(@sporttype = 1 AND transid2 = 1)
+			(@sporttype = 1 AND transid2 IN (1,-4))
             OR (@sporttype = 2 AND transid2 <> 1)
 		)
 END
