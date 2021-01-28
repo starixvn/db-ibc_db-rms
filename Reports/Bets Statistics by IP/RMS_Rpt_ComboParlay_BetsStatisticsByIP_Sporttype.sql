@@ -54,7 +54,7 @@ BEGIN
 		AND a.transdate >= @fromdate AND a.transdate < DATEADD(DAY, 1, @fromdate)
         AND (
 			(@sporttype = 1 AND transid2 IN (1,-4))
-            OR (@sporttype = 2 AND transid2 <> 1)
+            OR (@sporttype = 2 AND transid2 <> 1 AND transid2 <> -4)
 		)
 END
 GO
