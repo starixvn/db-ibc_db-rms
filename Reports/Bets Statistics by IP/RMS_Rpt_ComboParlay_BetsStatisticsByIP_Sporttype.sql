@@ -53,8 +53,8 @@ BEGIN
 		AND a.custid = @custid
 		AND a.transdate >= @fromdate AND a.transdate < DATEADD(DAY, 1, @fromdate)
         AND (
-			(@sporttype = 1 AND transid2 IN (1,-4))
-            OR (@sporttype = 2 AND transid2 <> 1 AND transid2 <> -4)
+			(@sporttype = 1 AND a.liveawayscore = 1)
+            OR (@sporttype = 2 AND a.liveawayscore IN (2,3))
 		)
 END
 GO
