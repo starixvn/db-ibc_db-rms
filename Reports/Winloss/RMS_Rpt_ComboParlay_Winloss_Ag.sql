@@ -22,6 +22,7 @@ AS
 		- 20191026@Jacob: Winloss by master RedmineID: [#122137]	
 		- 20191211@Jacob: Extra PT - Add new structure to support extra pt column on bettrans table #124194
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
+		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 	
 	Parameter's Explanation:
 		- @sporttype:

@@ -22,6 +22,7 @@ AS
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20191211@Jacob: Extra PT - Add new structure to support extra pt column on bettrans table #124194
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
+		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -149,7 +150,7 @@ BEGIN
 				,SUM(CASE WHEN statusID = 113 THEN -(winlost - actual_stake) * actualrate ELSE 0 END) AS member_lose
 				,SUM(CASE WHEN statusID = 112 THEN (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate ELSE 0 END) AS ourPT_won
 				,SUM(CASE WHEN statusID = 113 THEN (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate ELSE 0 END) AS ourPT_lose
-			FROM rmBettrans b WITH (NOLOCK)
+			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
@@ -247,7 +248,7 @@ BEGIN
 	ELSE
 		SELECT
 			winlostdate
-			,CASE WHEN sporttype NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE sporttype END AS sporttype
+			,CASE WHEN sporttype NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE sporttype END AS sporttype
 			,SUM(tickets_won)	AS tickets_won
 			,SUM(tickets_lose)	AS tickets_lose
 			,SUM(stake_won)		AS stake_won
@@ -257,7 +258,7 @@ BEGIN
 			,SUM(ourPT_won)		AS ourPT_won
 			,SUM(ourPT_lose)	AS ourPT_lose
 		FROM #rptWinloss
-		GROUP BY winlostdate, CASE WHEN sporttype NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE sporttype END
+		GROUP BY winlostdate, CASE WHEN sporttype NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE sporttype END
 		ORDER BY winlostdate ASC, sporttype ASC
 	
 	DROP TABLE #bettype

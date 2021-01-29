@@ -18,6 +18,7 @@ AS
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
+		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 
 	Parameter's Explanation:
 		- @selection:
@@ -29,6 +30,8 @@ AS
 					. '-1': Combined other sports
 					. '-2': Other sports
 					. '-3': Combined sports
+					. '-4': Saba soccer
+					. '-5': Saba basketball
 		- @ParlayType:
 					. 1: Mix parlay
 					. 2: Combo parlay
@@ -148,7 +151,7 @@ BEGIN
 			,b.transid
 			,b.refno
 			,b.bettype
-			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype
+		,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype
 			,ISNULL(n.NumberWon, 0) AS NumberWon
 			,b.odds2 * b.TotalBet AS odds
 			,b.stake * b.actualrate / b.TotalBet AS Stake
@@ -158,7 +161,7 @@ BEGIN
 			,(1 - b.tpositiontaking) AS HousePT
 			,b.hdp2 AS TotalSelection
 			,b.TotalBet AS TotalBet
-		FROM dbo.rmBettrans b WITH (NOLOCK)
+	FROM dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
@@ -182,7 +185,7 @@ BEGIN
 			,b.transid
 			,b.refno
 			,b.bettype
-			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype
+			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype
 			,ISNULL(n.NumberWon, 0) AS NumberWon
 			,b.odds2 * b.TotalBet AS odds
 			,b.stake * b.actualrate / b.TotalBet AS Stake

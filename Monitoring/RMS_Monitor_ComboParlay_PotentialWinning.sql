@@ -20,7 +20,8 @@ AS
 		- 20190214@Jacob: Add Bet Builder RedmineID: #108694
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
-		- 20201226@Sophia: Workaround for performance issue [RedmineID: #146929] 
+		- 20201226@Sophia: Workaround for performance issue [RedmineID: #146929]
+		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 
 	Parameter's Explanation:
 		- @selection:

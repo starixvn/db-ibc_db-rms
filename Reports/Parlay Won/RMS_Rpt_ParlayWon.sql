@@ -23,6 +23,7 @@ AS
 	Revisions:
 		- 20200512@Percy: Initialize SP [RedmineID: #130275]
 		- 20201216@Danny: Add order by Odds[RedmineID: #146929]
+		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 	
 	Parameter's Explanation:
 		- @selection:

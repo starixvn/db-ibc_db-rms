@@ -26,6 +26,7 @@ AS
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 		- 20201124@Percy: Enhance performance to support increase @limitRowcount [RedmineID: #145927]
 		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
+		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 	
 	Parameter's Explanation:
 		- @selection:
@@ -37,6 +38,8 @@ AS
 					. '-1': Combined other sports
 					. '-2': Other sports
 					. '-3': Combined sports
+					. '-4': Saba soccer
+					. '-5': Saba basketball
 		- @level:
 					. '0': none
 					. '1,2,3': level 1,2,3
@@ -300,7 +303,7 @@ BEGIN
 			,rb.transid
 			,rb.refno
 			,rb.username
-			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44) THEN -2 ELSE transid2 END AS Sporttype
+			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype
 			,rb.odds2 * rb.TotalBet AS odds
 			,rb.statusID
 			,rb.stake * rb.actualrate * (1 - rb.tpositiontaking) / rb.TotalBet AS stake

@@ -1,5 +1,5 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details]
+CREATE PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details]
 	@custid			INT,
 	@fromdate		DATETIME,
 	@todate			DATETIME,
@@ -22,6 +22,7 @@ AS
 		- 20191211@Jacob: Extra PT - Add new structure to support extra pt column on bettrans table #124194
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
+		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -29,6 +30,13 @@ AS
 					. 2: Combo parlay
 					. 3: Single Match Parlay
 					. 4: Panalty shootout combo
+		
+		- @sporttype:
+					. -1: Combine Others sport
+					. -2: Others sport
+					. -3: Combine sport
+					. -4: saba soccer
+					. -5: saba basketball
 */
 
 BEGIN
@@ -174,12 +182,12 @@ BEGIN
 		BEGIN
 			SELECT	@f_date = @FromDate
 					,@t_date = CASE WHEN @ToDate > @MoveBetsDay THEN @MoveBetsDay ELSE @ToDate END
-
+			
 			INSERT INTO #tmpBettrans
 			(
-				transid, refno, sporttype, bettype, betteam, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM
+				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM
 			)
-			SELECT transid, refno, CASE WHEN b.bettype IN (38, 376) THEN 1 ELSE 0 END AS sporttype, b.bettype, betteam, hdp2, CASE WHEN b.bettype IN (38, 376) THEN 1 ELSE 0 END AS TotalCombo
+			SELECT transid, refno, transid2, b.bettype, hdp2 AS combo, TotalBet AS TotalCombo
 				,CASE
 					WHEN b.bettype = 29 AND betteam = N'1' THEN 1
 					WHEN b.bettype = 29 AND betteam <> N'1' THEN 2
@@ -187,13 +195,15 @@ BEGIN
 					WHEN b.bettype = 376 THEN 4
 					ELSE 0 END AS ParlayType
 				,stake
-				,winlost-actual_stake
+				,winlost - actual_stake
 				,-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)
 				,stake * actualrate
 				,(winlost - actual_stake) * actualrate
-				,(-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking) ) * actualrate
-			FROM bodb02.dbo.bettrans14 b WITH (NOLOCK)
+				,(-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate
+			FROM dbo.rmBettrans_old b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
+				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND custid = @custid
 				AND statusID IN (112, 113)
@@ -204,62 +214,6 @@ BEGIN
 								ELSE 0 END
 							ELSE 1 END
 
-			IF EXISTS (SELECT 1 FROM #tmpBettrans WHERE bettype = 29 AND sporttype = 0)
-			BEGIN
-				CREATE CLUSTERED INDEX IX_bettype ON #tmpBettrans (bettype, sporttype)
-
-				-- Update Total Combo
-				UPDATE b
-				SET b.TotalCombo = pt.TotalCombo
-				FROM #tmpBettrans b
-					CROSS APPLY (
-						SELECT SUM (rcs.cnt) AS TotalCombo
-						FROM bodb02.dbo.RefCombinationSet rcs WITH (NOLOCK)
-						WHERE b.combo = rcs.N
-							AND (b.betteam & rcs.bitmapR) > 0
-					) pt
-				WHERE b.bettype = 29 AND b.sporttype = 0
-
-				-- Update sporttype
-				CREATE TABLE #tmpBettransm (refno BIGINT, sporttype INT)
-				CREATE CLUSTERED INDEX IX_refno ON #tmpBettransm (refno)
-
-				INSERT INTO #tmpbettransm (refno, sporttype)
-				SELECT bm.refno, m.sporttype
-				FROM #tmpBettrans b
-					INNER JOIN bodb02.dbo.bettransm bm WITH (NOLOCK) ON bm.refno = b.refno
-					INNER JOIN bodb02.dbo.match m (NOLOCK) ON bm.matchid = m.matchid
-				WHERE b.bettype = 29 AND b.sporttype = 0 AND (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
-		
-				INSERT INTO #tmpbettransm (refno, sporttype)
-				SELECT bm.refno, m.sporttype
-				FROM #tmpBettrans b
-					INNER JOIN bodb02.dbo.bettransm14 bm WITH (NOLOCK) ON bm.refno = b.refno
-					INNER JOIN bodb02.dbo.match14 m (NOLOCK) ON bm.matchid = m.matchid
-				WHERE b.bettype = 29 AND b.sporttype = 0 AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
-
-				INSERT INTO #tmpbettransm (refno, sporttype)
-				SELECT bm.refno, m.sporttype
-				FROM #tmpBettrans b
-					INNER JOIN DBARC.bodb_Archive.dbo.bettransm bm WITH (NOLOCK) ON bm.refno = b.refno
-					INNER JOIN DBARC.bodb_Archive.dbo.match_bk m (NOLOCK) ON bm.matchid = m.matchid
-				WHERE b.bettype = 29 AND b.sporttype = 0 AND bm.winlostdate < @BalanceUpDay
-		
-				UPDATE b
-				SET b.sporttype = s.sporttype
-				FROM #tmpBettrans b
-					CROSS APPLY (
-						SELECT CASE
-									WHEN COUNT(DISTINCT sporttype) = 1 THEN MIN(sporttype)
-									WHEN COUNT(DISTINCT sporttype) <> 1 AND MIN(sporttype) = 1 THEN -3
-									ELSE -1 END AS sporttype
-						FROM #tmpBettransm bm
-						WHERE b.refno = bm.refno
-					) s
-				WHERE b.bettype = 29 AND b.sporttype = 0
-
-				DROP TABLE #tmpBettransm
-			END
 		END
 	END
 
