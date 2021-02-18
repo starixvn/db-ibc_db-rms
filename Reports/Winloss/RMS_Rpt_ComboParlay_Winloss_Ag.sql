@@ -23,6 +23,7 @@ AS
 		- 20191211@Jacob: Extra PT - Add new structure to support extra pt column on bettrans table #124194
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
+		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -30,11 +31,14 @@ AS
 					. '-1': Combined other sports
 					. '-2': Other sports
 					. '-3': Combined sports
+					. -4: saba soccer
+					. -5: saba basketball
 		- @ParlayType:
 					. 1: Mix parlay
 					. 2: Combo parlay
 					. 3: Single Match Parlay
 					. 4: Panalty shootout combo
+					. 5: GOF
 */
 
 BEGIN
@@ -94,17 +98,20 @@ BEGIN
 		-- Combo parlay
 		DECLARE @ComboType TINYINT = 0 -- 1: mix parlay only, 2: combo parlay only, 3: combined
 		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR  ',' + @ParlayType + ',' LIKE '%,5,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
 
-			IF (SELECT COUNT(DISTINCT val) FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2)) = 2
-				SELECT @ComboType = 3
-			ELSE IF ',' + @ParlayType + ',' LIKE '%,1,%'
-				SELECT @ComboType = 1
-			ELSE
-				SELECT @ComboType = 2
+			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT val) = 3 AND SUM(DISTINCT CAST(val as SMALLINT)) = 8 THEN 7 
+										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 3 THEN 6
+										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 6 THEN 4
+										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 7 THEN 5
+										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 1 THEN 1
+										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 2 THEN 2
+										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 5 THEN 3
+								END
+			FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2,5)
 		END
 
 		-- Single match parlay
@@ -171,10 +178,14 @@ BEGIN
 				AND statusID IN (112, 113)
 				AND currency <> 20
 				AND 1 = CASE
-							WHEN b.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
-								WHEN @ComboType = 1 AND b.betteam = N'1' THEN 1
-								WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
-								ELSE 0 END
+							WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
+									WHEN @ComboType = 1 AND b.betteam = N'1' AND b.oddsspread <> 1 THEN 1
+									WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
+									WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
+									WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
+									WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
+									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread <> 1)) THEN 1
+									ELSE 0 END
 							ELSE 1 END
 			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), username
 		END

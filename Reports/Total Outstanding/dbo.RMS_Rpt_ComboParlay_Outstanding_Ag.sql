@@ -19,6 +19,7 @@ AS
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
+		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 	
 	Parameter's Explanation:
 		- @selection:
@@ -30,11 +31,15 @@ AS
 					. '-1': Combined other sports
 					. '-2': Other sports
 					. '-3': Combined sports
+					. '-4': Saba soccer
+					. '-5': Saba basketball
+
 		- @ParlayType:
 					. 1: Mix parlay
 					. 2: Combo parlay
 					. 3: Single Match Parlay
 					. 4: Panalty shootout combo
+					. 5: GOF
 */
 
 BEGIN
@@ -85,19 +90,29 @@ BEGIN
 		CREATE TABLE #bettype (bettype SMALLINT)
 
 		-- Combo parlay
-		DECLARE @ComboType TINYINT = 0 -- 1: mix parlay only, 2: combo parlay only, 3: combined
+		DECLARE @ComboType TINYINT = 0	
+				--1: mix parlay only, 
+				--2: combo parlay only, 
+				--3: GOF only, 
+				--4: combined between mix parlay and GOF, 
+				--5: combined between combo parlay and GOF,
+				--6: combined between mix parlay and combo parlay, 
+				--7: combined all
 		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
 
-			IF (SELECT COUNT(DISTINCT val) FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2)) = 2
-				SELECT @ComboType = 3
-			ELSE IF ',' + @ParlayType + ',' LIKE '%,1,%'
-				SELECT @ComboType = 1
-			ELSE
-				SELECT @ComboType = 2
+			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT val) = 3 AND SUM(DISTINCT CAST(val as SMALLINT)) = 8 THEN 7 
+										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 3 THEN 6
+										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 6 THEN 4
+										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 7 THEN 5
+										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 1 THEN 1
+										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 2 THEN 2
+										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 5 THEN 3
+								END
+			FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2,5)
 		END
 
 		-- Single match parlay
@@ -144,10 +159,14 @@ BEGIN
 			WHERE rb.recommend = @custid
 				AND statusid = 0
 				AND 1 = CASE
-							WHEN rb.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
-								WHEN @ComboType = 1 AND rb.betteam = N'1' THEN 1
-								WHEN @ComboType = 2 AND rb.betteam <> N'1' THEN 1
-								ELSE 0 END
+						WHEN rb.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
+									WHEN @ComboType = 1 AND rb.betteam = N'1' AND rb.oddsspread <> 1 THEN 1
+									WHEN @ComboType = 2 AND rb.betteam <> N'1' THEN 1
+									WHEN @ComboType = 3 AND rb.betteam = N'1' AND rb.oddsspread = 1 THEN 1
+									WHEN @ComboType = 4 AND rb.betteam = N'1' THEN 1
+									WHEN @ComboType = 5 AND (rb.betteam <> N'1' OR (rb.betteam = N'1' AND rb.oddsspread = 1)) THEN 1
+									WHEN @ComboType = 6 AND (rb.betteam <> N'1' OR (rb.betteam = N'1' AND rb.oddsspread <> 1)) THEN 1
+									ELSE 0 END
 							ELSE 1 END
 				AND t.CornerParlay > 0
 			GROUP BY custid, username
@@ -168,10 +187,14 @@ BEGIN
 			WHERE recommend = @custid
 				AND statusid = 0
 				AND 1 = CASE
-							WHEN rb.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
-								WHEN @ComboType = 1 AND rb.betteam = N'1' THEN 1
-								WHEN @ComboType = 2 AND rb.betteam <> N'1' THEN 1
-								ELSE 0 END
+							WHEN rb.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
+									WHEN @ComboType = 1 AND rb.betteam = N'1' AND rb.oddsspread <> 1 THEN 1
+									WHEN @ComboType = 2 AND rb.betteam <> N'1' THEN 1
+									WHEN @ComboType = 3 AND rb.betteam = N'1' AND rb.oddsspread = 1 THEN 1
+									WHEN @ComboType = 4 AND rb.betteam = N'1' THEN 1
+									WHEN @ComboType = 5 AND (rb.betteam <> N'1' OR (rb.betteam = N'1' AND rb.oddsspread = 1)) THEN 1
+									WHEN @ComboType = 6 AND (rb.betteam <> N'1' OR (rb.betteam = N'1' AND rb.oddsspread <> 1)) THEN 1
+									ELSE 0 END
 							ELSE 1 END
 			GROUP BY custid, username
 			ORDER  BY net_win DESC

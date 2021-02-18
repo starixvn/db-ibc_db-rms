@@ -88,7 +88,7 @@ BEGIN
 	END
 	ELSE IF @bettype = 38
 	BEGIN
-		DECLARE @OriginalSMP_Selection TABLE (transid BIGINT, SelectionType INT)
+		DECLARE @OriginalSMP_Selection TABLE (transid BIGINT, SelectionType INT)chè
 		DECLARE @SMP_Selection TABLE (transid BIGINT, SelectionType INT)
     
 		INSERT INTO @OriginalSMP_Selection (TransId, SelectionType)
