@@ -216,7 +216,8 @@ BEGIN
 		,b.ip
 		,(1 - b.tpositiontaking) AS HousePT
 		,b.hdp2 AS TotalSelection
-		,b.TotalBet AS TotalBet
+		,b.TotalBet AS TotalBet,
+		CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN #bettrans rb ON rb.transid = b.transid
 		LEFT JOIN #NumberWon n ON b.refno = n.refno

@@ -149,6 +149,7 @@ BEGIN
 			,stake_baseRM			MONEY
 			,winlost_baseRM			MONEY
 			,company_winlost_baseRM	MONEY
+			,IsGOF					BIT
 		)
 
 		-- rmBettrans
@@ -159,7 +160,7 @@ BEGIN
 
 			INSERT INTO #tmpBettrans
 			(
-				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM
+				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, IsGOF
 			)
 			SELECT transid, refno, transid2, b.bettype, hdp2 AS combo, TotalBet AS TotalCombo
 				,CASE
@@ -174,6 +175,7 @@ BEGIN
 				,stake * actualrate
 				,(winlost - actual_stake) * actualrate
 				,(-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate
+				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
@@ -201,7 +203,7 @@ BEGIN
 			
 			INSERT INTO #tmpBettrans
 			(
-				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM
+				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, IsGOF
 			)
 			SELECT transid, refno, transid2, b.bettype, hdp2 AS combo, TotalBet AS TotalCombo
 				,CASE
@@ -216,6 +218,7 @@ BEGIN
 				,stake * actualrate
 				,(winlost - actual_stake) * actualrate
 				,(-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate
+				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 			FROM dbo.rmBettrans_old b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
@@ -252,6 +255,7 @@ BEGIN
 		,b.stake_baseRM
 		,b.winlost_baseRM
 		,b.company_winlost_baseRM
+		,b.IsGOF
 	FROM #tmpBettrans b
 		INNER JOIN #tmpSelection s ON b.combo = s.selection
 		INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype

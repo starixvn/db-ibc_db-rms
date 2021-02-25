@@ -157,6 +157,7 @@ BEGIN
 			,stake_baseRM			MONEY
 			,winlost_baseRM			MONEY
 			,company_winlost_baseRM MONEY
+			,IsGOF					BIT
 		)
 
 		INSERT INTO #tmpBettrans
@@ -175,7 +176,7 @@ BEGIN
 			,stake_baseRM
 			,winlost_baseRM
 			,company_winlost_baseRM
-			
+			,IsGOF
 		)		
 		SELECT
 			transid
@@ -196,7 +197,8 @@ BEGIN
 			,-(winlost - actual_stake) * (1 - tpositiontaking - ISNULL(e.ExtraPT, CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)))) - scomm  + scomm * ISNULL(e.ExtraPT, CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) / (1 - tpositiontaking) 
 			,stake * actualrate
 			,(winlost - actual_stake) * actualrate
-			,(-(winlost - actual_stake) * (1 - tpositiontaking - ISNULL(e.ExtraPT, CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)))) - scomm  + scomm * ISNULL(e.ExtraPT, CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) / (1 - tpositiontaking)) * actualrate		
+			,(-(winlost - actual_stake) * (1 - tpositiontaking - ISNULL(e.ExtraPT, CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)))) - scomm  + scomm * ISNULL(e.ExtraPT, CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) / (1 - tpositiontaking)) * actualrate	
+			,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 		FROM dbo.bettrans_bk b WITH (NOLOCK)
 			LEFT JOIN #ExtraPT e ON b.srecommend = e.SuperId AND b.winlostdate BETWEEN e.FromDate AND e.Todate
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
@@ -293,6 +295,7 @@ BEGIN
 		,b.stake_baseRM
 		,b.winlost_baseRM
 		,b.company_winlost_baseRM
+		,b.IsGOF
 	FROM #tmpBettrans b
 		INNER JOIN #tmpSelection s ON b.combo = s.selection
 		INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
