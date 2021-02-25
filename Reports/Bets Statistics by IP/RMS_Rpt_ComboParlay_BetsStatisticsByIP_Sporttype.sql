@@ -33,7 +33,7 @@ BEGIN
             a.modds,
             a.odds,
             a.stake,
-            a.statusid,
+			a.statusid,
             a.status,
             a.winlost - a.actual_stake AS winlost,
             a.hdp1,
@@ -50,6 +50,7 @@ BEGIN
             ISNULL(m.IsNeutral, CONVERT(BIT, 0)) AS IsNeutral,
 			a.oddsspread,
 			bm.ExtraInfo,
+			a.actual_stake,
 			CASE WHEN a.bettype = 29 AND a.oddsspread = 1 AND  a.betteam = N'1' THEN 1 ELSE 0 END IsGOF
      FROM dbo.rmBettrans a WITH (NOLOCK)
           LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON m.matchid = a.matchid AND a.bettype IN (38, 376)
