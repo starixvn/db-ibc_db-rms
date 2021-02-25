@@ -185,21 +185,21 @@ BEGIN
 	END
 
 	-- Filter by ComboType
-	IF @ComboType IN (1,2,3,4,5,6)
-	BEGIN
-		IF @ComboType = 1 -- Mix parlay only
-			DELETE #bettrans WHERE betteam <> N'1' OR (betteam = N'1' AND oddsspread = 1)
-			ELSE IF @ComboType = 2 -- Combo parlay only
-				DELETE #bettrans WHERE betteam = N'1'
-				ELSE IF @ComboType = 3 -- GOF only
-					DELETE #bettrans WHERE betteam <> N'1' OR (betteam = N'1' AND oddsspread <> 1)
-					ELSE IF @ComboType = 4  -- combined between mix parlay and GOF
-						DELETE #bettrans WHERE betteam <> N'1'
-						ELSE IF @ComboType = 5  -- combined between combo parlay and GOF
-							DELETE #bettrans WHERE  betteam = N'1' AND oddsspread <> 1
-							ELSE IF @ComboType = 6  -- combined between mix parlay and combo parlay
-								DELETE #bettrans WHERE  betteam = N'1' AND oddsspread = 1
-	END
+		IF @ComboType IN (1,2,3,4,5,6)
+		BEGIN
+			IF @ComboType = 1 -- Mix parlay only
+				DELETE #bettrans WHERE bettype = 29 AND  betteam <> N'1' OR (bettype = 29 AND betteam = N'1' AND oddsspread = 1)
+				ELSE IF @ComboType = 2 -- Combo parlay only
+					DELETE #bettrans WHERE bettype = 29 AND betteam = N'1'
+					ELSE IF @ComboType = 3 -- GOF only
+						DELETE #bettrans WHERE (bettype = 29 AND betteam <> N'1') OR (bettype = 29 AND betteam = N'1' AND (oddsspread <> 1 OR oddsspread IS NULL))
+						ELSE IF @ComboType = 4  -- combined between mix parlay and GOF
+							DELETE #bettrans WHERE bettype = 29 AND betteam <> N'1'
+							ELSE IF @ComboType = 5  -- combined between combo parlay and GOF
+								DELETE #bettrans WHERE bettype = 29 AND  betteam = N'1' AND (oddsspread <> 1 OR oddsspread IS NULL)
+								ELSE IF @ComboType = 6  -- combined between mix parlay and combo parlay
+									DELETE #bettrans WHERE bettype = 29 AND  betteam = N'1' AND oddsspread = 1
+		END
 
 
 	SELECT
