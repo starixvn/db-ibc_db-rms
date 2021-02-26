@@ -174,12 +174,12 @@ BEGIN
 				AND currency <> 20
 				AND 1 = CASE
 							WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
-									WHEN @ComboType = 1 AND b.betteam = N'1' AND b.oddsspread <> 1 THEN 1
+									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
 									WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
 									WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
 									WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
 									WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
-									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread <> 1)) THEN 1
+									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
 									ELSE 0 END
 							ELSE 1 END
 			GROUP BY b.winlostdate, b.hdp2, b.transid2
