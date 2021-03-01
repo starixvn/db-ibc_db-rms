@@ -168,6 +168,7 @@ BEGIN
 				,SUM(CASE WHEN statusID = 112 THEN (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate ELSE 0 END) AS ourPT_won
 				,SUM(CASE WHEN statusID = 113 THEN (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate ELSE 0 END) AS ourPT_lose
 			FROM dbo.rmBettrans b WITH (NOLOCK)
+				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 			WHERE winlostdate BETWEEN @f_date AND @t_date
