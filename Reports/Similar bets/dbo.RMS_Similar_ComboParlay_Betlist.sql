@@ -16,6 +16,7 @@ AS
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 		- 20201105@Percy: Include data from yesterday [RedmineID: #144905]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
+		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 */
 
 BEGIN
@@ -163,7 +164,8 @@ BEGIN
 		,p.hdp2		AS TotalSelection
 		,ISNULL(@NumberWon, 0)	AS NumberWon
 		,p.TotalBet	AS TotalBet
-		,@cnt_bets	AS cnt_bets
+		,@cnt_bets	AS cnt_bets,
+		CAST(CASE WHEN p.bettype = 29 AND p.betteam= N'1' AND p.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 	FROM dbo.rmBettrans p WITH (NOLOCK) 
 		LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
 	WHERE transid = @transid
