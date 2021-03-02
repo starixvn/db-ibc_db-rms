@@ -65,14 +65,11 @@ BEGIN
 		select @movebetsday = movebetsday, @balanceUpday = balanceUpday FROM #MBU
 
 		-- Get custid list following site (get super if credit site, get agent if deposit site)
-		CREATE TABLE #CustList (custID INT)
+		CREATE TABLE #CustList (custID INT PRIMARY KEY)
 		INSERT INTO #CustList(custID)
 		SELECT custid 
 		FROM bodb02.dbo.Customer WITH(NOLOCK)
-		WHERE Site = @company and roleid = 2
-	
-
-
+		WHERE Site = @company and roleid = 1
 		
 		CREATE TABLE #tmpSport (sporttype INT)
 		INSERT INTO #tmpSport (sporttype)
@@ -192,12 +189,12 @@ BEGIN
 				-(winlost - actual_stake + awinlost + mwinlost + swinlost)* actualrate - scomm * actualrate - ((winlost - actual_stake + CASE WHEN tpositiontaking = 1 THEN 0  ELSE scomm / (1 - tpositiontaking) END) * CAST(ISNULL(b.epositiontaking, 0) AS DECIMAL(9,8)) * actualrate),
 				((CASE WHEN b.statusID IN (103) THEN 0   WHEN b.tpositiontaking = 1 THEN 0  ELSE (1- b.tpositiontaking - CAST(ISNULL(b.epositiontaking, 0) AS DECIMAL(9,8))) * b.stake END) * actualrate) ,
 				1
-			FROM  rmBettrans b WITH (NOLOCK)
+			FROM  rmBettrans b WITH (NOLOCK, INDEX = IX_winlostdate_matchid_statusid)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
-			INNER JOIN #CustList c ON c.custID = b.recommend
-			WHERE b.winlostdate BETWEEN @f_date AND @t_date
-				AND statusID IN (111,112, 113)
+			WHERE  b.custid IN (SELECT custID FROM #CustList c)
+			AND b.winlostdate BETWEEN @f_date AND @t_date
+				AND b.statusID IN (111,112, 113)
 				AND 1 = CASE
 									WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
 									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
@@ -247,8 +244,9 @@ BEGIN
 			
 			FROM  dbo.rmSumWinloss b WITH (NOLOCK)
 			INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
-			INNER JOIN #CustList c ON c.custID = b.recommend
-			WHERE b.winlostdate BETWEEN @f_date AND @t_date
+			--INNER JOIN #CustList c ON c.custID = b.recommend
+			WHERE   b.custid IN (SELECT custID FROM #CustList c)
+				AND b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), b.ParlayType - 1) + ',%'
 
@@ -290,8 +288,9 @@ BEGIN
 			
 			FROM  dbo.rmSumWinloss_Old b WITH (NOLOCK)
 			INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
-			INNER JOIN #CustList c ON c.custID = b.recommend
-			WHERE b.winlostdate BETWEEN @f_date AND @t_date
+			--INNER JOIN #CustList c ON c.custID = b.recommend
+			WHERE  b.custid IN (SELECT custID FROM #CustList c)
+			AND b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), b.ParlayType - 1) + ',%'
 		END

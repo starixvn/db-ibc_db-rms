@@ -73,7 +73,7 @@ BEGIN
 			INSERT INTO #CustList(custID)
 			SELECT custid 
 			FROM bodb02.dbo.Customer WITH(NOLOCK)
-			WHERE srecommend = @custID and roleid = 2
+			WHERE srecommend = @custID and roleid = 1
 		END
 
 		IF @roleID = 3 
@@ -81,7 +81,7 @@ BEGIN
 			INSERT INTO #CustList(custID)
 			SELECT custid 
 			FROM bodb02.dbo.Customer WITH(NOLOCK)
-			WHERE mrecommend = @custID and roleid = 2
+			WHERE mrecommend = @custID and roleid = 1
 		END
 
 		IF @roleID = 2 
@@ -89,7 +89,7 @@ BEGIN
 			INSERT INTO #CustList(custID)
 			SELECT custid 
 			FROM bodb02.dbo.Customer WITH(NOLOCK)
-			WHERE recommend = @custID and roleid = 2
+			WHERE recommend = @custID and roleid = 1
 		END
 	
 		CREATE TABLE #tmpSport (sporttype INT)
@@ -211,7 +211,7 @@ BEGIN
 			FROM  dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
-			INNER JOIN #CustList c ON c.custID = b.recommend
+			INNER JOIN #CustList c ON c.custID = b.custid
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
 					AND 1 = CASE
@@ -263,7 +263,7 @@ BEGIN
 			
 			FROM  dbo.rmSumWinloss b WITH (NOLOCK)
 			INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
-			INNER JOIN #CustList c ON c.custID = b.recommend
+			INNER JOIN #CustList c ON c.custID = b.custid
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), b.ParlayType - 1) + ',%'
@@ -306,7 +306,7 @@ BEGIN
 			
 			FROM  dbo.rmSumWinloss_Old b WITH (NOLOCK)
 			INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
-			INNER JOIN #CustList c ON c.custID = b.recommend
+			INNER JOIN #CustList c ON c.custID = b.custid
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), b.ParlayType - 1) + ',%'
@@ -334,7 +334,7 @@ BEGIN
 					SUM(RealIncome) RealIncome ,
 					SUM(RealTurnover) RealTurnover 
 		FROM		#rptRiskWLControl b
-		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.mrecommend
+		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.custid
 		GROUP BY	b.mrecommend,c.UserName,c.RoleID
 
 	END
@@ -359,7 +359,7 @@ BEGIN
 					SUM(RealIncome) RealIncome ,
 					SUM(RealTurnover) RealTurnover 
 		FROM		#rptRiskWLControl b
-		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.recommend
+		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.custid
 		GROUP BY	b.recommend,c.UserName,c.RoleID
 
 	END
