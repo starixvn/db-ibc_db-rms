@@ -33,6 +33,7 @@ AS
 					. 2: Combo parlay
 					. 3: Single Match Parlay
 					. 4: Panalty shootout combo
+					. 5: GOF
 
 		- @ReportBy:
 					. '1': Company
@@ -104,20 +105,30 @@ BEGIN
 
 		-- Get bettype
 		CREATE TABLE #bettype (bettype SMALLINT)
-			-- Combo parlay
-		DECLARE @ComboType TINYINT = 0 -- 1: mix parlay only, 2: combo parlay only, 3: combined
+		-- Combo parlay
+		DECLARE @ComboType TINYINT = 0	
+				--1: mix parlay only, 
+				--2: combo parlay only, 
+				--3: GOF only, 
+				--4: combined between mix parlay and GOF, 
+				--5: combined between combo parlay and GOF,
+				--6: combined between mix parlay and combo parlay, 
+				--7: combined all
 		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
 
-			IF (SELECT COUNT(DISTINCT val) FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2)) = 2
-				SELECT @ComboType = 3
-			ELSE IF ',' + @ParlayType + ',' LIKE '%,1,%'
-				SELECT @ComboType = 1
-			ELSE
-				SELECT @ComboType = 2
+			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT val) = 3 AND SUM(DISTINCT CAST(val as SMALLINT)) = 8 THEN 7 
+										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 3 THEN 6
+										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 6 THEN 4
+										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 7 THEN 5
+										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 1 THEN 1
+										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 2 THEN 2
+										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 5 THEN 3
+								END
+			FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2,5)
 		END
 
 			-- Single match parlay
@@ -203,12 +214,16 @@ BEGIN
 			INNER JOIN #CustList c ON c.custID = b.recommend
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
-				AND 1 = CASE
-							WHEN b.bettype = 29 AND @ComboType IN (1, 2) THEN CASE
-								WHEN @ComboType = 1 AND b.betteam = N'1' THEN 1
-								WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
-								ELSE 0 END
-							ELSE 1 END
+					AND 1 = CASE
+									WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
+									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
+									WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
+									WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
+									WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
+									WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
+									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
+									ELSE 0 END
+								ELSE 1 END
 		END
 
 		-- rmSumWinloss
