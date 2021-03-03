@@ -7,7 +7,8 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners]
 	@limitedRow		INT = 20,
 	@sporttype		VARCHAR(100) = '',
 	@selection		VARCHAR(MAX) = '',
-	@ParlayType		VARCHAR(20) = ''
+	@ParlayType		VARCHAR(20) = '',
+	@currency		VARCHAR(MAX) = ''
 AS
 
 /*
@@ -24,6 +25,7 @@ AS
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
+		- 20210303@Danny: Change on Report Top Winners [RedmineID: #146554]
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -44,6 +46,13 @@ AS
 
 BEGIN
 	SET NOCOUNT ON
+	-- currency
+	BEGIN
+		CREATE TABLE #tmpCurrency (currency TINYINT)
+		INSERT INTO #tmpCurrency (currency)
+		SELECT val FROM dbo.f_RMS_strSplit(@currency, ',')
+
+	END
 
 	-- selections
 	BEGIN
@@ -151,7 +160,7 @@ BEGIN
 			(
 				custid, username, currency, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, betcount
 			)
-			SELECT custid, username, currency
+			SELECT custid, username, b.currency
 				 ,SUM(stake)
 				 ,SUM(winlost - actual_stake)
 				 ,SUM(-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking))
@@ -163,6 +172,7 @@ BEGIN
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+				INNER JOIN #tmpCurrency tc ON tc.currency = b.currency
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (112, 113)
 				AND 1 = CASE
@@ -175,7 +185,7 @@ BEGIN
 									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
 									ELSE 0 END
 							ELSE 1 END
-			GROUP BY custid, username, currency
+			GROUP BY custid, username, b.currency
 		END
 
 		-- rmSumWinloss
@@ -188,7 +198,7 @@ BEGIN
 			(
 				custid, username, currency, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, betcount
 			)
-			SELECT custid, username, currency
+			SELECT custid, username, a.currency
 				,SUM(stake)
 				,SUM(winlost - stake)
 				,SUM(company_winlost - ISNULL(a.extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.extra_comm, 0))
@@ -199,10 +209,11 @@ BEGIN
 			FROM dbo.rmSumWinloss a WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
+				INNER JOIN #tmpCurrency tc ON tc.currency = a.currency
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
-			GROUP BY custid, username, currency
+			GROUP BY custid, username, a.currency
 		END
 
 		-- rmSumWinloss_Old
@@ -215,7 +226,7 @@ BEGIN
 			(
 				custid, username, currency, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, betcount
 			)
-			SELECT custid, username, currency
+			SELECT custid, username, a.currency
 				,SUM(stake)
 				,SUM(winlost - stake)
 				,SUM(company_winlost - ISNULL(a.extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.extra_comm, 0))
@@ -226,10 +237,11 @@ BEGIN
 			FROM dbo.rmSumWinloss_Old a WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
+				INNER JOIN #tmpCurrency tc ON tc.currency = a.currency
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
-			GROUP BY custid, username, currency
+			GROUP BY custid, username, a.currency
 		END
 	END
 
@@ -272,5 +284,6 @@ BEGIN
 	DROP TABLE #tmpSelection
 	DROP TABLE #tmpSport
 	DROP TABLE #tmpSum
+	DROP TABLE #tmpCurrency
 END
 GO
