@@ -5,7 +5,8 @@
 	@todate			DATETIME,
 	@sporttype		VARCHAR(100) = '',
 	@selection		VARCHAR(MAX) = '',
-	@ParlayType		VARCHAR(10) = ''
+	@ParlayType		VARCHAR(10) = '',
+	@currency		VARCHAR(MAX) = ''
 AS
 
 /*
@@ -23,6 +24,7 @@ AS
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
+		- 20210303@Danny: Change on Report Top Winners [RedmineID: #146554]
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -42,6 +44,14 @@ BEGIN
 
 	DECLARE @BalanceUpDay SMALLDATETIME, @MoveBetsDay SMALLDATETIME
 	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBU
+
+	-- currency
+	BEGIN
+		CREATE TABLE #tmpCurrency (currency TINYINT)
+		INSERT INTO #tmpCurrency (currency)
+		SELECT val FROM dbo.f_RMS_strSplit(@currency, ',')
+
+	END
 
 	-- selections
 	BEGIN
@@ -158,6 +168,7 @@ BEGIN
 			,winlost_baseRM			MONEY
 			,company_winlost_baseRM MONEY
 			,IsGOF					BIT
+			,currency				TINYINT
 		)
 
 		INSERT INTO #tmpBettrans
@@ -177,6 +188,7 @@ BEGIN
 			,winlost_baseRM
 			,company_winlost_baseRM
 			,IsGOF
+			,currency
 		)		
 		SELECT
 			transid
@@ -199,6 +211,7 @@ BEGIN
 			,(winlost - actual_stake) * actualrate
 			,(-(winlost - actual_stake) * (1 - tpositiontaking - ISNULL(e.ExtraPT, CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)))) - scomm  + scomm * ISNULL(e.ExtraPT, CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) / (1 - tpositiontaking)) * actualrate	
 			,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
+			,b.currency
 		FROM dbo.bettrans_bk b WITH (NOLOCK)
 			LEFT JOIN #ExtraPT e ON b.srecommend = e.SuperId AND b.winlostdate BETWEEN e.FromDate AND e.Todate
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
@@ -299,6 +312,7 @@ BEGIN
 	FROM #tmpBettrans b
 		INNER JOIN #tmpSelection s ON b.combo = s.selection
 		INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
+		INNER JOIN #tmpCurrency tc ON tc.currency = b.currency
 	ORDER BY transid DESC
 
 	DROP TABLE #bettype
@@ -306,5 +320,6 @@ BEGIN
 	DROP TABLE #tmpBettrans
 	DROP TABLE #tmpSelection
 	DROP TABLE #tmpSport
+	DROP TABLE #tmpCurrency
 END
 GO
