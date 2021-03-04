@@ -26,7 +26,7 @@ AS
 		- 20201216@Danny: Add order by Odds[RedmineID: #146929]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
-		- 20210303@Danny: Filter by Currency  [RedmineID: #149966]
+		- 20210303@Danny: Filter by Currency  [RedmineID: #148137]
 
 	Parameter's Explanation:
 		- @selection:

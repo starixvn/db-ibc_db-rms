@@ -17,6 +17,7 @@ AS
 		- 20201105@Percy: Include data from yesterday [RedmineID: #144905]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
+		- 20210303@Danny: Add Filter won ticket  [RedmineID: #148137]
 */
 
 BEGIN
@@ -29,14 +30,14 @@ BEGIN
 	DECLARE @BalanceUpDay SMALLDATETIME, @MoveBetsDay SMALLDATETIME
 	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBU
 
-	DECLARE @bettype INT, @betteam NVARCHAR(10), @matchid INT, @refno BIGINT, @combo INT, @cnt_bets INT, @yesterday DATETIME
+	DECLARE @bettype INT, @betteam NVARCHAR(10), @matchid INT, @refno BIGINT, @combo INT, @cnt_bets INT, @yesterday DATETIME, @statusID TINYINT
 
 	SELECT @yesterday = CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
 
-	SELECT @bettype = bettype, @betteam = betteam, @matchid = matchid, @refno = refno, @combo = hdp2
-	FROM dbo.rmBettrans WITH (NOLOCK) WHERE transid = @transid AND statusID = 0
+	SELECT @bettype = bettype, @betteam = betteam, @matchid = matchid, @refno = refno, @combo = hdp2, @statusID = statusID
+	FROM dbo.rmBettrans WITH (NOLOCK) WHERE transid = @transid
 
-	IF @@ROWCOUNT = 0
+	IF (@@ROWCOUNT = 0 OR @statusID IN (111, 113) )
 		RETURN
 
 	DECLARE @result TABLE (transid BIGINT PRIMARY KEY, cnt INT)
@@ -61,7 +62,7 @@ BEGIN
 		FROM dbo.rmBettrans WITH (NOLOCK)
 		WHERE bettype = 29
 			AND combo = @combo
-			AND statusID = 0
+			AND statusID = @statusID
 			AND winlostdate >= @yesterday
 			AND refno <> @refno
 
@@ -103,7 +104,7 @@ BEGIN
 		FROM dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
 		WHERE b.hdp2 = @combo 		
-			AND statusid = 0
+			AND statusid = @statusID
 			AND a.matchid = @MatchId
 			AND winlostdate >= @yesterday
 			AND b.transid <> @transid
@@ -123,7 +124,7 @@ BEGIN
 		SELECT transid, betteam
 		FROM dbo.rmBettrans WITH (NOLOCK)
 		WHERE hdp2 = @combo
-			AND statusID = 0
+			AND statusID = @statusID
 			AND matchid = @matchid
 			AND winlostdate >= @yesterday
 			AND transid <> @transid
