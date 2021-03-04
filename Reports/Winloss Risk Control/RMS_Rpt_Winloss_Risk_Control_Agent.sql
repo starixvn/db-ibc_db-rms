@@ -103,6 +103,12 @@ BEGIN
 			WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
 				AND SportType <= 99
 
+		CREATE TABLE #tmpSelection (selection INT)
+		DECLARE @selection NVARCHAR(4000) = '2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
+		-- all selections (2 --> 100)
+		INSERT INTO #tmpSelection (selection)
+		SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
+
 		-- Get bettype
 		CREATE TABLE #bettype (bettype SMALLINT)
 		-- Combo parlay
@@ -212,6 +218,7 @@ BEGIN
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 			INNER JOIN #CustList c ON c.custID = b.custid
+			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
 					AND 1 = CASE
@@ -264,6 +271,7 @@ BEGIN
 			FROM  dbo.rmSumWinloss b WITH (NOLOCK)
 			INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
 			INNER JOIN #CustList c ON c.custID = b.custid
+			INNER JOIN #tmpSelection s ON b.combo = s.selection
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), b.ParlayType - 1) + ',%'
@@ -307,6 +315,7 @@ BEGIN
 			FROM  dbo.rmSumWinloss_Old b WITH (NOLOCK)
 			INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
 			INNER JOIN #CustList c ON c.custID = b.custid
+			INNER JOIN #tmpSelection s ON b.combo = s.selection
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), b.ParlayType - 1) + ',%'
@@ -462,6 +471,7 @@ BEGIN
 	DROP TABLE #rptRiskWLControl_Summary
 	DROP TABLE #rptRiskWLControl
 	DROP TABLE #tmpSport
+	DROP TABLE #tmpSelection
 END
 GO
 
