@@ -15,7 +15,7 @@ AS
 		Created: Johnson
 		Date: 2012-05-09
 		Task: function support to split string 
-		DB: DBRMS/bodb_RMS,DBARC/bodb_Archive
+		DB: DBRMS/bodb_RMS
 		
 		Revisions:
 			- 20201126@Danny: @string NVARCHAR( 4000) to NVARCHAR( MAX) [RedmineID: #144471]		
