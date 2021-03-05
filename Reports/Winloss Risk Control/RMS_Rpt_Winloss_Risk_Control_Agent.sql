@@ -441,7 +441,8 @@ BEGIN
 					Commission, 
 					RealIncome, 
 					RealTurnover,
-					ROW_NUMBER() over(order by UserName) as RowNum
+					ROW_NUMBER() over(order by UserName) as RowNum,
+					@Site as Site
 				FROM #rptRiskWLControl_Summary
 		) wl
 		WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
