@@ -363,7 +363,8 @@ BEGIN
 			ExtraPT, 
 			Commission, 
 			RealIncome, 
-			RealTurnover
+			RealTurnover,
+			@company as Site
 	FROM #rptRiskWLControl_Summary
 	ORDER BY UserName
 	

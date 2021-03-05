@@ -9,7 +9,8 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_Winloss_Risk_Control_Agent]
 	@ReportBy		TINYINT = 1,
 	@PageSize		INT = 0,
 	@PageIndex		INT = 0,
-	@TotalRecords   INT =0  OUTPUT
+	@TotalRecords   INT =0  OUTPUT,
+	@Site			NVARCHAR(50) = ''
 AS
 
 /*
@@ -73,7 +74,7 @@ BEGIN
 			INSERT INTO #CustList(custID)
 			SELECT custid 
 			FROM bodb02.dbo.Customer WITH(NOLOCK)
-			WHERE srecommend = @custID and roleid = 1
+			WHERE srecommend = @custID and roleid = 1 and site = @Site
 		END
 
 		IF @roleID = 3 
@@ -81,7 +82,7 @@ BEGIN
 			INSERT INTO #CustList(custID)
 			SELECT custid 
 			FROM bodb02.dbo.Customer WITH(NOLOCK)
-			WHERE mrecommend = @custID and roleid = 1
+			WHERE mrecommend = @custID and roleid = 1 and site = @Site
 		END
 
 		IF @roleID = 2 
@@ -89,7 +90,7 @@ BEGIN
 			INSERT INTO #CustList(custID)
 			SELECT custid 
 			FROM bodb02.dbo.Customer WITH(NOLOCK)
-			WHERE recommend = @custID and roleid = 1
+			WHERE recommend = @custID and roleid = 1 and site = @Site
 		END
 	
 		CREATE TABLE #tmpSport (sporttype INT)

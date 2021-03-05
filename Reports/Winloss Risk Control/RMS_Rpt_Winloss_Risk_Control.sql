@@ -295,7 +295,7 @@ BEGIN
 						SUM(RealIncome) RealIncome ,
 						SUM(RealTurnover) RealTurnover 
 			FROM #rptRiskWLControl b
-			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.recommend = c.custid
+			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.CustID = c.custid
 			INNER JOIN bodb02.dbo.Site s  WITH(NOLOCK) ON  c.site = s.site
 			GROUP BY s.site, s.isDeposit
 
