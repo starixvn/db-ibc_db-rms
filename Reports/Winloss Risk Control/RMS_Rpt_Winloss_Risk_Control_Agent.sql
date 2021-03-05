@@ -343,7 +343,7 @@ BEGIN
 					SUM(RealIncome) RealIncome ,
 					SUM(RealTurnover) RealTurnover 
 		FROM		#rptRiskWLControl b
-		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.custid
+		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.mrecommend
 		GROUP BY	b.mrecommend,c.UserName,c.RoleID
 
 	END
@@ -368,7 +368,7 @@ BEGIN
 					SUM(RealIncome) RealIncome ,
 					SUM(RealTurnover) RealTurnover 
 		FROM		#rptRiskWLControl b
-		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.custid
+		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.recommend
 		GROUP BY	b.recommend,c.UserName,c.RoleID
 
 	END
