@@ -245,7 +245,7 @@ BEGIN
 				(awinlost + mwinlost + swinlost)  * actualrate, --SMA_winloss
 				-(ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate)  ,  --ExtraPT
 				-(scomm * actualrate), --Commission
-				company_winlost * actualrate -  scomm * actualrate + (ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate), --RealIncome
+				(company_winlost - ISNULL(b.Extra_winlost, 0) - ISNULL(b.scomm, 0) + ISNULL(b.Extra_comm, 0)) * actualrate , --RealIncome
 				(company_stake - ISNULL(Extra_stake,0))* actualrate, -- Real turnover
 				b.betcount
 			
@@ -289,7 +289,7 @@ BEGIN
 				(awinlost + mwinlost + swinlost)  * actualrate, --SMA_winloss
 				-(ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate)  ,  --ExtraPT
 				-(scomm * actualrate), --Commission
-				company_winlost * actualrate -  scomm * actualrate + (ISNULL(extra_Winlost,0)  * actualrate + ISNULL(Extra_comm,0) * actualrate), --RealIncome
+				(company_winlost - ISNULL(b.Extra_winlost, 0) - ISNULL(b.scomm, 0) + ISNULL(b.Extra_comm, 0)) * actualrate , --RealIncome
 				(company_stake - ISNULL(Extra_stake,0))* actualrate, -- Real turnover
 				b.betcount
 			
