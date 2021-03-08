@@ -30,12 +30,19 @@ BEGIN
 	DECLARE @BalanceUpDay SMALLDATETIME, @MoveBetsDay SMALLDATETIME
 	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBU
 
-	DECLARE @bettype INT, @betteam NVARCHAR(10), @matchid INT, @refno BIGINT, @combo INT, @cnt_bets INT, @yesterday DATETIME, @statusID TINYINT
+	DECLARE @bettype INT, @betteam NVARCHAR(10), @matchid INT, @refno BIGINT, @combo INT, @cnt_bets INT, @yesterday DATETIME, @statusID TINYINT, @winlostdate SMALLDATETIME
 
 	SELECT @yesterday = CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
 
-	SELECT @bettype = bettype, @betteam = betteam, @matchid = matchid, @refno = refno, @combo = hdp2, @statusID = statusID
-	FROM dbo.rmBettrans WITH (NOLOCK) WHERE transid = @transid
+	SELECT @bettype = t.bettype, @betteam = t.betteam, @matchid = t.matchid, @refno = t.refno, @combo = t.hdp2, @statusID = t.statusID
+	FROM
+	(
+		SELECT bettype, betteam, matchid, refno, hdp2, statusID
+		FROM dbo.rmBettrans WITH (NOLOCK) WHERE transid = @transid
+		UNION ALL
+		SELECT bettype, betteam, matchid, refno, hdp2, statusID
+		FROM dbo.rmBettrans_Old WITH (NOLOCK) WHERE transid = @transid
+	) t
 
 	IF (@@ROWCOUNT = 0 OR @statusID IN (111, 113) )
 		RETURN
@@ -45,49 +52,149 @@ BEGIN
 	IF @bettype = 29
 	BEGIN
 		DECLARE @Selection TABLE (matchid INT, bettype INT, betteam NVARCHAR(10))
-		INSERT INTO @Selection (matchid, bettype, betteam)
-		SELECT a.matchid, a.bettype, a.betteam
-		FROM bodb02.dbo.bettransm a WITH (NOLOCK)
-			INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON a.matchid = m.matchid
-		WHERE a.refno = @refno AND (a.statusID IN (0, 1) OR a.winlostdate > @MoveBetsDay)
-		UNION
-		SELECT a.matchid, a.bettype, a.betteam
-		FROM bodb02.dbo.bettransm14 a WITH (NOLOCK)
-			INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON a.matchid = m.matchid
-		WHERE a.refno = @refno AND a.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
-
-
 		DECLARE @bettrans TABLE (transid BIGINT PRIMARY KEY, refno BIGINT)
-		INSERT INTO @bettrans (transid, refno)
-		SELECT transid, refno
-		FROM dbo.rmBettrans WITH (NOLOCK)
-		WHERE bettype = 29
-			AND combo = @combo
-			AND statusID = @statusID
-			AND winlostdate >= @yesterday
-			AND refno <> @refno
-
-		INSERT INTO @result (transid, cnt)
-		SELECT b.transid, COUNT(1)
-		FROM @bettrans b
-			CROSS APPLY (
-				SELECT bm.matchid, bm.bettype, bm.betteam
-				FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-				WHERE bm.refno = b.refno AND (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
-				UNION
-				SELECT bm.matchid, bm.bettype, bm.betteam
-				FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
-				WHERE bm.refno = b.refno AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
-			) r
-			INNER JOIN @Selection s ON r.matchid = s.matchid AND r.bettype = s.bettype AND r.betteam = s.betteam
-		GROUP BY b.transid
-		HAVING COUNT(1) >= CASE WHEN @combo = 2 THEN @combo ELSE (@combo * 1.0 / 2) END
-
-		SELECT @cnt_bets = @@ROWCOUNT
-     
 		DECLARE @NumberWon INT
-		SELECT  @NumberWon = COUNT(1) FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate > @MoveBetsDay
-		SELECT  @NumberWon = @NumberWon + COUNT(1) FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+
+		IF @statusID = 0 
+		BEGIN
+			INSERT INTO @Selection (matchid, bettype, betteam)
+			SELECT a.matchid, a.bettype, a.betteam
+			FROM bodb02.dbo.bettransm a WITH (NOLOCK)
+				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON a.matchid = m.matchid
+			WHERE a.refno = @refno AND (a.statusID IN (0, 1) OR a.winlostdate > @MoveBetsDay)
+			UNION
+			SELECT a.matchid, a.bettype, a.betteam
+			FROM bodb02.dbo.bettransm14 a WITH (NOLOCK)
+				INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON a.matchid = m.matchid
+			WHERE a.refno = @refno AND a.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+
+			INSERT INTO @bettrans (transid, refno)
+			SELECT transid, refno
+			FROM dbo.rmBettrans WITH (NOLOCK)
+			WHERE bettype = 29
+				AND combo = @combo
+				AND statusID = @statusID
+				AND winlostdate >= @yesterday
+				AND refno <> @refno
+
+			INSERT INTO @result (transid, cnt)
+			SELECT b.transid, COUNT(1)
+			FROM @bettrans b
+				CROSS APPLY (
+					SELECT bm.matchid, bm.bettype, bm.betteam
+					FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
+					WHERE bm.refno = b.refno AND (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
+					UNION
+					SELECT bm.matchid, bm.bettype, bm.betteam
+					FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
+					WHERE bm.refno = b.refno AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+				) r
+				INNER JOIN @Selection s ON r.matchid = s.matchid AND r.bettype = s.bettype AND r.betteam = s.betteam
+			GROUP BY b.transid
+			HAVING COUNT(1) >= CASE WHEN @combo = 2 THEN @combo ELSE (@combo * 1.0 / 2) END
+
+			SELECT @cnt_bets = @@ROWCOUNT
+			SELECT  @NumberWon = COUNT(1) FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate > @MoveBetsDay
+			SELECT  @NumberWon = @NumberWon + COUNT(1) FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+		END
+	
+		IF @statusID = 112
+		BEGIN
+			IF @winlostdate between  @MoveBetsDay AND @BalanceUpDay
+			BEGIN
+				INSERT INTO @Selection (matchid, bettype, betteam)
+				SELECT a.matchid, a.bettype, a.betteam
+				FROM bodb02.dbo.bettransm a WITH (NOLOCK)
+					INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON a.matchid = m.matchid
+				WHERE a.refno = @refno AND a.winlostdate > @MoveBetsDay
+				UNION
+				SELECT a.matchid, a.bettype, a.betteam
+				FROM bodb02.dbo.bettransm14 a WITH (NOLOCK)
+					INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON a.matchid = m.matchid
+				WHERE a.refno = @refno AND a.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+				
+				INSERT INTO @Selection (matchid, bettype, betteam)
+				SELECT a.matchid, a.bettype, a.betteam
+				FROM DBARC.bodb_Archive.dbo.bettransm a WITH (NOLOCK)
+					INNER JOIN DBARC.bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON a.matchid = m.matchid
+				WHERE a.refno = @refno 
+			END
+
+			IF @winlostdate >  @MoveBetsDay 
+			BEGIN
+				INSERT INTO @Selection (matchid, bettype, betteam)
+				SELECT a.matchid, a.bettype, a.betteam
+				FROM bodb02.dbo.bettransm a WITH (NOLOCK)
+					INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON a.matchid = m.matchid
+				WHERE a.refno = @refno AND a.winlostdate > @MoveBetsDay
+				UNION
+				SELECT a.matchid, a.bettype, a.betteam
+				FROM bodb02.dbo.bettransm14 a WITH (NOLOCK)
+					INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON a.matchid = m.matchid
+				WHERE a.refno = @refno AND a.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+			END
+
+			IF @winlostdate < @BalanceUpDay
+			BEGIN
+
+				INSERT INTO @Selection (matchid, bettype, betteam)
+				SELECT a.matchid, a.bettype, a.betteam
+				FROM bodb02.dbo.bettransm14 a WITH (NOLOCK)
+					INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON a.matchid = m.matchid
+				WHERE a.refno = @refno AND a.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+				UNION
+				
+				SELECT a.matchid, a.bettype, a.betteam
+				FROM DBARC.bodb_Archive.dbo.bettransm a WITH (NOLOCK)
+					INNER JOIN DBARC.bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON a.matchid = m.matchid
+				WHERE a.refno = @refno 
+			END
+
+			-- get transid list
+			INSERT INTO @bettrans (transid, refno)
+			SELECT transid, refno
+			FROM dbo.rmBettrans WITH (NOLOCK)
+			WHERE bettype = 29
+				AND combo = @combo
+				AND statusID = @statusID
+				AND winlostdate between DATEADD(DAY, -7, @winlostdate) AND  DATEADD(DAY, +7, @winlostdate)
+				AND refno <> @refno
+
+			INSERT INTO @bettrans (transid, refno)
+			SELECT transid, refno
+			FROM dbo.rmBettrans_Old WITH (NOLOCK)
+			WHERE bettype = 29
+				AND combo = @combo
+				AND statusID = @statusID
+				AND winlostdate between DATEADD(DAY, -7, @winlostdate) AND  DATEADD(DAY, +7, @winlostdate)
+				AND refno <> @refno
+			-- END get transid list
+
+			CREATE TABLE #match_bk ()
+			
+
+
+			INSERT INTO @result (transid, cnt)
+			SELECT b.transid, COUNT(1)
+			FROM @bettrans b
+				CROSS APPLY (
+					SELECT bm.matchid, bm.bettype, bm.betteam
+					FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
+					WHERE bm.refno = b.refno AND (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
+					UNION
+					SELECT bm.matchid, bm.bettype, bm.betteam
+					FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
+					WHERE bm.refno = b.refno AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+				) r
+				INNER JOIN @Selection s ON r.matchid = s.matchid AND r.bettype = s.bettype AND r.betteam = s.betteam
+			GROUP BY b.transid
+			HAVING COUNT(1) >= CASE WHEN @combo = 2 THEN @combo ELSE (@combo * 1.0 / 2) END
+
+			SELECT @cnt_bets = @@ROWCOUNT
+			SELECT  @NumberWon = COUNT(1) FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate > @MoveBetsDay
+			SELECT  @NumberWon = @NumberWon + COUNT(1) FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+		END
+
 	END
 	ELSE IF @bettype = 38
 	BEGIN
