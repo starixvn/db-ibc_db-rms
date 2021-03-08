@@ -213,14 +213,20 @@ BEGIN
 		DECLARE @OriginalSMP_Selection TABLE (transid BIGINT, SelectionType INT)
 		DECLARE @SMP_Selection TABLE (transid BIGINT, SelectionType INT)
 		
-		IF @statusID = 0 
+
+		INSERT INTO @OriginalSMP_Selection (TransId, SelectionType)
+		SELECT b.transid, a.SelectionType
+		FROM dbo.rmBettrans b WITH (NOLOCK)
+			INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
+		WHERE b.transid = @transid
+		UNION 
+		SELECT b.transid, a.SelectionType
+		FROM dbo.rmBettrans_Old b WITH (NOLOCK)
+			INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
+		WHERE b.transid = @transid
+			
+		IF @winlostdate > @MoveBetsDay
 		BEGIN
-			INSERT INTO @OriginalSMP_Selection (TransId, SelectionType)
-			SELECT b.transid, a.SelectionType
-			FROM dbo.rmBettrans b WITH (NOLOCK)
-				INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
-			WHERE b.transid = @transid
- 
 			INSERT INTO @SMP_Selection (TransId, SelectionType)
 			SELECT b.transid, a.SelectionType
 			FROM dbo.rmBettrans b WITH (NOLOCK)
@@ -230,39 +236,28 @@ BEGIN
 				AND a.matchid = @MatchId
 				AND winlostdate >= @yesterday
 				AND b.transid <> @transid
-
-			INSERT INTO @result (transid, cnt)
-			SELECT s.transid, COUNT(1)
-			FROM @OriginalSMP_Selection r
-			   INNER JOIN @SMP_Selection s ON r.SelectionType = s.SelectionType
-			GROUP BY s.transid
-			HAVING COUNT(1) >= CASE WHEN @combo = 2 THEN @combo ELSE (@combo * 1.0 / 2) END
 		END
-
-		IF @statusID = 112
+		ELSE 
 		BEGIN
-			INSERT INTO @OriginalSMP_Selection (TransId, SelectionType)
-			SELECT @transid, a.SelectionType
-			FROM bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) 
-			WHERE a.MarketId = @betcheck
- 
 			INSERT INTO @SMP_Selection (TransId, SelectionType)
 			SELECT b.transid, a.SelectionType
-			FROM dbo.rmBettrans b WITH (NOLOCK)
+			FROM dbo.rmBettrans_Old b WITH (NOLOCK)
 				INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
 			WHERE b.hdp2 = @combo 		
 				AND statusid = @statusID
 				AND a.matchid = @MatchId
-				AND winlostdate >= @yesterday
+				AND winlostdate = @winlostdate
 				AND b.transid <> @transid
-
-			INSERT INTO @result (transid, cnt)
-			SELECT s.transid, COUNT(1)
-			FROM @OriginalSMP_Selection r
-			   INNER JOIN @SMP_Selection s ON r.SelectionType = s.SelectionType
-			GROUP BY s.transid
-			HAVING COUNT(1) >= CASE WHEN @combo = 2 THEN @combo ELSE (@combo * 1.0 / 2) END
 		END
+
+		INSERT INTO @result (transid, cnt)
+		SELECT s.transid, COUNT(1)
+		FROM @OriginalSMP_Selection r
+			INNER JOIN @SMP_Selection s ON r.SelectionType = s.SelectionType
+		GROUP BY s.transid
+		HAVING COUNT(1) >= CASE WHEN @combo = 2 THEN @combo ELSE (@combo * 1.0 / 2) END
+
+		
 	END
 	ELSE IF @bettype = 376
 	BEGIN
