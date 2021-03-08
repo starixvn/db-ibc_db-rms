@@ -202,6 +202,7 @@ BEGIN
 			WHERE  b.custid IN (SELECT custID FROM #CustList c)
 			AND b.winlostdate BETWEEN @f_date AND @t_date
 				AND b.statusID IN (111,112, 113)
+				AND b.currency <> 20
 				AND 1 = CASE
 									WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
 									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
@@ -254,6 +255,7 @@ BEGIN
 			INNER JOIN #tmpSelection s ON b.combo = s.selection
 			WHERE   b.custid IN (SELECT custID FROM #CustList c)
 				AND b.winlostdate BETWEEN @f_date AND @t_date
+				AND b.currency <> 20
 				AND statusID IN (111,112, 113)
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), b.ParlayType - 1) + ',%'
 
@@ -299,6 +301,7 @@ BEGIN
 			WHERE  b.custid IN (SELECT custID FROM #CustList c)
 			AND b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)
+				AND b.currency <> 20
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), b.ParlayType - 1) + ',%'
 		END
 
