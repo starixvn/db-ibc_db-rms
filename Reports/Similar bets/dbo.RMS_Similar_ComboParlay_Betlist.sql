@@ -30,17 +30,17 @@ BEGIN
 	DECLARE @BalanceUpDay SMALLDATETIME, @MoveBetsDay SMALLDATETIME
 	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBU
 
-	DECLARE @bettype INT, @betteam NVARCHAR(10), @matchid INT, @refno BIGINT, @combo INT, @cnt_bets INT, @yesterday DATETIME, @statusID TINYINT, @winlostdate SMALLDATETIME
+	DECLARE @bettype INT, @betteam NVARCHAR(10), @matchid INT, @refno BIGINT, @combo INT, @cnt_bets INT, @yesterday DATETIME, @statusID TINYINT, @winlostdate SMALLDATETIME, @betcheck NVARCHAR(50)
 
 	SELECT @yesterday = CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
 
-	SELECT @bettype = t.bettype, @betteam = t.betteam, @matchid = t.matchid, @refno = t.refno, @combo = t.hdp2, @statusID = t.statusID
+	SELECT @bettype = t.bettype, @betteam = t.betteam, @matchid = t.matchid, @refno = t.refno, @combo = t.hdp2, @statusID = t.statusID, @winlostdate = t.winlostdate, @betcheck = t.betcheck
 	FROM
 	(
-		SELECT bettype, betteam, matchid, refno, hdp2, statusID
+		SELECT bettype, betteam, matchid, refno, hdp2, statusID, winlostdate, betcheck
 		FROM dbo.rmBettrans WITH (NOLOCK) WHERE transid = @transid
 		UNION ALL
-		SELECT bettype, betteam, matchid, refno, hdp2, statusID
+		SELECT bettype, betteam, matchid, refno, hdp2, statusID, winlostdate, betcheck
 		FROM dbo.rmBettrans_Old WITH (NOLOCK) WHERE transid = @transid
 	) t
 
@@ -170,9 +170,15 @@ BEGIN
 				AND refno <> @refno
 			-- END get transid list
 
-			CREATE TABLE #match_bk ()
-			
 
+			CREATE TABLE #match_bk (refno BIGINT, matchid INT, bettype INT, betteam NVARCHAR(10))
+
+			INSERT INTO #match_bk (refno, matchid, bettype, betteam)
+			SELECT bm.refno, bm.matchid, bm.bettype, bm.betteam
+			FROM DBARC.bodb_Archive.dbo.bettransm bm
+			WHERE bm.winlostdate BETWEEN DATEADD(DAY, -14, @winlostdate) AND  DATEADD(DAY, +14, @winlostdate) AND  statusID IN (112,113)
+
+			CREATE CLUSTERED INDEX cix_#refno ON #match_bk(refno)
 
 			INSERT INTO @result (transid, cnt)
 			SELECT b.transid, COUNT(1)
@@ -185,6 +191,10 @@ BEGIN
 					SELECT bm.matchid, bm.bettype, bm.betteam
 					FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
 					WHERE bm.refno = b.refno AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+					UNION 
+					SELECT bm.matchid, bm.bettype, bm.betteam
+					FROM #match_bk bm
+					WHERE bm.refno = b.refno 
 				) r
 				INNER JOIN @Selection s ON r.matchid = s.matchid AND r.bettype = s.bettype AND r.betteam = s.betteam
 			GROUP BY b.transid
@@ -193,6 +203,8 @@ BEGIN
 			SELECT @cnt_bets = @@ROWCOUNT
 			SELECT  @NumberWon = COUNT(1) FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate > @MoveBetsDay
 			SELECT  @NumberWon = @NumberWon + COUNT(1) FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+			SELECT  @NumberWon = @NumberWon + COUNT(1) FROM DBARC.bodb_Archive.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 
+
 		END
 
 	END
@@ -200,29 +212,57 @@ BEGIN
 	BEGIN
 		DECLARE @OriginalSMP_Selection TABLE (transid BIGINT, SelectionType INT)
 		DECLARE @SMP_Selection TABLE (transid BIGINT, SelectionType INT)
-    
-		INSERT INTO @OriginalSMP_Selection (TransId, SelectionType)
-		SELECT b.transid, a.SelectionType
-		FROM dbo.rmBettrans b WITH (NOLOCK)
-			INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
-		WHERE b.transid = @transid
+		
+		IF @statusID = 0 
+		BEGIN
+			INSERT INTO @OriginalSMP_Selection (TransId, SelectionType)
+			SELECT b.transid, a.SelectionType
+			FROM dbo.rmBettrans b WITH (NOLOCK)
+				INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
+			WHERE b.transid = @transid
  
-		INSERT INTO @SMP_Selection (TransId, SelectionType)
-		SELECT b.transid, a.SelectionType
-		FROM dbo.rmBettrans b WITH (NOLOCK)
-			INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
-		WHERE b.hdp2 = @combo 		
-			AND statusid = @statusID
-			AND a.matchid = @MatchId
-			AND winlostdate >= @yesterday
-			AND b.transid <> @transid
+			INSERT INTO @SMP_Selection (TransId, SelectionType)
+			SELECT b.transid, a.SelectionType
+			FROM dbo.rmBettrans b WITH (NOLOCK)
+				INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
+			WHERE b.hdp2 = @combo 		
+				AND statusid = @statusID
+				AND a.matchid = @MatchId
+				AND winlostdate >= @yesterday
+				AND b.transid <> @transid
 
-		INSERT INTO @result (transid, cnt)
-		SELECT s.transid, COUNT(1)
-		FROM @OriginalSMP_Selection r
-		   INNER JOIN @SMP_Selection s ON r.SelectionType = s.SelectionType
-		GROUP BY s.transid
-		HAVING COUNT(1) >= CASE WHEN @combo = 2 THEN @combo ELSE (@combo * 1.0 / 2) END
+			INSERT INTO @result (transid, cnt)
+			SELECT s.transid, COUNT(1)
+			FROM @OriginalSMP_Selection r
+			   INNER JOIN @SMP_Selection s ON r.SelectionType = s.SelectionType
+			GROUP BY s.transid
+			HAVING COUNT(1) >= CASE WHEN @combo = 2 THEN @combo ELSE (@combo * 1.0 / 2) END
+		END
+
+		IF @statusID = 112
+		BEGIN
+			INSERT INTO @OriginalSMP_Selection (TransId, SelectionType)
+			SELECT @transid, a.SelectionType
+			FROM bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) 
+			WHERE a.MarketId = @betcheck
+ 
+			INSERT INTO @SMP_Selection (TransId, SelectionType)
+			SELECT b.transid, a.SelectionType
+			FROM dbo.rmBettrans b WITH (NOLOCK)
+				INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
+			WHERE b.hdp2 = @combo 		
+				AND statusid = @statusID
+				AND a.matchid = @MatchId
+				AND winlostdate >= @yesterday
+				AND b.transid <> @transid
+
+			INSERT INTO @result (transid, cnt)
+			SELECT s.transid, COUNT(1)
+			FROM @OriginalSMP_Selection r
+			   INNER JOIN @SMP_Selection s ON r.SelectionType = s.SelectionType
+			GROUP BY s.transid
+			HAVING COUNT(1) >= CASE WHEN @combo = 2 THEN @combo ELSE (@combo * 1.0 / 2) END
+		END
 	END
 	ELSE IF @bettype = 376
 	BEGIN
