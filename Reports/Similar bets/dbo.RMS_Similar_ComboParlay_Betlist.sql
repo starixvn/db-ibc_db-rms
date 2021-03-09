@@ -159,8 +159,7 @@ BEGIN
 				AND statusID = @statusID
 				AND winlostdate between DATEADD(DAY, -7, @winlostdate) AND  DATEADD(DAY, +7, @winlostdate)
 				AND refno <> @refno
-
-			INSERT INTO @bettrans (transid, refno)
+			UNION
 			SELECT transid, refno
 			FROM dbo.rmBettrans_Old WITH (NOLOCK)
 			WHERE bettype = 29
