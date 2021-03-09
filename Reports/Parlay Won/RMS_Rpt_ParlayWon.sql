@@ -172,7 +172,7 @@ BEGIN
 			,TotalSelection		INT
 			,SportType			SMALLINT
 			,IP					NVARCHAR(15)
-			,currency			TINYINT
+			,currencyName		NVARCHAR(50)
 		)
 
 		IF @ToDate > @MoveBetsDay
@@ -183,10 +183,10 @@ BEGIN
 		
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currency
+				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName
 			)
 			SELECT
-				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currency
+				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName
 			FROM
 			(
 				SELECT
@@ -237,10 +237,10 @@ BEGIN
 
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currency
+				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName
 			)
 			SELECT
-				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currency
+				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName
 			FROM
 			(
 				SELECT
@@ -328,11 +328,11 @@ BEGIN
 		DECLARE @SQL VARCHAR(MAX)
 		SELECT  @SQL = 'CREATE INDEX IX_Index ON #rmBettrans (' + @sortedColumn + ')' + CHAR(13)
 		SELECT  @SQL = @SQL
-						+  'SELECT transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currency
+						+  'SELECT transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName
 							FROM
 							(
 								SELECT
-									b.transdate,b.transid,b.refno,b.custid,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currency
+									b.transdate,b.transid,b.refno,b.custid,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName
 									,ROW_NUMBER() OVER(ORDER BY b.' + @sortedColumn + CASE WHEN @IsSortAsc = 0 THEN ' DESC' ELSE ' ' END + ') AS rn
 								FROM #rmBettrans b
 									LEFT JOIN dbo.rmCustomer c WITH (NOLOCK) ON b.custid = c.custid
