@@ -358,10 +358,8 @@ BEGIN
 			,ISNULL(c.level, 0) AS level
 			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE p.transid2 END AS Sporttype
 			,p.odds2 * p.TotalBet AS odds
-			,CASE WHEN @statusID = 0  THEN (p.stake * p.actualrate * (1 - p.tpositiontaking) / p.TotalBet)
-			ELSE (p.stake * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) * p.actualrate)  END AS stake
-			,CASE WHEN @statusID = 0  THEN (p.stake * (p.odds2 - 1) * p.actualrate * (1 - p.tpositiontaking))
-			ELSE  ((p.winlost - p.actual_stake) * p.actualrate)  END AS net_win
+			,(p.stake * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) * p.actualrate) AS stake
+			,((p.winlost - p.actual_stake) * p.actualrate) net_win
 			,p.hdp2		AS TotalSelection
 			,ISNULL(@NumberWon, 0)	AS NumberWon
 			,p.TotalBet	AS TotalBet
@@ -373,6 +371,32 @@ BEGIN
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
 		WHERE transid = @transid
 
+		UNION ALL
+
+		SELECT
+			p.transdate
+			,p.transid
+			,p.refno
+			,p.username
+			,p.custid
+			,p.bettype
+			,ISNULL(c.level, 0) AS level
+			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE p.transid2 END AS Sporttype
+			,p.odds2 * p.TotalBet AS odds
+			,(p.stake * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) * p.actualrate) AS stake
+			,((p.winlost - p.actual_stake) * p.actualrate) net_win
+			,p.hdp2		AS TotalSelection
+			,ISNULL(@NumberWon, 0)	AS NumberWon
+			,p.TotalBet	AS TotalBet
+			,@cnt_bets	AS cnt_bets,
+			CAST(CASE WHEN p.bettype = 29 AND p.betteam= N'1' AND p.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
+			,p.statusID as statusID
+
+		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
+			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
+		WHERE transid = @transid
+
+
 		SELECT
 			p.transid
 			,p.refno
@@ -383,6 +407,18 @@ BEGIN
 			,cnt AS similar_selection
 		FROM @result r
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
+			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
+		UNION ALL
+		SELECT
+			p.transid
+			,p.refno
+			,p.username
+			,p.custid
+			,ISNULL(c.level, 0) AS level
+			,CASE WHEN @statusID = 0  THEN stake * (odds2 - 1) * actualrate * (1 - p.tpositiontaking) ELSE ((p.winlost - p.actual_stake) * p.actualrate) END  AS net_win
+			,cnt AS similar_selection
+		FROM @result r
+			INNER JOIN dbo.rmBettrans_Old p WITH (NOLOCK) ON r.transid = p.transid
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
 		ORDER BY cnt DESC
 	END
