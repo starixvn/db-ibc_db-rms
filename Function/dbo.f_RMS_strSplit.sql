@@ -1,6 +1,7 @@
-﻿ ALTER FUNCTION  [dbo].[f_RMS_strSplit]  
+﻿/*<info serverAlias="DBRMS-bodb_RMS" selectors="bodbRMSNet" isFunction="1" isNested="1"></info>*/
+ ALTER FUNCTION  [dbo].[f_RMS_strSplit]  
 (
-	@string NVARCHAR( 4000),
+	@string NVARCHAR(MAX),
 	@splitter CHAR( 1) 
 )
 RETURNS @res TABLE 
@@ -14,9 +15,10 @@ AS
 		Created: Johnson
 		Date: 2012-05-09
 		Task: function support to split string 
-		DB: DBRMS/bodb_RMS,DBARC/bodb_Archive
+		DB: DBRMS/bodb_RMS
 		
 		Revisions:
+			- 20201126@Danny: @string NVARCHAR( 4000) to NVARCHAR( MAX) [RedmineID: #144471]		
 		
 		Parameter's Explanation:
 	*/
@@ -44,8 +46,3 @@ BEGIN
      END
      RETURN
 END
-
-GO
-GRANT VIEW DEFINITION ON [dbo].[f_RMS_strSplit] TO [vnteam]
-GO
-GRANT SELECT ON [dbo].[f_RMS_strSplit] TO [bodbRMSNet]
