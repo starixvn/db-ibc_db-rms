@@ -61,7 +61,7 @@ BEGIN
 
 
 	--INSERT INTO @result (transid, cnt)
-	SELECT b.transid, COUNT(1)
+	SELECT b.transid, COUNT(1) as cnt
 	FROM @bettrans b
 		CROSS APPLY (
 			SELECT bm.matchid, bm.bettype, bm.betteam
