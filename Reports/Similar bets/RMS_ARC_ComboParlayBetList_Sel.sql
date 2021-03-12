@@ -3,11 +3,11 @@ ALTER PROCEDURE RMS_ARC_ComboParlayBetList_Sel @winlostdate SMALLDATETIME, @refn
 AS
 /*
 	Created:
-	DB: DBRMS-bodb_Archive
-	Task: RMS - Check Sum data Rm bettrans_Old
+	DB: DBARC-bodb_Archive
+	Task:  - Detail bettransm of parlay ticket archived
 
 	Revisions:   
-		- 20201221@danny: create SP  [RedmineID: #145926]
+		- 20201221@danny: create SP  [RedmineID: #148137]
 */
 SET NOCOUNT ON 
 BEGIN
