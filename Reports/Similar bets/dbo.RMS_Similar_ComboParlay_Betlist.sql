@@ -102,7 +102,7 @@ BEGIN
 		BEGIN
 			
 			INSERT INTO @result (transid, cnt)
-			EXEC RMS_ARC_ComboParlayBetList_Sel @winlostdate = @winlostdate, @refno = @refno, @combo = @combo, @statusID = @statusID,  @cnt_bets = @cnt_bets OUTPUT,  @NumberWon = @NumberWon OUTPUT
+			EXEC DBARC.bodb_Archive.dbo.RMS_ARC_ComboParlayBetList_Sel @winlostdate = @winlostdate, @refno = @refno, @combo = @combo, @statusID = @statusID,  @cnt_bets = @cnt_bets OUTPUT,  @NumberWon = @NumberWon OUTPUT
 		END
 
 	END
