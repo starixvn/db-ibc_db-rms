@@ -17,7 +17,7 @@ BEGIN
 
 	SELECT ExchangeId as Currency, currency as CurrencyName 
 	FROM bodb02.dbo.Exchange WITH(NOLOCK)
-	WHERE isActive = 1
+	WHERE isActive = 1 and ExchangeId <> 20
 	ORDER BY currency
 
 END
