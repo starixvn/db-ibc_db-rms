@@ -1,5 +1,5 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[RMS_CurrencySel]
+ALTER PROCEDURE [dbo].[RMS_CurrencySel] @CurrencyName NVARCHAR(50) = ''
 AS
 
 /*
@@ -17,7 +17,7 @@ BEGIN
 
 	SELECT ExchangeId as Currency, currency as CurrencyName 
 	FROM bodb02.dbo.Exchange WITH(NOLOCK)
-	WHERE isActive = 1 and ExchangeId <> 20
+	WHERE isActive = 1 and ExchangeId <> 20 AND currency LIKE '%'+@CurrencyName+'%'
 	ORDER BY CurrencyName
 
 END
