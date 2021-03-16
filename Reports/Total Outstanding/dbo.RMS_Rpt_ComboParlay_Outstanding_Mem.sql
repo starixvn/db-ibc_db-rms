@@ -19,6 +19,7 @@ AS
 		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
+		- 20210303@Danny: Correct data bettransm14  [RedmineID: #148137]
 		
 	Parameter's Explanation:
 		- @selection:
@@ -176,7 +177,7 @@ BEGIN
 							SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS CornerParlay
 					FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
 					LEFT JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
-					WHERE b.refno = bm.refno AND bm.statusID = 112
+					WHERE b.refno = bm.refno 
 				) bm
 			WHERE b.bettype = 29
 		END
