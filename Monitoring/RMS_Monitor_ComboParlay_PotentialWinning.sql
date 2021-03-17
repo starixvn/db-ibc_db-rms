@@ -309,6 +309,7 @@ BEGIN
 		BEGIN
 			SELECT TOP (@limitRowcount)
 				mc.username AgentName
+				,SUM(stake) TotalStake
 				,SUM(b.WinningAmount) AS WinningAmount
 				,COUNT(DISTINCT b.custid) TotalMember
 				,b.recommend
