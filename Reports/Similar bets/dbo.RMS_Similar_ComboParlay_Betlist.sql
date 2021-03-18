@@ -254,7 +254,7 @@ BEGIN
 			,p.bettype
 			,ISNULL(c.level, 0) AS level
 			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE p.transid2 END AS Sporttype
-			,p.odds2 * p.TotalBet AS odds
+			,(p.winlost - p.actual_stake) / p.stake AS odds
 			,(p.stake * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) * p.actualrate) AS stake
 			,((p.winlost - p.actual_stake) * p.actualrate) net_win
 			,p.hdp2		AS TotalSelection
@@ -279,7 +279,7 @@ BEGIN
 			,p.bettype
 			,ISNULL(c.level, 0) AS level
 			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE p.transid2 END AS Sporttype
-			,p.odds2 * p.TotalBet AS odds
+			,(p.winlost - p.actual_stake) / p.stake AS odds
 			,(p.stake * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) * p.actualrate) AS stake
 			,((p.winlost - p.actual_stake) * p.actualrate) net_win
 			,p.hdp2		AS TotalSelection
