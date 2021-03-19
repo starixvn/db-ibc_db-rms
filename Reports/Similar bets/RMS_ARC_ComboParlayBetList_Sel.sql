@@ -27,17 +27,14 @@ BEGIN
 	INSERT INTO @Selection (matchid, bettype, betteam)
 	SELECT a.matchid, a.bettype, a.betteam
 	FROM bodb02.dbo.bettransm a WITH (NOLOCK)
-		INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON a.matchid = m.matchid
 	WHERE a.refno = @refno AND a.winlostdate > @MoveBetsDay
 	UNION
 	SELECT a.matchid, a.bettype, a.betteam
 	FROM bodb02.dbo.bettransm14 a WITH (NOLOCK)
-		INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON a.matchid = m.matchid
 	WHERE a.refno = @refno AND a.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay	
 	UNION
 	SELECT a.matchid, a.bettype, a.betteam
 	FROM dbo.bettransm a WITH (NOLOCK)
-		INNER JOIN DBARC.bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON a.matchid = m.matchid
 	WHERE a.refno = @refno 
 
 	DECLARE @bettrans TABLE (transid BIGINT PRIMARY KEY, refno BIGINT)
