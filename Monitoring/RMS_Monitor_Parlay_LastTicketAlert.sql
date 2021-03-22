@@ -13,6 +13,7 @@ AS
 	Revisions:
 		- 20200226@Franklin: Notify/Alert by Winning Amount #129275
 		- 20200703@Percy: Add jobtype to support many jobs [RedmineID: #137010]
+		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
 */
 
 BEGIN
@@ -128,6 +129,27 @@ BEGIN
                AND bm.statusid = 0
      )
      FROM #sumtotal s;
+
+	  UPDATE s
+       SET 
+           numberlose = s.numberlose +
+     (
+         SELECT COUNT(bm.transid)
+         FROM dbo.rmBettransm_bk bm WITH(NOLOCK)
+              INNER JOIN dbo.rmMatch_bk m WITH(NOLOCK) ON bm.matchid = m.matchid
+         WHERE s.refno = bm.refno
+               AND bm.statusid = 113
+     ), 
+           numberrunning = s.numberrunning +
+     (
+         SELECT COUNT(bm.transid)
+        FROM dbo.rmBettransm_bk bm WITH(NOLOCK)
+              INNER JOIN dbo.rmMatch_bk m WITH(NOLOCK) ON bm.matchid = m.matchid
+         WHERE s.refno = bm.refno
+               AND bm.statusid = 0
+     )
+     FROM #sumtotal s;
+
      CREATE TABLE #lastalert
      (transid     BIGINT, 
       alerttime   DATETIME, 
