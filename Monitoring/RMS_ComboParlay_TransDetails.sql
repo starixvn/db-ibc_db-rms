@@ -16,6 +16,7 @@ AS
 		- 20191026@Jacob: Show stake on bet details RedmineID: [#122137]
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
+		- 20210324@Danny: Get data from backup range  [RedmineID: #148137]
 */
 
 BEGIN
@@ -31,8 +32,15 @@ BEGIN
 	SET @CurrencyName = NULL
 
 	DECLARE @tpositiontaking SMALLMONEY, @actualrate FLOAT, @sql NVARCHAR(MAX)
-	SELECT  @CurrencyName = CurrencyName, @tpositiontaking = tpositiontaking, @actualrate = actualrate
-	FROM dbo.rmBettrans WITH (NOLOCK) WHERE transid = @transid
+	SELECT  @CurrencyName = MAX(CurrencyName), @tpositiontaking = MAX(tpositiontaking), @actualrate = MAX(actualrate)
+	FROM
+	(
+		SELECT CurrencyName, tpositiontaking, actualrate
+		FROM dbo.rmBettrans WITH (NOLOCK) WHERE transid = @transid
+		UNION 
+		SELECT CurrencyName, tpositiontaking, actualrate
+		FROM dbo.rmBettrans_Old WITH (NOLOCK) WHERE transid = @transid
+	)m
 
 	-- Blacklist league
 	DECLARE @BlacklistLeagueGroupId INT
@@ -97,6 +105,36 @@ BEGIN
 			INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
 			LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
 		WHERE refno = @refno
+	END
+
+	-- bettrans_bk
+	IF EXISTS (SELECT 1 FROM DBARC.bodb_Archive.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND winlostdate < @BalanceUpDay)
+	BEGIN
+		SELECT @SQL = 'SELECT transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusid
+							,status,livehomescore,liveawayscore,liveindicator,leagueid,sporttype
+							,isNeutral,matchid,matchcode,betstatus,betcheck,stake,transdate,transdesc
+						FROM OPENQUERY(DBARC, ''SELECT bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
+														,bm.status,bm.livehomescore,bm.liveawayscore,bm.liveindicator,m.leagueid,m.sporttype
+														,m.isNeutral,m.matchid,m.matchcode,m.betstatus,bm.betcheck,bm.stake ,bm.transdate, bm.transdesc
+												FROM bodb_Archive.dbo.bettransm bm WITH (NOLOCK)
+													INNER JOIN bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
+												WHERE bm.refno = ' + CONVERT(VARCHAR(50), @refno) + ''')'
+
+		
+		INSERT INTO @bettransm
+		(
+			transid, bettype, homeid, awayid, hdp1, hdp2
+			,odds, betteam, statusID, status
+			,livehomescore, liveawayscore, liveindicator
+			,leagueid, sporttype, isNeutral, matchid, matchcode
+			,betstatus, betcheck, stake, transdate, transdesc
+		)
+        EXEC (@SQL)
+
+		UPDATE m
+		SET m.IsBlacklistLeague = CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END
+		FROM @bettransm m 
+		LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
 	END
 
 	-- Return data
