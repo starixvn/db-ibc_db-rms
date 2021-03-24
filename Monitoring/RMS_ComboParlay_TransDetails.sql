@@ -110,7 +110,7 @@ BEGIN
 	-- bettrans_bk
 	IF EXISTS (SELECT 1 FROM DBARC.bodb_Archive.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND winlostdate < @BalanceUpDay)
 	BEGIN
-		SELECT @SQL = 'SELECT transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusid
+		SELECT @sql = 'SELECT transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusid
 							,status,livehomescore,liveawayscore,liveindicator,leagueid,sporttype
 							,isNeutral,matchid,matchcode,betstatus,betcheck,stake,transdate,transdesc
 						FROM OPENQUERY(DBARC, ''SELECT bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
@@ -129,7 +129,7 @@ BEGIN
 			,leagueid, sporttype, isNeutral, matchid, matchcode
 			,betstatus, betcheck, stake, transdate, transdesc
 		)
-        EXEC (@SQL)
+        EXEC (@sql)
 
 		UPDATE m
 		SET m.IsBlacklistLeague = CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END
