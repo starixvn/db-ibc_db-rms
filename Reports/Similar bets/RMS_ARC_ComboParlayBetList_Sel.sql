@@ -63,17 +63,19 @@ BEGIN
 		CROSS APPLY (
 			SELECT bm.matchid, bm.bettype, bm.betteam
 			FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
+			INNER JOIN @Selection s ON bm.matchid = s.matchid AND bm.bettype = s.bettype AND bm.betteam = s.betteam
 			WHERE bm.refno = b.refno AND bm.winlostdate > @MoveBetsDay
 			UNION
 			SELECT bm.matchid, bm.bettype, bm.betteam
 			FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
+			INNER JOIN @Selection s ON bm.matchid = s.matchid AND bm.bettype = s.bettype AND bm.betteam = s.betteam
 			WHERE bm.refno = b.refno AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 			UNION 
 			SELECT arc.matchid, arc.bettype, arc.betteam
 			FROM dbo.bettransm arc WITH (NOLOCK)
+			INNER JOIN @Selection s ON arc.matchid = s.matchid AND arc.bettype = s.bettype AND arc.betteam = s.betteam
 			WHERE arc.refno = b.refno  and arc.winlostdate < @BalanceUpDay
 		) r
-		INNER JOIN @Selection s ON r.matchid = s.matchid AND r.bettype = s.bettype AND r.betteam = s.betteam
 	GROUP BY b.transid
 	HAVING COUNT(1) >= CASE WHEN @combo = 2 THEN @combo ELSE (@combo * 1.0 / 2) END
 
