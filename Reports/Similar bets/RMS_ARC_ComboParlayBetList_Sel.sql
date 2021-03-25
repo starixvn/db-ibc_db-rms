@@ -160,11 +160,11 @@ BEGIN
 
 		DELETE  t
 		FROM #bettrans t
-		WHERE t.winlostdate > @MoveBetsDay AND t.combo_byRange = @combo
+		WHERE t.winlostdate  between @BalanceUpDay AND @MoveBetsDay AND t.combo_byRange = @combo
 
 		
 		-- Scan bettrans_bk
-		IF Exists (SELECT 1 FROM #bettrans WHERE winlostdate > @MoveBetsDay)
+		IF Exists (SELECT 1 FROM #bettrans WHERE winlostdate between @BalanceUpDay AND @MoveBetsDay)
 		BEGIN
 			INSERT INTO #result(refno, transid, combo, cnt)
 			SELECT b.refno, b.transid, COUNT(1) as combo, SUM(cnt) as cnt
@@ -180,11 +180,11 @@ BEGIN
 			UPDATE t
 			SET t.combo_byRange = t.combo_byRange + ISNULL(r.combo,0)
 			FROM #bettrans t
-			INNER JOIN #result r ON t.refno = r.refno AND t.winlostdate < @BalanceUpDay 
+			INNER JOIN #result r ON t.refno = r.refno AND t.winlostdate between @BalanceUpDay AND @MoveBetsDay
 
 			DELETE  t
 			FROM #bettrans t
-			WHERE t.winlostdate > @MoveBetsDay AND t.combo_byRange = @combo
+			WHERE t.winlostdate  between @BalanceUpDay AND @MoveBetsDay  AND t.combo_byRange = @combo
 
 		END
 	END
@@ -193,7 +193,6 @@ BEGIN
 	IF exists (SELECT 1 FROM #bettrans WHERE winlostdate < @BalanceUpDay)
 	BEGIN
 		-- Scan bettrans_bk
-	
 		INSERT INTO #result(refno, transid, combo, cnt)
 		SELECT b.refno, b.transid, COUNT(1) as combo, SUM(cnt) as cnt
 		FROM (
@@ -212,7 +211,7 @@ BEGIN
 
 		DELETE  t
 		FROM #bettrans t
-		WHERE t.winlostdate > @MoveBetsDay AND t.combo_byRange = @combo
+		WHERE t.winlostdate < @BalanceUpDay AND t.combo_byRange = @combo
 	END
 
 	----INSERT INTO @result (transid, cnt)
