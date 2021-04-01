@@ -37,13 +37,35 @@ BEGIN
 	CREATE TABLE #bettrans (transid BIGINT, refno BIGINT)
 
 	DECLARE @TSQL varchar(MAX)
-	SELECT  @TSQL = 'SELECT transid,refno
+	DECLARE @MinDate SMALLDATETIME 
+	DECLARE @MaxDate SMALLDATETIME
+
+	IF @combo > 2 
+	BEGIN
+		DECLARE @date_asc TABLE (winlostdate smalldatetime)
+		DECLARE @date_desc TABLE (winlostdate smalldatetime)
+
+		DECLARE @Combo_Similar INT
+		SELECT  @Combo_Similar = CEILING(@Combo *1.0 /2)
+
+		INSERT INTO @date_asc(winlostdate)
+		SELECT TOP(@Combo_Similar) winlostdate  FROM @Selection ORDER BY winlostdate asc
+
+		INSERT INTO @date_desc(winlostdate)
+		SELECT TOP(@Combo_Similar) winlostdate  FROM @Selection ORDER BY winlostdate desc
+
+	
+
+		SELECT @MinDate = MAX(winlostdate) FROM @date_asc
+		SELECT @MaxDate = DATEADD(DAY,20,MIN(winlostdate)) FROM @date_desc
+
+		SELECT  @TSQL = 'SELECT transid,refno
 					FROM OPENQUERY(DBRMS,''	SELECT transid,refno 
 											FROM bodb_RMS.dbo.rmBettrans WITH (NOLOCK)
 											WHERE bettype = 29
 												AND combo = '+CAST(@combo as VARCHAR(10))+'
 												AND statusID = 112
-												AND winlostdate between DATEADD(DAY, -20, '''''+CONVERT(VARCHAR(50),@winlostdate,120)+''''') AND  DATEADD(DAY, +20,'''''+CONVERT(VARCHAR(50),@winlostdate,120)+''''')
+												AND winlostdate between '''''+CONVERT(VARCHAR(50),@MinDate,120)+''''' AND  '''''+CONVERT(VARCHAR(50),@MaxDate,120)+'''''
 												AND refno <> '+CAST(@refno AS VARCHAR(50))+'
 											UNION
 											SELECT transid,refno 
@@ -51,10 +73,34 @@ BEGIN
 											WHERE bettype = 29
 												AND combo = '+CAST(@combo as VARCHAR(10))+'
 												AND statusID = 112
-												AND winlostdate between DATEADD(DAY, -20, '''''+CONVERT(VARCHAR(50),@winlostdate,120)+''''') AND  DATEADD(DAY, +20, '''''+CONVERT(VARCHAR(50),@winlostdate,120)+''''')
+												AND winlostdate between '''''+CONVERT(VARCHAR(50),@MinDate,120)+''''' AND  '''''+CONVERT(VARCHAR(50),@MaxDate,120)+'''''
 												AND refno <> '+CAST(@refno AS VARCHAR(50))+'
 												'')'
-	
+	END
+
+	IF @combo = 2 
+	BEGIN
+		SELECT @MinDate = MAX(winlostdate) FROM @Selection
+
+		SELECT  @TSQL = 'SELECT transid,refno
+					FROM OPENQUERY(DBRMS,''	SELECT transid,refno 
+											FROM bodb_RMS.dbo.rmBettrans WITH (NOLOCK)
+											WHERE bettype = 29
+												AND combo = '+CAST(@combo as VARCHAR(10))+'
+												AND statusID = 112
+												AND winlostdate = '''''+CONVERT(VARCHAR(50),@winlostdate,120)+'''''
+												AND refno <> '+CAST(@refno AS VARCHAR(50))+'
+											UNION
+											SELECT transid,refno 
+											FROM bodb_RMS.dbo.rmBettrans_Old WITH (NOLOCK)
+											WHERE bettype = 29
+												AND combo = '+CAST(@combo as VARCHAR(10))+'
+												AND statusID = 112
+												AND winlostdate = '''''+CONVERT(VARCHAR(50),@winlostdate,120)+'''''
+												AND refno <> '+CAST(@refno AS VARCHAR(50))+'
+												'')'
+	END
+
 	INSERT INTO #bettrans(transid, refno)
 	EXEC (@TSQL)
 
@@ -67,27 +113,38 @@ BEGIN
 
 
 	CREATE TABLE #temp (transid BIGINT, refno BIGINT)
-	INSERT INTO #temp (transid, refno)
-	select b.transid, b.refno
-	FROM #bettrans b
-	INNER JOIN  bodb02.dbo.bettransm bm WITH (NOLOCK) ON b.refno = bm.refno
-	INNER JOIN @Selection s ON bm.matchid = s.matchid AND bm.bettype = s.bettype AND bm.betteam = s.betteam
-	WHERE bm.refno between  @MinRef AND @MaxRef and bm.winlostdate > @MoveBetsDay AND s.winlostdate > @MoveBetsDay
 
+	IF EXISTS (SELECT 1 FROM @Selection s WHERE s.winlostdate > @MoveBetsDay)
+	BEGIN
+		INSERT INTO #temp (transid, refno)
+		select b.transid, b.refno
+		FROM #bettrans b
+		INNER JOIN  bodb02.dbo.bettransm bm WITH (NOLOCK) ON b.refno = bm.refno
+		INNER JOIN @Selection s ON bm.matchid = s.matchid AND bm.bettype = s.bettype AND bm.betteam = s.betteam
+		WHERE bm.refno between  @MinRef AND @MaxRef and bm.winlostdate > @MoveBetsDay AND s.winlostdate > @MoveBetsDay
+	END
 
-	INSERT INTO #temp 
-	select b.transid, b.refno
-	FROM #bettrans b
-	INNER JOIN  bodb02.dbo.bettransm14 bm WITH (NOLOCK) ON b.refno = bm.refno
-	INNER JOIN @Selection s ON bm.matchid = s.matchid AND bm.bettype = s.bettype AND bm.betteam = s.betteam
-	WHERE bm.refno between  @MinRef AND @MaxRef and bm.winlostdate between  @BalanceUpDay AND @MoveBetsDay  AND s.winlostdate  between  @BalanceUpDay AND @MoveBetsDay
+	IF EXISTS (SELECT 1 FROM @Selection s WHERE s.winlostdate between  @BalanceUpDay AND @MoveBetsDay)
+	BEGIN
+		INSERT INTO #temp 
+		select b.transid, b.refno
+		FROM #bettrans b
+		INNER JOIN  bodb02.dbo.bettransm14 bm WITH (NOLOCK) ON b.refno = bm.refno
+		INNER JOIN @Selection s ON bm.matchid = s.matchid AND bm.bettype = s.bettype AND bm.betteam = s.betteam
+		WHERE bm.refno between  @MinRef AND @MaxRef and bm.winlostdate between  @BalanceUpDay AND @MoveBetsDay  AND s.winlostdate  between  @BalanceUpDay AND @MoveBetsDay
+	END
 
-	INSERT INTO #temp 
-	select b.transid, b.refno
-	FROM #bettrans b
-	INNER JOIN  dbo.bettransm bm WITH (NOLOCK) ON b.refno = bm.refno
-	INNER JOIN @Selection s ON bm.matchid = s.matchid AND bm.bettype = s.bettype AND bm.betteam = s.betteam
-	WHERE bm.refno between  @MinRef AND @MaxRef and bm.winlostdate <  @BalanceUpDay   AND s.winlostdate  < @BalanceUpDay
+	IF EXISTS (SELECT 1 FROM @Selection s WHERE s.winlostdate < @BalanceUpDay)
+	BEGIN
+		INSERT INTO #temp 
+		select b.transid, b.refno
+		FROM #bettrans b
+		INNER JOIN  dbo.bettransm bm WITH (NOLOCK) ON b.refno = bm.refno
+		INNER JOIN @Selection s ON bm.matchid = s.matchid AND bm.bettype = s.bettype AND bm.betteam = s.betteam
+		WHERE bm.refno between  @MinRef AND @MaxRef 
+				and bm.winlostdate between DATEADD(DAY,-20,@MinDate) AND  DATEADD(DAY,-1,@BalanceUpDay)
+				AND s.winlostdate  < @BalanceUpDay
+	END
 
 	SELECT transid, count(1) as cnt
 	FROM #temp
