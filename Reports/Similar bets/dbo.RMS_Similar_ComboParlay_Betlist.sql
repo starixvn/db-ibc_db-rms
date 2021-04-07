@@ -44,7 +44,7 @@ BEGIN
 		FROM dbo.rmBettrans_Old WITH (NOLOCK) WHERE transid = @transid
 	) t
 
-	IF (@@ROWCOUNT = 0 OR @statusID IN (111, 113) )
+	IF (@@ROWCOUNT = 0 OR @statusID IN (111, 113) OR @winlostdate < @BalanceUpDay)
 		RETURN
 
 	DECLARE @result TABLE (transid BIGINT PRIMARY KEY, cnt INT)

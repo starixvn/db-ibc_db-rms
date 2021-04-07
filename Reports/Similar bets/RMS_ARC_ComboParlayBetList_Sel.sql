@@ -55,8 +55,12 @@ BEGIN
 		SELECT TOP(@Combo_Similar) winlostdate  FROM @Selection ORDER BY winlostdate desc
 
 	
-
 		SELECT @MinDate = MAX(winlostdate) FROM @date_asc
+		IF @MinDate < @BalanceUpDay 
+		BEGIN
+			SELECT @MinDate = @BalanceUpDay
+		END
+
 		SELECT @MaxDate = DATEADD(DAY,20,MIN(winlostdate)) FROM @date_desc
 
 		SELECT  @TSQL = 'SELECT transid,refno
@@ -142,7 +146,6 @@ BEGIN
 		INNER JOIN  dbo.bettransm bm WITH (NOLOCK) ON b.refno = bm.refno
 		INNER JOIN @Selection s ON bm.matchid = s.matchid AND bm.bettype = s.bettype AND bm.betteam = s.betteam
 		WHERE bm.refno between  @MinRef AND @MaxRef 
-				and bm.winlostdate between DATEADD(DAY,-20,@MinDate) AND  DATEADD(DAY,-1,@BalanceUpDay)
 				AND s.winlostdate  < @BalanceUpDay
 	END
 
