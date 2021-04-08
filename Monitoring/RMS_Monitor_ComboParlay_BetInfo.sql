@@ -1,10 +1,4 @@
-USE [bodb_RMS]
-GO
-/****** Object:  StoredProcedure [dbo].[RMS_Monitor_ComboParlay_Betlist]    Script Date: 4/27/2016 9:40:10 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[RMS_Monitor_ComboParlay_BetInfo]
 	@TransID		BIGINT	
  AS
@@ -13,12 +7,14 @@ CREATE PROCEDURE [dbo].[RMS_Monitor_ComboParlay_BetInfo]
 		Date: 20160425
 		Task: Monitoring bets combo parlay of special members
 		DB: DBRMS/bodb_RMS		
-		Revisions:			
+		Revisions:		
+			- 20210303@Danny: Get BetInfo from trans_bk and bettrans14  [RedmineID: #148137]
 
 	*/
 SET NOCOUNT ON 
 	SELECT betTeam, betCheck, hdp1, hdp2 FROM rmBettrans WITH (NOLOCK) WHERE transid=@TransID
+	UNION
+	SELECT betTeam, betCheck, hdp1, hdp2 FROM rmBettrans_Old WITH (NOLOCK) WHERE transid=@TransID
 
 
-GO
-GRANT EXECUTE ON [dbo].[RMS_Monitor_ComboParlay_BetInfo] TO [bodbRMSNet]
+
