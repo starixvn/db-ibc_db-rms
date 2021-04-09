@@ -17,6 +17,7 @@ AS
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 		- 20210324@Danny: Get data from backup range  [RedmineID: #148137]
+		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
 */
 
 BEGIN
@@ -73,7 +74,7 @@ BEGIN
 			bm.transid, bm.bettype, m.homeid, m.awayid, bm.hdp1, bm.hdp2
 			,bm.odds, bm.betteam, bm.statusID, bm.status
 			,bm.livehomescore, bm.liveawayscore, bm.liveindicator
-			,m.leagueid, m.sporttype, m.isNeutral, m.matchid, m.matchcode
+			,m.leagueid, m.sporttype, m.isNeutral, CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END, m.matchcode
 			,m.betstatus, bm.betcheck, bm.stake, bm.transdate, bm.transdesc
 			,CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END
 		FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
@@ -98,7 +99,7 @@ BEGIN
 			bm.transid, bm.bettype, m.homeid, m.awayid, bm.hdp1, bm.hdp2
 			,bm.odds, bm.betteam, bm.statusID, bm.status
 			,bm.livehomescore, bm.liveawayscore, bm.liveindicator
-			,m.leagueid, m.sporttype, m.isNeutral, m.matchid, m.matchcode
+			,m.leagueid, m.sporttype, m.isNeutral,  CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END, m.matchcode
 			,m.betstatus, bm.betcheck, bm.stake, bm.transdate, bm.transdesc
 			,CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END
 		FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
@@ -115,7 +116,7 @@ BEGIN
 							,isNeutral,matchid,matchcode,betstatus,betcheck,stake,transdate,transdesc
 						FROM OPENQUERY(DBARC, ''SELECT bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
 														,bm.status,bm.livehomescore,bm.liveawayscore,bm.liveindicator,m.leagueid,m.sporttype
-														,m.isNeutral,m.matchid,m.matchcode,m.betstatus,bm.betcheck,bm.stake ,bm.transdate, bm.transdesc
+														,m.isNeutral, CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END matchid,m.matchcode,m.betstatus,bm.betcheck,bm.stake ,bm.transdate, bm.transdesc
 												FROM bodb_Archive.dbo.bettransm bm WITH (NOLOCK)
 													INNER JOIN bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
 												WHERE bm.refno = ' + CONVERT(VARCHAR(50), @refno) + ''')'
