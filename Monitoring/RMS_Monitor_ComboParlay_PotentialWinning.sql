@@ -177,7 +177,7 @@ BEGIN
 					ISNULL(mc.level,0),
 					b.oddsspread
 			FROM #rmTransRecommend tmp
-				INNER JOIN dbo.rmBettrans b WITH (NOLOCK, INDEX = CIX_rmBettrans, FORCESEEK) ON tmp.transid = b.transid
+				INNER JOIN dbo.rmBettrans b WITH (NOLOCK, INDEX = CIX_bettransParlay, FORCESEEK) ON tmp.transid = b.transid
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
