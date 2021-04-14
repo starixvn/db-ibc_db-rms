@@ -255,7 +255,6 @@ BEGIN
 
 		END
 
-		
 		DROP TABLE #bettype
 		DROP TABLE #tmpSelection
 		DROP TABLE #tmpSport
@@ -270,6 +269,12 @@ BEGIN
 
 		IF @IsAgentView = 0
 		BEGIN
+
+		IF @Recommend > 0 
+		BEGIN
+			SET @limitRowcount = 1000000
+		END
+
 			SELECT TOP(@limitRowcount) 
 				MAX(b.transdate) AS transdate
 				,b.custid
@@ -300,7 +305,7 @@ BEGIN
 				,b.username 
 				,b.level 
 				,b.CurrencyName
-			HAVING SUM(b.WinningAmount) >= @WinningAmount
+			HAVING SUM(b.WinningAmount) >= CASE WHEN @Recommend >0 THEN 0 ELSE @WinningAmount END
 			ORDER BY WinningAmount DESC
 
 		
