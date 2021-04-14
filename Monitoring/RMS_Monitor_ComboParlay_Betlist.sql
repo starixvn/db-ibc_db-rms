@@ -28,6 +28,8 @@ AS
 		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
+		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
+
 	
 	Parameter's Explanation:
 		- @selection:
@@ -246,6 +248,22 @@ BEGIN
 							LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
 						WHERE b.refno = bm.refno
 							AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+
+						UNION ALL
+
+						SELECT
+							SUM(CASE WHEN bm.StatusID = 112 THEN 1 ELSE 0 END) AS NumberWon
+							,MAX(CASE WHEN bm.matchdate = @today THEN 1 ELSE 0 END) AS today
+							,MAX(CASE WHEN bm.matchdate = @today THEN 0 ELSE 1 END) AS early
+							,MIN(CASE WHEN m.GlobalShowTime < GETDATE() AND m.eventstatus <> 'Completed' THEN 1 ELSE 0 END) AS IsLive
+							,MAX(CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END) AS IsBlacklistLeague
+							,SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS IsCornerParlay
+						FROM dbo.rmBettransm_bk bm WITH (NOLOCK)
+							INNER JOIN dbo.rmMatch_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
+							LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
+						WHERE b.refno = bm.refno
+							AND bm.winlostdate < @BalanceUpDay 
+
 					) bm
 				) bm
 			WHERE b.bettype = 29

@@ -20,6 +20,7 @@ AS
 		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
+		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
 
 	Parameter's Explanation:
 		- @selection:
@@ -165,13 +166,20 @@ BEGIN
 						SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS CornerParlay
 				FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
 				LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
-				WHERE b.refno = bm.refno --AND bm.winlostdate > @MoveBetsDay
+				WHERE b.refno = bm.refno AND bm.winlostdate > @MoveBetsDay
 				UNION ALL
 				SELECT	 SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END) as NumberWon,
 						SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS CornerParlay
 				FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
 				LEFT JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
-				WHERE b.refno = bm.refno --AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+				WHERE b.refno = bm.refno AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+				UNION ALL
+				SELECT	 SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END) as NumberWon,
+						SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS CornerParlay
+				FROM dbo.rmBettransm_bk bm WITH (NOLOCK)
+				LEFT JOIN dbo.rmMatch_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
+				WHERE b.refno = bm.refno AND bm.winlostdate < @BalanceUpDay
+
 			) bm
 		WHERE bettype = 29
 		GROUP BY refno
