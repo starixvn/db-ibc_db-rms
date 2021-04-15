@@ -13,6 +13,7 @@ AS
 	Revisions:
 		- 20200226@Franklin: Notify/Alert by Winning Amount #129275
 		- 20200703@Percy: Add jobtype to support many jobs [RedmineID: #137010]
+		- 20210414@Danny: Notify/Alert for ticket have half-lose selection [RedmineID: #137010]
 */
 
 BEGIN
@@ -98,7 +99,7 @@ BEGIN
          FROM bodb02.dbo.bettransm bm WITH(NOLOCK)
               INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON bm.matchid = m.matchid
          WHERE s.refno = bm.refno
-               AND bm.statusid = 113
+               AND bm.statusid = 113 AND bm.statuswinlost = 4
      ), 
            numberrunning =
      (
@@ -117,7 +118,7 @@ BEGIN
          FROM bodb02.dbo.bettransm14 bm WITH(NOLOCK)
               INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON bm.matchid = m.matchid
          WHERE s.refno = bm.refno
-               AND bm.statusid = 113
+               AND bm.statusid = 113 AND bm.statuswinlost = 4
      ), 
            numberrunning = s.numberrunning +
      (

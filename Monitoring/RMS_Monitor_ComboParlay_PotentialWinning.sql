@@ -6,7 +6,9 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_PotentialWinning]
 	@WinningAmount	MONEY = 0,
 	@limitRowCount	INT = 100,
 	@ParlayType		VARCHAR(10)  = '',
-	@IsCornerParlay BIT = 0
+	@IsCornerParlay BIT = 0,
+	@IsAgentView	BIT = 0,
+	@Recommend		INT = NULL
 AS
 
 /*
@@ -21,8 +23,8 @@ AS
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
 		- 20201226@Sophia: Workaround for performance issue [RedmineID: #146929]
-		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
+		- 20210302@Danny: Changes on Potential Winning Monitor Tool [RedmineID: #146930]
 
 	Parameter's Explanation:
 		- @selection:
@@ -91,17 +93,28 @@ BEGIN
 
 	-- get data
 	BEGIN
-		CREATE TABLE #bettrans (
+
+		CREATE TABLE #bettrans_details(
 			refno BIGINT, 
 			bettype SMALLINT, 
 			transid BIGINT,
-			CornerParlay	 INT DEFAULT(0)
-			,betteam	NVARCHAR(10)
-			,oddsspread SMALLMONEY
+			custID INT,
+			username NVARCHAR(50),
+			betteam NVARCHAR(10),
+			CurrencyName NVARCHAR(50),
+			Odds MONEY,
+			stake MONEY,
+			WinningAmount MONEY,
+			CompanyLoseAmount MONEY,
+			transdate DATETIME,
+			recommend INT,
+			level TINYINT,
+			oddsspread SMALLMONEY
 		)
 
-		CREATE TABLE #bettype (bettype SMALLINT)
+	
 
+		CREATE TABLE #bettype (bettype SMALLINT)
 		-- Combo parlay
 		DECLARE @ComboType TINYINT = 0	
 				--1: mix parlay only, 
@@ -138,73 +151,109 @@ BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (376)
 
-		INSERT INTO #bettrans (transid, bettype, refno, betteam, oddsspread)
-		SELECT b.transid, b.bettype, b.refno, b.betteam, b.oddsspread
-		FROM dbo.rmBettrans b WITH (NOLOCK)
-			INNER JOIN #bettype bt ON b.bettype = bt.bettype
-			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
-			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
-		WHERE b.statusID = 0
-			AND b.currency <> 20
-		
-		CREATE CLUSTERED INDEX CIX_bettype ON #bettrans (bettype)
-
-		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype = 29)
+		IF @Recommend > 0 and @IsAgentView = 0
 		BEGIN
-			UPDATE b
-			SET 
-				b.CornerParlay = ISNULL(b.CornerParlay, 0) + ISNULL(bm.CornerParlay,0)
-			FROM #bettrans b
-				INNER JOIN (
-					SELECT	bm.refno, 
-							SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END) NumberWon,
-							SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS CornerParlay
-					FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-					LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
-					GROUP BY bm.refno					
-				) bm ON b.refno = bm.refno 
-			WHERE b.bettype = 29
+			
+			CREATE TABLE #rmTransRecommend (transid BIGINT)
 
-			UPDATE b
-			SET b.CornerParlay = ISNULL(b.CornerParlay, 0) +  ISNULL(bm.CornerParlay,0)
-			FROM #bettrans b
-				INNER JOIN (
-					SELECT  bm.refno,
-							SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END) NumberWon,
-							SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS CornerParlay
-					FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
-					LEFT JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
-					WHERE bm.statusID = 112
-					GROUP BY bm.refno
-				) bm ON b.refno = bm.refno
-			WHERE b.bettype = 29
+			INSERT INTO #rmTransRecommend(transid) 
+			SELECT  transid FROM dbo.rmBettrans b WITH (NOLOCK) 
+			WHERE recommend = @Recommend
+
+			INSERT INTO #bettrans_details(refno,bettype,transid,custID,username,betteam,CurrencyName,Odds,stake,WinningAmount,CompanyLoseAmount, transdate,recommend,level,oddsspread)
+			SELECT	b.refno, 
+					b.bettype, 
+					b.transid,
+					b.custID,
+					b.username, 
+					b.betteam, 
+					b.CurrencyName,
+					b.odds2 * b.TotalBet as Odds,
+					b.stake * b.actualrate as stake,
+					(b.odds2 - 1) * b.stake * b.actualrate as WinningAmount,
+					(b.odds2 - 1) * b.stake * b.actualrate * (1 - b.tpositiontaking) as CompanyLoseAmount,
+					b.transdate,
+					b.recommend,
+					ISNULL(mc.level,0),
+					b.oddsspread
+			FROM #rmTransRecommend tmp
+				INNER JOIN dbo.rmBettrans b WITH (NOLOCK, INDEX = CIX_bettransParlay, FORCESEEK) ON tmp.transid = b.transid
+				INNER JOIN #bettype bt ON b.bettype = bt.bettype
+				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
+			WHERE b.statusID = 0
+				AND b.currency <> 20
+
+			DROP TABLE #rmTransRecommend
+		END
+		ELSE
+		BEGIN
+			INSERT INTO #bettrans_details(refno,bettype,transid,custID,username,betteam,CurrencyName,Odds,stake,WinningAmount,CompanyLoseAmount, transdate,recommend,level,oddsspread)
+			SELECT	b.refno, 
+					b.bettype, 
+					b.transid,
+					b.custID,
+					b.username, 
+					b.betteam, 
+					b.CurrencyName,
+					b.odds2 * b.TotalBet as Odds,
+					b.stake * b.actualrate as stake,
+					(b.odds2 - 1) * b.stake * b.actualrate as WinningAmount,
+					(b.odds2 - 1) * b.stake * b.actualrate * (1 - b.tpositiontaking) as CompanyLoseAmount,
+					b.transdate,
+					b.recommend,
+					ISNULL(mc.level,0),
+					b.oddsspread
+			FROM dbo.rmBettrans b WITH (NOLOCK)
+				INNER JOIN #bettype bt ON b.bettype = bt.bettype
+				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
+			WHERE b.statusID = 0
+				AND b.currency <> 20
 		END
 
-		-- Filter by ComboType
-		IF @ComboType IN (1,2,3,4,5,6)
-		BEGIN
-			IF @ComboType = 1 -- Mix parlay only
-				DELETE #bettrans WHERE bettype = 29 AND  betteam <> N'1' OR (bettype = 29 AND betteam = N'1' AND oddsspread = 1)
-				ELSE IF @ComboType = 2 -- Combo parlay only
-					DELETE #bettrans WHERE bettype = 29 AND betteam = N'1'
-					ELSE IF @ComboType = 3 -- GOF only
-						DELETE #bettrans WHERE (bettype = 29 AND betteam <> N'1') OR (bettype = 29 AND betteam = N'1' AND (oddsspread <> 1 OR oddsspread IS NULL))
-						ELSE IF @ComboType = 4  -- combined between mix parlay and GOF
-							DELETE #bettrans WHERE bettype = 29 AND betteam <> N'1'
-							ELSE IF @ComboType = 5  -- combined between combo parlay and GOF
-								DELETE #bettrans WHERE bettype = 29 AND  betteam = N'1' AND (oddsspread <> 1 OR oddsspread IS NULL)
-								ELSE IF @ComboType = 6  -- combined between mix parlay and combo parlay
-									DELETE #bettrans WHERE bettype = 29 AND  betteam = N'1' AND oddsspread = 1
-		END
 
-		-- filter by Corner Parlay Tickets
-		IF @IsCornerParlay = 1 
+		IF @IsCornerParlay = 1
 		BEGIN
-			DELETE b
-			FROM #bettrans b
-			WHERE b.CornerParlay = 0
-		END
+			CREATE TABLE #bettransm(
+			transid BIGINT,
+			CornerParlay INT
+			)
 
+			INSERT INTO #bettransm (transid, CornerParlay)
+			SELECT b.transid, COUNT(1) AS CornerParlay
+			FROM #bettrans_details b WITH(NOLOCK)
+			INNER JOIN  bodb02.dbo.bettransm bm WITH (NOLOCK, INDEX = IX_bettransm) ON b.refno = bm.refno
+			INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
+			WHERE m.ChildMatchType = 204
+			GROUP BY b.transid 	 	
+
+
+			INSERT INTO #bettransm (transid, CornerParlay)
+			SELECT  b.transid, COUNT(1) AS CornerParlay
+			FROM #bettrans_details b WITH(NOLOCK)
+			INNER JOIN  bodb02.dbo.bettransm14 bm WITH (NOLOCK, INDEX = IX_bettransm14) ON b.refno = bm.refno
+			INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
+			WHERE m.ChildMatchType = 204
+			GROUP BY b.transid 		
+
+			SELECT	transid, SUM(CornerParlay) CornerParlay
+			INTO	#bettransmSummary
+			FROM	#bettransm
+			GROUP BY transid
+
+			
+			CREATE CLUSTERED INDEX #cix_bettransmSummary ON #bettransmSummary (transid)
+
+			DELETE t
+			FROM #bettrans_details t
+			WHERE  NOT EXISTS (SELECT 1 FROM #bettransmSummary x WHERE  x.transid = t.transid)
+
+			DROP TABLE #bettransm
+
+		END
 
 		DROP TABLE #bettype
 		DROP TABLE #tmpSelection
@@ -218,30 +267,82 @@ BEGIN
 		INSERT INTO #level (level)
 		SELECT DISTINCT val FROM dbo.f_RMS_strSplit(@level, ',')
 
-		SELECT TOP (@limitRowcount)
-			MAX(rb.transdate) AS transdate
-			,rb.custid
-			,rb.username
-			,AVG(rb.odds2 * rb.TotalBet) AS Odds
-			,SUM(rb.stake * rb.actualrate) AS stake
-			,SUM((rb.odds2 - 1) * rb.stake * rb.actualrate) AS WinningAmount
-			,SUM((rb.odds2 - 1) * rb.stake * rb.actualrate * (1 - rb.tpositiontaking)) AS CompanyLoseAmount
-			,COUNT(1) AS TotalBets
-			,ISNULL(mc.level, 0) AS level
-			,rb.CurrencyName AS currency
-		FROM dbo.rmBettrans rb WITH(NOLOCK) 
-			INNER JOIN #bettrans b ON rb.transid = b.transid
-			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
-		WHERE ISNULL(mc.level, 0) IN (SELECT level FROM #level)
-		GROUP BY
-			rb.custid
-			,rb.username 
-			,ISNULL(mc.level, 0)
-			,rb.CurrencyName
-		HAVING SUM((rb.odds2 - 1) * rb.stake * rb.actualrate) >= @WinningAmount
-		ORDER BY WinningAmount DESC
+		IF @IsAgentView = 0
+		BEGIN
+
+		IF @Recommend > 0 
+		BEGIN
+			SET @limitRowcount = 1000000
+		END
+
+			SELECT TOP(@limitRowcount) 
+				MAX(b.transdate) AS transdate
+				,b.custid
+				,b.username
+				,AVG(b.Odds) AS Odds
+				,SUM(b.stake) AS stake
+				,SUM(b.WinningAmount) AS WinningAmount
+				,SUM(b.CompanyLoseAmount) AS CompanyLoseAmount
+				,COUNT(1) AS TotalBets
+				,b.level  AS level
+				,b.CurrencyName AS currency
+			FROM #bettrans_details b WITH(NOLOCK)
+			WHERE
+				b.level IN(SELECT level FROM #level)
+				AND 1 = CASE
+							WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
+							WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
+							WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
+							WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
+							WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
+							WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
+							WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
+							ELSE 0 END
+								ELSE 1 END
+
+			GROUP BY
+				b.custid
+				,b.username 
+				,b.level 
+				,b.CurrencyName
+			HAVING SUM(b.WinningAmount) >= CASE WHEN @Recommend >0 THEN 0 ELSE @WinningAmount END
+			ORDER BY WinningAmount DESC
+
+		
+		END
+		ELSE
+		BEGIN
+			SELECT TOP (@limitRowcount)
+				mc.username AgentName
+				,SUM(stake) TotalStake
+				,SUM(b.WinningAmount) AS WinningAmount
+				,COUNT(DISTINCT b.custid) TotalMember
+				,b.recommend
+			FROM  #bettrans_details b WITH(NOLOCK) 
+			LEFT JOIN bodb02.dbo.custInfo  mc WITH (NOLOCK)  ON b.recommend = mc.custid
+			WHERE
+			b.level IN(SELECT level FROM #level)
+			AND 1 = CASE
+									WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
+									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
+									WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
+									WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
+									WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
+									WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
+									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
+									ELSE 0 END
+								ELSE 1 END
+			GROUP BY
+				mc.username
+				,b.recommend
+			HAVING SUM(b.WinningAmount) >= @WinningAmount
+			ORDER BY WinningAmount DESC
+			
+		END
+
+
 	END
 	
-	DROP TABLE #bettrans
+	DROP TABLE #bettrans_details
 END
 GO
