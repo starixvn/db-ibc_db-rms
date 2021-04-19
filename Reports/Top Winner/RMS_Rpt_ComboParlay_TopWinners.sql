@@ -279,6 +279,7 @@ BEGIN
 	FROM CTE_Result r
 		INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON r.currency = e.exchangeid
 		LEFT JOIN rmCustomer c WITH (NOLOCK) ON r.custid = c.custid
+	ORDER BY winlost_baseRM desc
 
 	DROP TABLE #bettype
 	DROP TABLE #tmpSelection
