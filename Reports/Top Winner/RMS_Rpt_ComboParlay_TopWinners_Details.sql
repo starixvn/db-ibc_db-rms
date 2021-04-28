@@ -6,7 +6,8 @@ CREATE PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details]
 	@sporttype		VARCHAR(100) = '',
 	@MoveBetsDay	DATETIME,
 	@selection		VARCHAR(MAX) = '',
-	@ParlayType		VARCHAR(10) = ''
+	@ParlayType		VARCHAR(10) = '',
+	@currency		VARCHAR(MAX) = ''
 AS
 
 /*
@@ -24,6 +25,7 @@ AS
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
+		- 20210303@Danny: Change on Report Top Winners [RedmineID: #146554]
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -50,6 +52,14 @@ BEGIN
 
 	DECLARE @BalanceUpDay SMALLDATETIME
 	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBU
+
+	-- currency
+	BEGIN
+		CREATE TABLE #tmpCurrency (currency TINYINT)
+		INSERT INTO #tmpCurrency (currency)
+		SELECT val FROM dbo.f_RMS_strSplit(@currency, ',')
+
+	END
 
 	-- selections
 	BEGIN
@@ -180,6 +190,7 @@ BEGIN
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+				INNER JOIN #tmpCurrency tc ON tc.currency = b.currency
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND custid = @custid
 				AND statusID IN (112, 113)
@@ -223,6 +234,7 @@ BEGIN
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+				INNER JOIN #tmpCurrency tc ON tc.currency = b.currency
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND custid = @custid
 				AND statusID IN (112, 113)
@@ -265,5 +277,6 @@ BEGIN
 	DROP TABLE #tmpBettrans
 	DROP TABLE #tmpSelection
 	DROP TABLE #tmpSport
+	DROP TABLE #tmpCurrency
 END
 GO
