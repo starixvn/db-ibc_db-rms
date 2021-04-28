@@ -17,7 +17,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	SELECT Site, isDeposit 
+	SELECT Site, CASE WHEN Site = 'Saba789' THEN 0 ELSE isDeposit  END  isDeposit
 	FROM bodb02.dbo.Site WITH(NOLOCK)
 	WHERE isDeposit = CASE WHEN @IsDeposit= '' THEN isDeposit ELSE @IsDeposit END
 	AND isActive = 1

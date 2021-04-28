@@ -7,7 +7,8 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss]
 	@sporttype		VARCHAR(100) = '',
 	@selection		VARCHAR(MAX) = '',
 	@ParlayType		VARCHAR(20) = '',
-	@ReportType		TINYINT = 1
+	@ReportType		TINYINT = 1,
+	@Site			TINYINT = 2
 AS
 
 /*
@@ -24,6 +25,7 @@ AS
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
+		- 20210428@Danny: Add filtering by Site[RedmineID: #153874]
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -43,10 +45,24 @@ AS
 					. 3: Single Match Parlay
 					. 4: Panalty shootout combo
 					. 5: GOF
+
+		 - @Site:
+					. 0 = Credit sites
+					. 1 = Deposit sites
+					. 2 = All sites
 */
 
 BEGIN
 	SET NOCOUNT ON
+
+	--Site
+	BEGIN
+		DECLARE @SiteTab TABLE (SiteName NVARCHAR(50), IsDeposit BIT)
+
+		INSERT INTO @SiteTab(SiteName, IsDeposit)
+		SELECT Site, CASE WHEN Site = 'Saba789'  THEN 0 ELSE isDeposit END
+		FROM bodb02.dbo.Site (NOLOCK)
+	END
 
 	-- selections
 	BEGIN
@@ -169,9 +185,10 @@ BEGIN
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+				INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (112, 113)
-				AND currency <> 20
+				AND b.currency <> 20
 				AND 1 = CASE
 							WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
 									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
@@ -182,6 +199,7 @@ BEGIN
 									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
 									ELSE 0 END
 							ELSE 1 END
+				AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 			GROUP BY b.winlostdate, b.hdp2, b.transid2
 		END
 
@@ -209,10 +227,12 @@ BEGIN
 			FROM dbo.rmSumWinloss a WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
+				INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON a.custid = ct.custid
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 				AND a.statusID IN (112, 113)
 				AND a.currency <> 20
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
+				AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 			GROUP BY a.winlostdate, a.combo, a.sporttype
 		END
 
@@ -240,10 +260,12 @@ BEGIN
 			FROM dbo.rmSumWinloss_Old a WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
+				INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON a.custid = ct.custid
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 				AND a.statusID IN (112, 113)
 				AND a.currency <> 20
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
+				AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 			GROUP BY a.winlostdate, a.combo, a.sporttype
 		END
 	END

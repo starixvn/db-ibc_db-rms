@@ -15,6 +15,8 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ParlayWon]
 	,@PageSize		INT = 100 -- = 0 --> all data (export excel)
 	,@TotalRows		INT = 0 OUTPUT
 	,@Currency		VARCHAR(MAX) = ''
+	,@Site			TINYINT = 2
+	,@LiveStatus	TINYINT = 3
 AS
 /*
 	Created: 20200512@Percy
@@ -27,6 +29,7 @@ AS
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210303@Danny: Filter by Currency  [RedmineID: #148137]
+		- 20210428@Danny: Add filtering by Site, Live status[RedmineID: #153874]
 
 	Parameter's Explanation:
 		- @selection:
@@ -64,10 +67,25 @@ AS
 		- @IsSortAsc: ascending or descending
 					. 1: ascending
 					. 0: descending
+
+		 - @@LiveStatus:
+					. Non live : 0, 
+					. Live : 1, 
+					. Mix Live and Non live: 2
+					. All : 3
 */
 
 BEGIN
 	SET NOCOUNT ON
+
+	--Site
+	BEGIN
+		DECLARE @SiteTab TABLE (SiteName NVARCHAR(50), IsDeposit BIT)
+
+		INSERT INTO @SiteTab(SiteName, IsDeposit)
+		SELECT Site, CASE WHEN Site = 'Saba789'  THEN 0 ELSE isDeposit END
+		FROM bodb02.dbo.Site (NOLOCK)
+	END
 
 	-- currency
 	BEGIN
@@ -210,6 +228,7 @@ BEGIN
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
 					CROSS APPLY (SELECT TOP 1 sp.sporttype FROM @tmpSport sp WHERE b.transid2 = sp.sporttype) sp
 					CROSS APPLY (SELECT TOP 1 tc.currency FROM @tmpCurrency tc WHERE b.currency = tc.currency) tc
+					INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
 				WHERE b.winlostdate BETWEEN @FDate AND @TDate
 					AND b.bettype IN (29, 38, 376)
 					AND CHARINDEX(',' + CONVERT(VARCHAR(10), b.bettype) + ',', ',' + @bettypes + ',') > 0
@@ -226,6 +245,8 @@ BEGIN
 									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
 									ELSE 0 END
 								ELSE 1 END
+					AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
+					AND (b.livehomescore = @LiveStatus OR @LiveStatus = 3)
 			) r
 			WHERE @ToHouseAmt = 0 OR HouseLoseAmount <= @ToHouseAmt
 		END
@@ -264,6 +285,7 @@ BEGIN
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
 					CROSS APPLY (SELECT TOP 1 sp.sporttype FROM @tmpSport sp WHERE b.transid2 = sp.sporttype) sp
 					CROSS APPLY (SELECT TOP 1 tc.currency FROM @tmpCurrency tc WHERE b.currency = tc.currency) tc
+					INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
 				WHERE b.winlostdate BETWEEN @FDate AND @TDate
 					AND b.bettype IN (29, 38, 376)
 					AND CHARINDEX(',' + CONVERT(VARCHAR(10), b.bettype) + ',', ',' + @bettypes + ',') > 0
@@ -280,6 +302,8 @@ BEGIN
 									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
 									ELSE 0 END
 								ELSE 1 END
+					AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
+					AND (b.livehomescore = @LiveStatus OR @LiveStatus = 3)
 			) r
 			WHERE @ToHouseAmt = 0 OR HouseLoseAmount <= @ToHouseAmt
 		END
