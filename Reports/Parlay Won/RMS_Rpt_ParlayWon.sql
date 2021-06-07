@@ -246,7 +246,7 @@ BEGIN
 									ELSE 0 END
 								ELSE 1 END
 					AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
-					AND (b.livehomescore = @LiveStatus OR @LiveStatus = 3)
+					AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 			) r
 			WHERE @ToHouseAmt = 0 OR HouseLoseAmount <= @ToHouseAmt
 		END
