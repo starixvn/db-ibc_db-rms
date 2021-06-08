@@ -267,7 +267,7 @@ BEGIN
 	-- Return data
 	;WITH CTE_Result AS 
 	(
-		SELECT TOP (@limitedRow) custid, username, currency
+		SELECT TOP (@limitedRow) r.custid, r.username, r.currency, ci.CustomerClass
 			,SUM(stake)						AS stake
 			,SUM(winlost)					AS winlost 
 			,SUM(company_winlost)			AS company_winlost
@@ -276,8 +276,12 @@ BEGIN
 			,SUM(company_winlost_baseRM)	AS company_winlost_baseRM
 			,SUM(betcount)					AS betcount
 			,SUM(winlost_baseRM) / SUM(stake_baseRM) AS avg_odds
-		FROM #tmpSum		
-		GROUP BY custid, username, currency
+		FROM #tmpSum r
+		INNER JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON r.custid = ci.custid
+		INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON r.custid = ct.custid
+		WHERE (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
+			AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
+		GROUP BY r.custid, r.username, r.currency, ci.CustomerClass
 		HAVING SUM(winlost_baseRM) > 0
 		ORDER BY SUM(winlost_baseRM) DESC
 	)
@@ -295,14 +299,11 @@ BEGIN
 		,betcount
 		,avg_odds
 		,ISNULL(c.level, 0) AS level,
-		ci.CustomerClass
+		r.CustomerClass
 	FROM CTE_Result r
 		INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON r.currency = e.exchangeid
 		LEFT JOIN rmCustomer c WITH (NOLOCK) ON r.custid = c.custid
-		INNER JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON r.custid = ci.custid
-		INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON r.custid = ct.custid
-	WHERE (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
-		AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
+	
 	ORDER BY winlost_baseRM desc
 
 	DROP TABLE #bettype
