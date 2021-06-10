@@ -289,7 +289,7 @@ BEGIN
 
 		INSERT INTO #rptRiskWLControl_Summary(Site, IsDeposit, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover)
 			SELECT		s.site,
-						s.isDeposit,
+						CASE WHEN s.site = 'Saba789' THEN 0 ELSE s.isDeposit END,
 						COUNT(distinct b.custid) noMember,
 						SUM(betCount)  betCount,
 						SUM(member_Winloss) member_Winloss,
@@ -301,7 +301,7 @@ BEGIN
 			FROM #rptRiskWLControl b
 			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.CustID = c.custid
 			INNER JOIN bodb02.dbo.Site s  WITH(NOLOCK) ON  c.site = s.site
-			GROUP BY s.site, s.isDeposit
+			GROUP BY s.site, CASE WHEN s.site = 'Saba789' THEN 0 ELSE s.isDeposit END
 
 	
 	END

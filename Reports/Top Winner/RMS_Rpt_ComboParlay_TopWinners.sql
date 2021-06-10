@@ -8,7 +8,9 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners]
 	@sporttype		VARCHAR(100) = '',
 	@selection		VARCHAR(MAX) = '',
 	@ParlayType		VARCHAR(20) = '',
-	@currency		VARCHAR(MAX) = ''
+	@currency		VARCHAR(MAX) = '',
+	@Site			TINYINT = 2,
+	@CustomerClass	SMALLINT = NULL
 AS
 
 /*
@@ -26,6 +28,7 @@ AS
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210303@Danny: Change on Report Top Winners [RedmineID: #146554]
+		- 20210428@Danny: Add filtering by Site[RedmineID: #153874]
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -42,10 +45,26 @@ AS
 					. '-3': Combined sports
 					. '-4': Saba soccer
 					. '-5': Saba basketball
+
+		
+		 - @Site:
+					. 0 = Credit sites
+					. 1 = Deposit sites
+					. 2 = All sites
 */
 
 BEGIN
 	SET NOCOUNT ON
+
+	--Site
+	BEGIN
+		DECLARE @SiteTab TABLE (SiteName NVARCHAR(50), IsDeposit BIT)
+
+		INSERT INTO @SiteTab(SiteName, IsDeposit)
+		SELECT Site, CASE WHEN Site = 'Saba789'  THEN 0 ELSE isDeposit END
+		FROM bodb02.dbo.Site (NOLOCK)
+	END
+
 	-- currency
 	BEGIN
 		CREATE TABLE #tmpCurrency (currency TINYINT)
@@ -248,7 +267,7 @@ BEGIN
 	-- Return data
 	;WITH CTE_Result AS 
 	(
-		SELECT TOP (@limitedRow) custid, username, currency
+		SELECT TOP (@limitedRow) r.custid, r.username, r.currency, ci.CustomerClass
 			,SUM(stake)						AS stake
 			,SUM(winlost)					AS winlost 
 			,SUM(company_winlost)			AS company_winlost
@@ -257,8 +276,12 @@ BEGIN
 			,SUM(company_winlost_baseRM)	AS company_winlost_baseRM
 			,SUM(betcount)					AS betcount
 			,SUM(winlost_baseRM) / SUM(stake_baseRM) AS avg_odds
-		FROM #tmpSum		
-		GROUP BY custid, username, currency
+		FROM #tmpSum r
+		INNER JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON r.custid = ci.custid
+		INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON r.custid = ct.custid
+		WHERE (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
+			AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
+		GROUP BY r.custid, r.username, r.currency, ci.CustomerClass
 		HAVING SUM(winlost_baseRM) > 0
 		ORDER BY SUM(winlost_baseRM) DESC
 	)
@@ -275,10 +298,12 @@ BEGIN
 		,winlost_baseRM / stake_baseRM AS margin
 		,betcount
 		,avg_odds
-		,ISNULL(c.level, 0) AS level
+		,ISNULL(c.level, 0) AS level,
+		r.CustomerClass
 	FROM CTE_Result r
 		INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON r.currency = e.exchangeid
 		LEFT JOIN rmCustomer c WITH (NOLOCK) ON r.custid = c.custid
+	
 	ORDER BY winlost_baseRM desc
 
 	DROP TABLE #bettype
