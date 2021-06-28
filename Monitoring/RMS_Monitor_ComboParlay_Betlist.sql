@@ -29,6 +29,7 @@ AS
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
+		- 20210628@Danny: Add Column Member Potential Winning [RedmineID: #156979]
 
 	
 	Parameter's Explanation:
@@ -324,11 +325,12 @@ BEGIN
 			,betteam NVARCHAR(10)
 			,oddsspread SMALLMONEY
 			,IsGOF BIT
+			,potentialWinningAmt MONEY
 		)
 		INSERT INTO #Result
 		(
 			custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
-			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF
+			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF, potentialWinningAmt
 		)
 		SELECT
 			rb.custid
@@ -352,6 +354,7 @@ BEGIN
 			,rb.betteam
 			,rb.oddsspread
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END
+			,(rb.odds2 - 1) * rb.stake * rb.actualrate
 		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN #bettrans b ON rb.transid = b.transid
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
@@ -383,10 +386,10 @@ BEGIN
 		CREATE INDEX IX_Index ON #Result (transid)
 		
 		SELECT custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
-			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF
+			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt
 		FROM (
 				SELECT custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
-					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF
+					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt
 					,ROW_NUMBER() OVER(ORDER BY transid DESC) AS rn
 				FROM #Result
 			) r
