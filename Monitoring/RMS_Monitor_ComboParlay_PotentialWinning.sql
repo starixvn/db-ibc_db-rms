@@ -8,7 +8,8 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_PotentialWinning]
 	@ParlayType		VARCHAR(10)  = '',
 	@IsCornerParlay BIT = 0,
 	@IsAgentView	BIT = 0,
-	@Recommend		INT = NULL
+	@Recommend		INT = NULL,
+	@CustomerClass	SMALLINT = NULL
 AS
 
 /*
@@ -25,6 +26,7 @@ AS
 		- 20201226@Sophia: Workaround for performance issue [RedmineID: #146929]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210302@Danny: Changes on Potential Winning Monitor Tool [RedmineID: #146930]
+		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 
 	Parameter's Explanation:
 		- @selection:
@@ -109,7 +111,8 @@ BEGIN
 			transdate DATETIME,
 			recommend INT,
 			level TINYINT,
-			oddsspread SMALLMONEY
+			oddsspread SMALLMONEY,
+			CustomerClass SMALLINT
 		)
 
 	
@@ -160,7 +163,7 @@ BEGIN
 			SELECT  transid FROM dbo.rmBettrans b WITH (NOLOCK) 
 			WHERE recommend = @Recommend
 
-			INSERT INTO #bettrans_details(refno,bettype,transid,custID,username,betteam,CurrencyName,Odds,stake,WinningAmount,CompanyLoseAmount, transdate,recommend,level,oddsspread)
+			INSERT INTO #bettrans_details(refno,bettype,transid,custID,username,betteam,CurrencyName,Odds,stake,WinningAmount,CompanyLoseAmount, transdate,recommend,level,oddsspread, CustomerClass)
 			SELECT	b.refno, 
 					b.bettype, 
 					b.transid,
@@ -175,21 +178,24 @@ BEGIN
 					b.transdate,
 					b.recommend,
 					ISNULL(mc.level,0),
-					b.oddsspread
+					b.oddsspread,
+					ci.CustomerClass
 			FROM #rmTransRecommend tmp
 				INNER JOIN dbo.rmBettrans b WITH (NOLOCK, INDEX = CIX_bettransParlay, FORCESEEK) ON tmp.transid = b.transid
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+				INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
 				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
 			WHERE b.statusID = 0
 				AND b.currency <> 20
+				AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 
 			DROP TABLE #rmTransRecommend
 		END
 		ELSE
 		BEGIN
-			INSERT INTO #bettrans_details(refno,bettype,transid,custID,username,betteam,CurrencyName,Odds,stake,WinningAmount,CompanyLoseAmount, transdate,recommend,level,oddsspread)
+			INSERT INTO #bettrans_details(refno,bettype,transid,custID,username,betteam,CurrencyName,Odds,stake,WinningAmount,CompanyLoseAmount, transdate,recommend,level,oddsspread, CustomerClass)
 			SELECT	b.refno, 
 					b.bettype, 
 					b.transid,
@@ -204,14 +210,17 @@ BEGIN
 					b.transdate,
 					b.recommend,
 					ISNULL(mc.level,0),
-					b.oddsspread
+					b.oddsspread,
+					ci.CustomerClass
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+				INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
 				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
 			WHERE b.statusID = 0
 				AND b.currency <> 20
+				AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 		END
 
 
@@ -286,6 +295,7 @@ BEGIN
 				,COUNT(1) AS TotalBets
 				,b.level  AS level
 				,b.CurrencyName AS currency
+				,b.CustomerClass
 			FROM #bettrans_details b WITH(NOLOCK)
 			WHERE
 				b.level IN(SELECT level FROM #level)
@@ -305,6 +315,7 @@ BEGIN
 				,b.username 
 				,b.level 
 				,b.CurrencyName
+				,b.CustomerClass
 			HAVING SUM(b.WinningAmount) >= CASE WHEN @Recommend >0 THEN 0 ELSE @WinningAmount END
 			ORDER BY WinningAmount DESC
 
