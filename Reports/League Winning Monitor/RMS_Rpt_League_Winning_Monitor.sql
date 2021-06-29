@@ -202,7 +202,7 @@ BEGIN
 						AND ISNULL(mc.level, 0) IN (SELECT level FROM @levelTab)
 			)
 			INSERT INTO  #bettrans (transid, bettype, matchid, refno, bettype, betteam, oddsspread, custid)
-			SELECT	    b.transid, b.bettype, b.matchid, b.refno, b.betteam, b.oddsspread, b.custid
+			SELECT	    b.transid, b.bettype, b.matchid, b.refno, b.bettype, b.betteam, b.oddsspread, b.custid
 			FROM		t
 			INNER JOIN	dbo.rmBettrans b WITH (NOLOCK) ON t.transid = b.transid
 		END
@@ -212,7 +212,7 @@ BEGIN
 			SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans WITH (NOLOCK) WHERE statusID = 0
 
 			INSERT INTO #bettrans (transid, bettype, matchid, refno, bettype, betteam, oddsspread, custid)
-			SELECT b.transid, b.bettype, b.matchid, b.refno, b.betteam, b.oddsspread, b.custid
+			SELECT b.transid, b.bettype, b.matchid, b.refno,b.bettype,  b.betteam, b.oddsspread, b.custid
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN @bettype bt ON b.bettype = bt.bettype
 				INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
