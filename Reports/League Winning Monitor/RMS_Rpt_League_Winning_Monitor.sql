@@ -7,7 +7,9 @@ CREATE PROCEDURE [dbo].[RMS_Rpt_League_Winning_Monitor]
 	,@limitRowCount	INT = 100
 	,@leagueGroupId INT = 99
 	,@maxpayout		MONEY = 0
-	,@ReportType	TINYINT = 1  -- By League, By Username
+	,@ReportType	TINYINT = 1  --Group By League, Group By Username
+	,@LeagueID		INT = 0 -- Details by League 
+	,@CustID		INT = 0 -- Details by UserName
 AS
 
 /*
@@ -34,8 +36,8 @@ AS
 					. '0': none
 					. '1,2,3': level 1,2,3
 		- @ReportType:
-					. 1: Filter by stake
-					. 2: filter by net win
+					. 1: Group by League
+					. 2: Group by Username
 
 		- @ParlayType:
 					. 1: Mix parlay
@@ -55,19 +57,19 @@ BEGIN
 	DECLARE @BalanceUpDay SMALLDATETIME, @MoveBetsDay SMALLDATETIME
 	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBU
 
-	DECLARE @today SMALLDATETIME
-	SELECT  @today = CONVERT(DATE, GETDATE())
-
+	DECLARE @levelTab TABLE (level TINYINT)
+	INSERT INTO @levelTab (level)
+	SELECT DISTINCT val FROM dbo.f_RMS_strSplit(@level, ',')
 	-- selections
 	BEGIN
-		CREATE TABLE #tmpSelection (selection INT)
+		DECLARE  @tmpSelection TABLE  (selection INT)
 
 		-- all selections (2 --> 100)
 		IF ',' + @selection + ',' LIKE '%,0,%'
 		BEGIN
 			SELECT @selection = '2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
 		
-			INSERT INTO #tmpSelection (selection)
+			INSERT INTO @tmpSelection (selection)
 			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
 		END
 		-- 10UP (add 11 --> 100)
@@ -75,24 +77,24 @@ BEGIN
 		BEGIN
 			SELECT @selection = @selection + ',11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
 		
-			INSERT INTO #tmpSelection (selection)
+			INSERT INTO @tmpSelection (selection)
 			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
 		END
 		ELSE
 		BEGIN
-			INSERT INTO #tmpSelection (selection)
+			INSERT INTO @tmpSelection (selection)
 			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
 		END
 	END
 
 	-- sports
 	BEGIN
-		CREATE TABLE #tmpSport (sporttype INT)
-		INSERT INTO #tmpSport (sporttype)
+		DECLARE  @tmpSport TABLE (sporttype INT)
+		INSERT INTO @tmpSport (sporttype)
 		SELECT val FROM dbo.f_RMS_strSplit(@sporttype, ',')
 
 		IF ',' + @sporttype + ',' LIKE '%,-2,%'
-			INSERT INTO #tmpSport (sporttype)
+			INSERT INTO @tmpSport (sporttype)
 			SELECT SportType FROM bodb02.dbo.Sports WITH (NOLOCK)
 			WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
 				AND SportType <= 99
@@ -101,15 +103,22 @@ BEGIN
 	-- League filter
 	BEGIN
 		CREATE TABLE #tmpLeague (LeagueId INT)
-		IF @leagueGroupId = 99
-			INSERT INTO #tmpLeague (LeagueId)
-			SELECT LeagueID FROM DBTXN.bodb02.dbo.ParlayLeagueMaxpayout WITH(NOLOCK) 
-			WHERE	LiveMaxPayout = @maxpayout OR NonLiveMaxPayout = @maxpayout
+		IF @LeagueID <> 0 
+		BEGIN
+			INSERT INTO #tmpLeague (LeagueId) VALUES (@LeagueID)
+		END
+		ELSE
+		BEGIN
+			IF @leagueGroupId = 99
+				INSERT INTO #tmpLeague (LeagueId)
+				SELECT LeagueID FROM DBTXN.bodb02.dbo.ParlayLeagueMaxpayout WITH(NOLOCK) 
+				WHERE	LiveMaxPayout = @maxpayout OR NonLiveMaxPayout = @maxpayout
 
-		IF @leagueGroupId <> 99
-			INSERT INTO #tmpLeague (LeagueId)
-			SELECT LeagueID FROM rmLeague WITH(NOLOCK) 
-			WHERE  GroupID = @leagueGroupId
+			IF @leagueGroupId <> 99
+				INSERT INTO #tmpLeague (LeagueId)
+				SELECT LeagueID FROM rmLeague WITH(NOLOCK) 
+				WHERE  GroupID = @leagueGroupId
+		END
 	END
 
 	-- get data
@@ -122,8 +131,20 @@ BEGIN
 			,bettype			SMALLINT
 			,betteam			NVARCHAR(10)
 			,oddsspread			SMALLMONEY
+			,leagueid			INT
+			,custid				INT
 		)
-		CREATE TABLE #bettype (bettype SMALLINT)
+
+		CREATE TABLE #Result
+		(
+			leagueid			INT
+			,custid				INT
+			,transid			BIGINT
+			,bettype			INT
+		)
+
+
+		DECLARE  @bettype TABLE (bettype SMALLINT)
 
 		-- Combo parlay
 		DECLARE @ComboType TINYINT = 0	
@@ -137,7 +158,7 @@ BEGIN
 		
 		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%'
 		BEGIN
-			INSERT INTO #bettype (bettype)
+			INSERT INTO @bettype (bettype)
 			VALUES (29)
 
 			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT val) = 3 AND SUM(DISTINCT CAST(val as SMALLINT)) = 8 THEN 7 
@@ -153,27 +174,55 @@ BEGIN
 
 		-- Single match parlay
 		IF ',' + @ParlayType + ',' LIKE '%,3,%'
-			INSERT INTO #bettype (bettype)
+			INSERT INTO @bettype (bettype)
 			VALUES (38)
 
 		-- Penalty shootout combo
 		IF ',' + @ParlayType + ',' LIKE '%,4,%'
-			INSERT INTO #bettype (bettype)
+			INSERT INTO @bettype (bettype)
 			VALUES (376)
 
-		DECLARE @min_transid BIGINT
-		SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans WITH (NOLOCK) WHERE statusID = 0
+		
+		IF @CustID <>0 
+		BEGIN
+			DECLARE @recommend INT 
+			SELECT @recommend = recommend FROM bodb02.dbo.Customer WITH(NOLOCK) WHERE custid = @CustID
 
-		INSERT INTO #bettrans (transid, bettype, matchid, refno, bettype, betteam, oddsspread)
-		SELECT b.transid, b.bettype, b.matchid, b.refno, b.betteam, b.oddsspread
-		FROM dbo.rmBettrans b WITH (NOLOCK)
-			INNER JOIN #bettype bt ON b.bettype = bt.bettype
-			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
-			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
-		WHERE b.transid >= @min_transid
-			AND b.statusID = 0
-			AND b.currency <> 20
+			;WITH t AS
+			(
+					SELECT b.transid
+					FROM dbo.rmBettrans b WITH (NOLOCK)
+						INNER JOIN @bettype bt ON b.bettype = bt.bettype
+						INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
+						INNER JOIN @tmpSport sp ON b.transid2 = sp.sporttype
+						LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
+					WHERE b.recommend >= @recommend
+						AND b.statusID = 0
+						AND b.currency <> 20
+						AND ISNULL(mc.level, 0) IN (SELECT level FROM @levelTab)
+			)
+			INSERT INTO  #bettrans (transid, bettype, matchid, refno, bettype, betteam, oddsspread, custid)
+			SELECT	    b.transid, b.bettype, b.matchid, b.refno, b.betteam, b.oddsspread, b.custid
+			FROM		t
+			INNER JOIN	dbo.rmBettrans b WITH (NOLOCK) ON t.transid = b.transid
+		END
+		ELSE
+		BEGIN
+			DECLARE @min_transid BIGINT
+			SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans WITH (NOLOCK) WHERE statusID = 0
 
+			INSERT INTO #bettrans (transid, bettype, matchid, refno, bettype, betteam, oddsspread, custid)
+			SELECT b.transid, b.bettype, b.matchid, b.refno, b.betteam, b.oddsspread, b.custid
+			FROM dbo.rmBettrans b WITH (NOLOCK)
+				INNER JOIN @bettype bt ON b.bettype = bt.bettype
+				INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN @tmpSport sp ON b.transid2 = sp.sporttype
+				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
+			WHERE b.transid >= @min_transid
+				AND b.statusID = 0
+				AND b.currency <> 20
+				AND ISNULL(mc.level, 0) IN (SELECT level FROM @levelTab)
+		END
 		IF @ComboType IN (1,2,3,4,5,6)
 		BEGIN
 			CREATE CLUSTERED INDEX CIX_bettype ON #bettrans (bettype)
@@ -193,102 +242,117 @@ BEGIN
 
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype IN (38, 376))
 		BEGIN
-			/* Do something here */
+			INSERT INTO #Result(leagueid, transid, bettype)
+			SELECT m.leagueid, t.transid, t.bettype
+			FROM #bettrans t
+			INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON t.matchid = m.matchid
+			WHERE t.bettype IN (38, 376) AND m.leagueid IN (SELECT x.LeagueId FROM #tmpLeague x)
+
 		END
 
-			IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype IN (29))
+		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype IN (29))
 		BEGIN
-			/* Do something here */
+			INSERT INTO #Result(leagueid, transid, bettype, custid)
+			SELECT u.leagueid, t.transid, t.bettype, t.custid
+			FROM #bettrans t
+			CROSS APPLY 
+			(
+				SELECT ma.leagueid 
+				FROM bodb02.dbo.bettransm m WITH(NOLOCK)
+				INNER JOIN bodb02.dbo.match ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+				WHERE m.refno = t.refno AND m.winlostdate > @MoveBetsDay 
+						
+				UNION 
+						
+				SELECT ma.leagueid 
+				FROM bodb02.dbo.bettransm14 m WITH(NOLOCK)
+				INNER JOIN bodb02.dbo.match14 ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+				WHERE m.refno = t.refno AND m.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+					
+				UNION 
+
+				SELECT ma.leagueid
+				FROM dbo.rmBettransm_bk m WITH(NOLOCK)
+				INNER JOIN dbo.rmMatch_bk ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+				WHERE m.refno = t.refno AND m.winlostdate < @BalanceUpDay 
+				
+			) u
+			WHERE t.bettype = 29 AND u.leagueid IN  (SELECT x.LeagueId FROM #tmpLeague x)
 		END
 
-		DROP TABLE #bettype
-		DROP TABLE #tmpSelection
-		DROP TABLE #tmpSport
-
+		DROP TABLE #tmpLeague
+		DROP TABLE #bettrans
 	END
 
 	-- Return data
 	BEGIN
-		CREATE TABLE #level (level TINYINT)
-		INSERT INTO #level (level)
-		SELECT DISTINCT val FROM dbo.f_RMS_strSplit(@level, ',')
-
-		CREATE TABLE #Result
-		(
-			custid INT
-			,transdate DATETIME
-			,transid BIGINT
-			,refno BIGINT
-			,username VARCHAR(30)
-			,sporttype INT
-			,odds MONEY
-			,statusId TINYINT
-			,stake MONEY
-			,maxpayout MONEY
-			,TotalSelection INT
-			,TotalBet INT
-			,IP NVARCHAR(15)
-			,level TINYINT
-			,NumberWon INT
-			,bettype INT
-			,IsLive BIT
-			,IsBlacklistLeague BIT
-			,betteam NVARCHAR(10)
-			,oddsspread SMALLMONEY
-			,IsGOF BIT
-			,potentialWinningAmt MONEY
-		)
-		INSERT INTO #Result
-		(
-			custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
-			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF, potentialWinningAmt
-		)
-		SELECT
-			rb.custid
-			,rb.transdate
-			,rb.transid
-			,rb.refno
-			,rb.username
-			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype
-			,rb.odds2 * rb.TotalBet AS odds
-			,rb.statusID
-			,rb.stake * rb.actualrate * (1 - rb.tpositiontaking) / rb.TotalBet AS stake
-			,(rb.odds2 - 1) * rb.stake * rb.actualrate * (1 - rb.tpositiontaking) AS maxpayout
-			,rb.hdp2 AS TotalSelection
-			,rb.TotalBet AS TotalBet
-			,rb.IP
-			,ISNULL(mc.level, 0) AS level
-			,b.NumberWon
-			,rb.bettype
-			,b.IsLive
-			,b.IsBlacklistLeague
-			,rb.betteam
-			,rb.oddsspread
-			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END
-			,(rb.odds2 - 1) * rb.stake * rb.actualrate
-		FROM rmBettrans rb WITH (NOLOCK)
-			INNER JOIN #bettrans b ON rb.transid = b.transid
-			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
-		WHERE ISNULL(mc.level, 0) IN (SELECT level FROM #level)
-
-		
-		
-
-		CREATE INDEX IX_Index ON #Result (transid)
-		
-		SELECT custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
-			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt
-		FROM (
-				SELECT custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
-					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt
-					,ROW_NUMBER() OVER(ORDER BY transid DESC) AS rn
-				FROM #Result
-			) r
-		WHERE rn <= @limitRowCount
-	END
 	
-	DROP TABLE #bettrans
-	DROP TABLE #level
+		IF @ReportType = 1 AND  @LeagueID = 0 
+		BEGIN
+			;WITH t AS
+			(
+				SELECT	r.leagueid , 
+						l.leagueName, 
+						SUM(stake) AS totalStake, 
+						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate) AS totalWinningAmt, 
+						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking)) AS companyLoseAmt, 
+						COUNT(1) AS totalTicket 
+				FROM	#Result r
+				INNER JOIN rmBettrans rm ON r.transid = rm.transid
+				INNER JOIN bodb02.dbo.League l ON r.leagueid = l.leagueid
+				GROUP BY r.leagueid, l.leagueName
+			), u AS
+			(
+				SELECT leagueid, leagueName, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
+				FROM t
+			)
+			SELECT leagueid, leagueName, totalStake, totalWinningAmt, companyLoseAmt, totalTicket
+			FROM u WHERE rn <= @limitRowCount
+		END
+
+		IF @ReportType = 2 AND @CustID = 0
+		BEGIN
+			;WITH t AS
+			(
+				SELECT	r.custid , 
+						c.username, 
+						SUM(stake) AS totalStake, 
+						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate) AS totalWinningAmt, 
+						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking)) AS companyLoseAmt, 
+						COUNT(1) AS totalTicket 
+				FROM	#Result r
+				INNER JOIN rmBettrans rm ON r.transid = rm.transid
+				INNER JOIN bodb02.dbo.Customer c ON c.custid = r.custid
+				GROUP BY r.custid, c.username
+			), u AS
+			(
+				SELECT custid, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
+				FROM t
+			)
+			SELECT custid, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket
+			FROM u WHERE rn <= @limitRowCount
+		END
+
+		IF @CustID <> 0 OR @LeagueID <> 0
+		BEGIN
+			SELECT	rm.transdate,
+					rm.transid,
+					rm.Username,
+					mc.level,
+					rm.odds2 * rm.TotalBet AS odds,
+					rm.stake,
+					(rm.odds2 - 1) * rm.stake * rm.actualrate AS winningAmt,
+					(rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking) AS netWinAfterPT,
+					(rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking) AS companyLoseAmt,
+					rm.combo,
+					rm.hdp2 AS totalSelection,
+					CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE rm.transid2 END AS Sporttype,
+					rm.IP
+			FROM	#Result r
+			INNER JOIN rmBettrans rm ON r.transid = rm.transid
+			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON r.custid = mc.custid
+		END
+	END
 	DROP TABLE #Result
 END
 GO
