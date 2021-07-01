@@ -21,6 +21,7 @@ AS
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
+		- 20210701@Danny: Track User Monitoring [RedmineID: #153875]
 
 	Parameter's Explanation:
 		- @selection:
@@ -224,11 +225,13 @@ BEGIN
 		,b.ip
 		,(1 - b.tpositiontaking) AS HousePT
 		,b.hdp2 AS TotalSelection
-		,b.TotalBet AS TotalBet,
-		CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
+		,b.TotalBet AS TotalBet
+		,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
+		,l.username AS TrackingUser
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN #bettrans rb ON rb.transid = b.transid
 		LEFT JOIN #NumberWon n ON b.refno = n.refno
+		LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON b.transid = l.transid
 	ORDER BY b.transdate DESC
 
 	DROP TABLE #bettrans
