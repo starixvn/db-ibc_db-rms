@@ -347,7 +347,10 @@ BEGIN
 					rm.combo,
 					rm.hdp2 AS totalSelection,
 					CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE rm.transid2 END AS Sporttype,
-					rm.IP
+					rm.IP,
+					rm.custid,
+					rm.refno,
+					rm.bettype
 			FROM	#Result r
 			INNER JOIN rmBettrans rm ON r.transid = rm.transid
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON r.custid = mc.custid
