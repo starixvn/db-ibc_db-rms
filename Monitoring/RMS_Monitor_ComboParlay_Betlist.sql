@@ -11,6 +11,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_Betlist]
 	,@limitRowCount	INT = 2000
 	,@ParlayType	VARCHAR(20) = ''
 	,@IsCornerParlay BIT = 0
+	,@Odds			SMALLMONEY = NULL
 AS
 
 /*
@@ -185,6 +186,7 @@ BEGIN
 		WHERE b.transid >= @min_transid
 			AND b.statusID = 0
 			AND b.currency <> 20
+			AND (b.odds2 <= @Odds OR @Odds IS NULL)
 
 		DROP TABLE #bettype
 		DROP TABLE #tmpSelection
