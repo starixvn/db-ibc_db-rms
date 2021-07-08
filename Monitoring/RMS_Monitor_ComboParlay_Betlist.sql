@@ -186,8 +186,7 @@ BEGIN
 		WHERE b.transid >= @min_transid
 			AND b.statusID = 0
 			AND b.currency <> 20
-			AND (b.odds2 <= @Odds OR @Odds IS NULL)
-
+		
 		DROP TABLE #bettype
 		DROP TABLE #tmpSelection
 		DROP TABLE #tmpSport
@@ -361,6 +360,8 @@ BEGIN
 			INNER JOIN #bettrans b ON rb.transid = b.transid
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
 		WHERE ISNULL(mc.level, 0) IN (SELECT level FROM #level)
+		AND ((rb.odds2 * rb.TotalBet) <= @Odds OR @Odds IS NULL)
+
 
 		IF @reportType = 1
 			DELETE #Result WHERE stake < @stake
