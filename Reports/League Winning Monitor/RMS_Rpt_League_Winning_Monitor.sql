@@ -343,7 +343,6 @@ BEGIN
 					rm.odds2 * rm.TotalBet AS odds,
 					rm.stake,
 					(rm.odds2 - 1) * rm.stake * rm.actualrate AS winningAmt,
-					(rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking) AS netWinAfterPT,
 					(rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking) AS companyLoseAmt,
 					rm.combo,
 					rm.hdp2 AS totalSelection,
