@@ -197,6 +197,7 @@ BEGIN
 						INNER JOIN @tmpSport sp ON b.transid2 = sp.sporttype
 						LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
 					WHERE b.recommend >= @recommend
+						AND b.custid = @CustID
 						AND b.statusID = 0
 						AND b.currency <> 20
 						AND ISNULL(mc.level, 0) IN (SELECT level FROM @levelTab)
