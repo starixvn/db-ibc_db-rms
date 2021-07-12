@@ -111,8 +111,8 @@ BEGIN
 		BEGIN
 			IF @leagueGroupId = 99
 				INSERT INTO #tmpLeague (LeagueId)
-				SELECT LeagueID FROM DBTXN.bodb02.dbo.ParlayLeagueMaxpayout WITH(NOLOCK) 
-				WHERE	LiveMaxPayout = @maxpayout OR NonLiveMaxPayout = @maxpayout
+				SELECT LeagueID FROM DBPRO.bodb02.dbo.ParlayLeagueMaxpayout WITH(NOLOCK) 
+				WHERE	(LiveMaxPayout = @maxpayout OR NonLiveMaxPayout = @maxpayout OR @maxpayout = 0)
 
 			IF @leagueGroupId <> 99
 				INSERT INTO #tmpLeague (LeagueId)
@@ -260,16 +260,16 @@ BEGIN
 				SELECT ma.leagueid 
 				FROM bodb02.dbo.bettransm m WITH(NOLOCK)
 				INNER JOIN bodb02.dbo.match ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-				WHERE m.refno = t.refno AND m.winlostdate > @MoveBetsDay 
+				WHERE m.refno = t.refno AND m.winlostdate > @MoveBetsDay OR m.winlostdate IS NULL
 						
-				UNION 
+				UNION ALL
 						
 				SELECT ma.leagueid 
 				FROM bodb02.dbo.bettransm14 m WITH(NOLOCK)
 				INNER JOIN bodb02.dbo.match14 ma WITH(NOLOCK) ON m.matchid = ma.matchid 
 				WHERE m.refno = t.refno AND m.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 					
-				UNION 
+				UNION ALL 
 
 				SELECT ma.leagueid
 				FROM dbo.rmBettransm_bk m WITH(NOLOCK)
