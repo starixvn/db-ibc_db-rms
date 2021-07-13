@@ -264,7 +264,7 @@ BEGIN
 			,@cnt_bets	AS cnt_bets,
 			CAST(CASE WHEN p.bettype = 29 AND p.betteam= N'1' AND p.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 			,p.statusID as statusID
-			,0 AS houseLoseAmt
+			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate  AS houseLoseAmt
 
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
@@ -290,7 +290,7 @@ BEGIN
 			,@cnt_bets	AS cnt_bets,
 			CAST(CASE WHEN p.bettype = 29 AND p.betteam= N'1' AND p.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 			,p.statusID as statusID
-			,0 AS houseLoseAmt
+			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate  AS houseLoseAmt
 
 		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
