@@ -263,14 +263,14 @@ BEGIN
 				INNER JOIN bodb02.dbo.match ma WITH(NOLOCK) ON m.matchid = ma.matchid 
 				WHERE m.refno = t.refno AND (m.winlostdate > @MoveBetsDay OR m.winlostdate IS NULL)
 						
-				UNION ALL
+				UNION 
 						
 				SELECT ma.leagueid 
 				FROM bodb02.dbo.bettransm14 m WITH(NOLOCK)
 				INNER JOIN bodb02.dbo.match14 ma WITH(NOLOCK) ON m.matchid = ma.matchid 
 				WHERE m.refno = t.refno AND m.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 					
-				UNION ALL 
+				UNION  
 
 				SELECT ma.leagueid
 				FROM dbo.rmBettransm_bk m WITH(NOLOCK)
