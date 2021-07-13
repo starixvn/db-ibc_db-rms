@@ -253,32 +253,68 @@ BEGIN
 
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype IN (29))
 		BEGIN
-			INSERT INTO #Result(leagueid, transid, bettype, custid)
-			SELECT u.leagueid, t.transid, t.bettype, t.custid
-			FROM #bettrans t
-			CROSS APPLY 
-			(
-				SELECT ma.leagueid 
-				FROM bodb02.dbo.bettransm m WITH(NOLOCK)
-				INNER JOIN bodb02.dbo.match ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-				WHERE m.refno = t.refno AND (m.winlostdate > @MoveBetsDay OR m.winlostdate IS NULL)
-						
-				UNION 
-						
-				SELECT ma.leagueid 
-				FROM bodb02.dbo.bettransm14 m WITH(NOLOCK)
-				INNER JOIN bodb02.dbo.match14 ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-				WHERE m.refno = t.refno AND m.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
-					
-				UNION  
 
-				SELECT ma.leagueid
-				FROM dbo.rmBettransm_bk m WITH(NOLOCK)
-				INNER JOIN dbo.rmMatch_bk ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-				WHERE m.refno = t.refno AND m.winlostdate < @BalanceUpDay 
+			IF @ReportType = 1
+			BEGIN
+				INSERT INTO #Result(leagueid, transid, bettype, custid)
+				SELECT u.leagueid, t.transid, t.bettype, t.custid
+				FROM #bettrans t
+				CROSS APPLY 
+				(
+					SELECT ma.leagueid 
+					FROM bodb02.dbo.bettransm m WITH(NOLOCK)
+					INNER JOIN bodb02.dbo.match ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+					WHERE m.refno = t.refno AND (m.winlostdate > @MoveBetsDay OR m.winlostdate IS NULL)
+						
+					UNION 
+						
+					SELECT ma.leagueid 
+					FROM bodb02.dbo.bettransm14 m WITH(NOLOCK)
+					INNER JOIN bodb02.dbo.match14 ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+					WHERE m.refno = t.refno AND m.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+					
+					UNION  
+
+					SELECT ma.leagueid
+					FROM dbo.rmBettransm_bk m WITH(NOLOCK)
+					INNER JOIN dbo.rmMatch_bk ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+					WHERE m.refno = t.refno AND m.winlostdate < @BalanceUpDay 
 				
-			) u
-			WHERE t.bettype = 29 AND u.leagueid IN  (SELECT x.LeagueId FROM #tmpLeague x)
+				) u
+				WHERE t.bettype = 29 AND u.leagueid IN  (SELECT x.LeagueId FROM #tmpLeague x)
+			END
+
+			IF @ReportType = 2
+			BEGIN
+				INSERT INTO #Result( transid, bettype, custid)
+				SELECT DISTINCT t.transid, t.bettype, t.custid
+				FROM #bettrans t
+				CROSS APPLY 
+				(
+					SELECT ma.leagueid 
+					FROM bodb02.dbo.bettransm m WITH(NOLOCK)
+					INNER JOIN bodb02.dbo.match ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+					WHERE m.refno = t.refno AND (m.winlostdate > @MoveBetsDay OR m.winlostdate IS NULL)
+						
+					UNION 
+						
+					SELECT ma.leagueid 
+					FROM bodb02.dbo.bettransm14 m WITH(NOLOCK)
+					INNER JOIN bodb02.dbo.match14 ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+					WHERE m.refno = t.refno AND m.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+					
+					UNION  
+
+					SELECT ma.leagueid
+					FROM dbo.rmBettransm_bk m WITH(NOLOCK)
+					INNER JOIN dbo.rmMatch_bk ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+					WHERE m.refno = t.refno AND m.winlostdate < @BalanceUpDay 
+				
+				) u
+				WHERE t.bettype = 29 AND u.leagueid IN  (SELECT x.LeagueId FROM #tmpLeague x)
+			END
+
+
 		END
 
 		DROP TABLE #tmpLeague
