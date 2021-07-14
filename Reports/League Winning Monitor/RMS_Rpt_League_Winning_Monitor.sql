@@ -330,7 +330,7 @@ BEGIN
 			(
 				SELECT	r.leagueid , 
 						l.leagueName, 
-						SUM(stake) AS totalStake, 
+						SUM(rm.stake* rm.actualrate) AS totalStake, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate) AS totalWinningAmt, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking)) AS companyLoseAmt, 
 						COUNT(1) AS totalTicket 
@@ -353,7 +353,7 @@ BEGIN
 			(
 				SELECT	r.custid , 
 						c.username, 
-						SUM(stake) AS totalStake, 
+						SUM(rm.stake * rm.actualrate)  AS totalStake, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate) AS totalWinningAmt, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking)) AS companyLoseAmt, 
 						COUNT(1) AS totalTicket 
@@ -377,7 +377,7 @@ BEGIN
 					rm.Username,
 					mc.level,
 					rm.odds2 * rm.TotalBet AS odds,
-					rm.stake,
+					rm.stake * rm.actualrate as stake,
 					(rm.odds2 - 1) * rm.stake * rm.actualrate AS winningAmt,
 					(rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking) AS companyLoseAmt,
 					rm.combo,
