@@ -185,27 +185,22 @@ BEGIN
 		
 		IF @CustID <>0 
 		BEGIN
+
 			DECLARE @recommend INT 
 			SELECT @recommend = recommend FROM bodb02.dbo.Customer WITH(NOLOCK) WHERE custid = @CustID
 
-			;WITH t AS
-			(
-					SELECT b.transid
-					FROM dbo.rmBettrans b WITH (NOLOCK)
-					WHERE b.recommend = @recommend
-			)
 			INSERT INTO  #bettrans (transid, matchid, refno, bettype, betteam, oddsspread, custid)
 			SELECT	    b.transid, b.matchid, b.refno, b.bettype, b.betteam, b.oddsspread, b.custid
-			FROM		t
-			INNER JOIN	dbo.rmBettrans b WITH (NOLOCK) ON t.transid = b.transid
+			FROM		dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN @bettype bt ON b.bettype = bt.bettype
 			INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
 			INNER JOIN @tmpSport sp ON b.transid2 = sp.sporttype
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
-			WHERE 	   b.custid = @CustID
+			WHERE 	  b.custid = @CustID
 						AND b.statusID = 0
 						AND b.currency <> 20
-						AND ISNULL(mc.level, 0) IN (SELECT level FROM @levelTab)
+						AND b.recommend = @recommend
+						and ISNULL(mc.level, 0) IN (SELECT level FROM @levelTab)
 
 		END
 		ELSE
