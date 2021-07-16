@@ -192,7 +192,7 @@ BEGIN
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
 				INNER JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custID = rb.custid
-			WHERE recommend = @custid
+			WHERE rb.recommend = @custid
 				AND statusid = 0
 				AND 1 = CASE
 							WHEN rb.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
