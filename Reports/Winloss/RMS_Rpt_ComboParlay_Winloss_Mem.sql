@@ -23,6 +23,7 @@ AS
 			- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 			- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 			- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
+			- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 
 	Parameter's Explanation:
 		- @sporttype:
@@ -43,6 +44,10 @@ AS
 
 BEGIN
 	SET NOCOUNT ON
+
+	DECLARE @CustomerClass SMALLINT 
+
+	SELECT @CustomerClass = CustomerClass FROM bodb02.dbo.custInfo WITH(NOLOCK) WHERE custid = @custid
 
 	-- selections
 	BEGIN
@@ -277,6 +282,7 @@ BEGIN
 		,sum(member_lose) as member_lose
 		,sum(ourPT_won) as ourPT_won  
 		,sum(ourPT_lose) as ourPT_lose
+		,@CustomerClass as CustomerClass
 	FROM #tmpSum
 	GROUP BY month		
 	ORDER BY month
