@@ -139,7 +139,7 @@ BEGIN
 				SUM(stake * actualrate * (1 - tpositiontaking)) AS stakePT,
 				SUM(stake * actualrate * (odds2 - 1) * (1 - tpositiontaking)) AS net_win,
 				COUNT(1) AS betcount,
-				(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt,
+				SUM((rb.odds2 - 1) * rb.stake * rb.actualrate)  AS potentialWinningAmt,
 				ci.CustomerClass
 			FROM rmBettrans rb WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
@@ -186,7 +186,7 @@ BEGIN
 				SUM(stake * actualrate * (1 - tpositiontaking)) AS stakePT,
 				SUM(stake * actualrate * (odds2 - 1) * (1 - tpositiontaking)) AS net_win,
 				COUNT(1) AS betcount,
-				(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt,
+				SUM((rb.odds2 - 1) * rb.stake * rb.actualrate)  AS potentialWinningAmt,
 				ci.CustomerClass
 		FROM rmBettrans rb WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
