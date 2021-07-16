@@ -13,6 +13,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_Betlist]
 	,@IsCornerParlay BIT = 0
 	,@Odds			SMALLMONEY = NULL
 	,@CustomerClass	SMALLINT = NULL
+	,@leagueGroupId VARCHAR(200)
 AS
 
 /*
@@ -33,6 +34,7 @@ AS
 		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
 		- 20210628@Danny: Add Column Member Potential Winning [RedmineID: #156979]
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
+
 
 	
 	Parameter's Explanation:
