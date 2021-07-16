@@ -20,6 +20,7 @@ AS
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210303@Danny: Correct data bettransm14  [RedmineID: #148137]
+		- 20210628@Danny: Add Column Member Potential Winning [RedmineID: #156979]
 		
 	Parameter's Explanation:
 		- @selection:
@@ -224,7 +225,8 @@ BEGIN
 			,ISNULL(b.NumberWon, 0) AS NumberWon
 			,rb.TotalBet AS TotalBet
 			,CASE WHEN rb.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE rb.transid2 END AS Sporttype,
-			CAST(CASE WHEN rb.bettype = 29 AND rb.betteam= N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
+			CAST(CASE WHEN rb.bettype = 29 AND rb.betteam= N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF,
+			(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt
 		FROM rmBettrans rb WITH(NOLOCK)
 			INNER JOIN #bettrans b ON rb.transid = b.transid
 		ORDER BY net_win DESC

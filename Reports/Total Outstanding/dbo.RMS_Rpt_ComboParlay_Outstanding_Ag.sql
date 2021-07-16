@@ -20,6 +20,7 @@ AS
 		- 20201211@Danny: Monitor Corner Parlay Tickets [RedmineID: #146929]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
+		- 20210628@Danny: Add Column Member Potential Winning [RedmineID: #156979]
 	
 	Parameter's Explanation:
 		- @selection:
@@ -136,7 +137,8 @@ BEGIN
 				username,
 				SUM(stake * actualrate * (1 - tpositiontaking)) AS stakePT,
 				SUM(stake * actualrate * (odds2 - 1) * (1 - tpositiontaking)) AS net_win,
-				COUNT(1) AS betcount
+				COUNT(1) AS betcount,
+				(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt
 			FROM rmBettrans rb WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
@@ -180,7 +182,8 @@ BEGIN
 				username,
 				SUM(stake * actualrate * (1 - tpositiontaking)) AS stakePT,
 				SUM(stake * actualrate * (odds2 - 1) * (1 - tpositiontaking)) AS net_win,
-				COUNT(1) AS betcount
+				COUNT(1) AS betcount,
+				(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt
 		FROM rmBettrans rb WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype

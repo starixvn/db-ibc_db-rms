@@ -11,6 +11,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_Betlist]
 	,@limitRowCount	INT = 2000
 	,@ParlayType	VARCHAR(20) = ''
 	,@IsCornerParlay BIT = 0
+	,@Odds			SMALLMONEY = NULL
 AS
 
 /*
@@ -29,6 +30,7 @@ AS
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
+		- 20210628@Danny: Add Column Member Potential Winning [RedmineID: #156979]
 
 	
 	Parameter's Explanation:
@@ -184,7 +186,7 @@ BEGIN
 		WHERE b.transid >= @min_transid
 			AND b.statusID = 0
 			AND b.currency <> 20
-
+		
 		DROP TABLE #bettype
 		DROP TABLE #tmpSelection
 		DROP TABLE #tmpSport
@@ -324,11 +326,12 @@ BEGIN
 			,betteam NVARCHAR(10)
 			,oddsspread SMALLMONEY
 			,IsGOF BIT
+			,potentialWinningAmt MONEY
 		)
 		INSERT INTO #Result
 		(
 			custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
-			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF
+			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF, potentialWinningAmt
 		)
 		SELECT
 			rb.custid
@@ -352,10 +355,13 @@ BEGIN
 			,rb.betteam
 			,rb.oddsspread
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END
+			,(rb.odds2 - 1) * rb.stake * rb.actualrate
 		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN #bettrans b ON rb.transid = b.transid
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
 		WHERE ISNULL(mc.level, 0) IN (SELECT level FROM #level)
+		AND ((rb.odds2 * rb.TotalBet) <= @Odds OR @Odds IS NULL)
+
 
 		IF @reportType = 1
 			DELETE #Result WHERE stake < @stake
@@ -383,10 +389,10 @@ BEGIN
 		CREATE INDEX IX_Index ON #Result (transid)
 		
 		SELECT custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
-			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF
+			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt
 		FROM (
 				SELECT custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
-					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF
+					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt
 					,ROW_NUMBER() OVER(ORDER BY transid DESC) AS rn
 				FROM #Result
 			) r

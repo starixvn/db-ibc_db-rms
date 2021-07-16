@@ -18,6 +18,7 @@ AS
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210303@Danny: Add Filter won ticket  [RedmineID: #148137]
+		- 20210628@Danny: Add Column Member Potential Winning [RedmineID: #156979]
 */
 
 BEGIN
@@ -222,7 +223,7 @@ BEGIN
 			,@cnt_bets	AS cnt_bets,
 			CAST(CASE WHEN p.bettype = 29 AND p.betteam= N'1' AND p.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 			,p.statusID as statusID
-
+			,(p.odds2 - 1) * p.stake * p.actualrate AS potentialWinningAmt
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
 		WHERE transid = @transid
@@ -235,6 +236,8 @@ BEGIN
 			,ISNULL(c.level, 0) AS level
 			,CASE WHEN @statusID = 0  THEN stake * (odds2 - 1) * actualrate * (1 - p.tpositiontaking) ELSE ((p.winlost - p.actual_stake) * p.actualrate) END  AS net_win
 			,cnt AS similar_selection
+			,(p.stake * p.actualrate * (1 - p.tpositiontaking) / p.TotalBet) AS stake
+			,(p.odds2 - 1) * p.stake * p.actualrate AS potentialWinningAmt
 		FROM @result r
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
@@ -261,6 +264,7 @@ BEGIN
 			,@cnt_bets	AS cnt_bets,
 			CAST(CASE WHEN p.bettype = 29 AND p.betteam= N'1' AND p.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 			,p.statusID as statusID
+			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate  AS houseLoseAmt
 
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
@@ -286,6 +290,7 @@ BEGIN
 			,@cnt_bets	AS cnt_bets,
 			CAST(CASE WHEN p.bettype = 29 AND p.betteam= N'1' AND p.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 			,p.statusID as statusID
+			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate  AS houseLoseAmt
 
 		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
@@ -300,6 +305,8 @@ BEGIN
 			,ISNULL(c.level, 0) AS level
 			,CASE WHEN @statusID = 0  THEN stake * (odds2 - 1) * actualrate * (1 - p.tpositiontaking) ELSE ((p.winlost - p.actual_stake) * p.actualrate) END  AS net_win
 			,cnt AS similar_selection
+			,(p.stake * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) * p.actualrate) AS stake
+			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate AS houseLoseAmt
 		FROM @result r
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
@@ -312,6 +319,8 @@ BEGIN
 			,ISNULL(c.level, 0) AS level
 			,CASE WHEN @statusID = 0  THEN stake * (odds2 - 1) * actualrate * (1 - p.tpositiontaking) ELSE ((p.winlost - p.actual_stake) * p.actualrate) END  AS net_win
 			,cnt AS similar_selection
+			,(p.stake * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) * p.actualrate) AS stake
+			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate AS houseLoseAmt
 		FROM @result r
 			INNER JOIN dbo.rmBettrans_Old p WITH (NOLOCK) ON r.transid = p.transid
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
