@@ -401,7 +401,7 @@ BEGIN
 					c.CustomerClass
 		FROM		#rptRiskWLControl b
 		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.CustID
-		GROUP BY	b.CustID,c.UserName,c.RoleID
+		GROUP BY	b.CustID,c.UserName,c.RoleID,c.CustomerClass
 
 		IF @PageSize <=0 AND @PageIndex <=0 
 		BEGIN
