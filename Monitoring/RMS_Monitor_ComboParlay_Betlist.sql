@@ -123,6 +123,18 @@ BEGIN
 	-- Blacklist league
 	DECLARE @BlacklistLeagueGroupId INT
 	SELECT  @BlacklistLeagueGroupId = GroupId FROM dbo.rmLeagueGroup WITH (NOLOCK) WHERE GroupName = 'Blacklist'
+	
+	-- League 
+	DECLARE @leagueGroupIdTab TABLE (LeagueGroupId INT)
+	INSERT INTO @leagueGroupIdTab
+	SELECT val FROM dbo.f_RMS_strSplit(@leagueGroupId, ',')
+
+	CREATE TABLE #League (LeagueID INT)
+	INSERT INTO #League (LeagueID)
+	SELECT LeagueID 
+	FROM  dbo.rmLeague  t WITH(NOLOCK)
+	INNER JOIN @leagueGroupIdTab tb ON t.GroupId = tb.LeagueGroupId
+
 
 	-- get data
 	BEGIN
@@ -190,6 +202,7 @@ BEGIN
 		WHERE b.transid >= @min_transid
 			AND b.statusID = 0
 			AND b.currency <> 20
+
 		
 		DROP TABLE #bettype
 		DROP TABLE #tmpSelection
@@ -199,6 +212,12 @@ BEGIN
 
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype IN (38, 376))
 		BEGIN
+			DELETE b
+			FROM #bettrans b
+				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
+			WHERE m.leagueid NOT IN (SELECT x.leagueid FROM #League x)
+				AND  b.bettype IN (38, 376)
+
 			UPDATE b
 			SET b.market = CASE
 								WHEN m.eventdate = @today THEN 1 -- today only
@@ -215,6 +234,33 @@ BEGIN
 
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype = 29)
 		BEGIN
+
+			DELETE t
+			FROM #bettrans t
+			CROSS APPLY 
+			(
+				SELECT ma.leagueid 
+				FROM bodb02.dbo.bettransm m WITH(NOLOCK)
+				INNER JOIN bodb02.dbo.match ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+				WHERE m.refno = t.refno AND (m.winlostdate > @MoveBetsDay OR m.winlostdate IS NULL)
+						
+				UNION 
+						
+				SELECT ma.leagueid 
+				FROM bodb02.dbo.bettransm14 m WITH(NOLOCK)
+				INNER JOIN bodb02.dbo.match14 ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+				WHERE m.refno = t.refno AND m.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+					
+				UNION  
+
+				SELECT ma.leagueid
+				FROM dbo.rmBettransm_bk m WITH(NOLOCK)
+				INNER JOIN dbo.rmMatch_bk ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+				WHERE m.refno = t.refno AND m.winlostdate < @BalanceUpDay 
+				
+			) u
+			WHERE t.bettype = 29 AND NOT EXISTS  (SELECT x.LeagueId FROM #League x WHERE x.LeagueID = u.leagueid)
+			
 			UPDATE b
 			SET b.NumberWon = bm.NumberWon
 				,b.market = CASE
@@ -410,5 +456,6 @@ BEGIN
 	DROP TABLE #bettrans
 	DROP TABLE #level
 	DROP TABLE #Result
+	DROP TABLE #League
 END
 GO
