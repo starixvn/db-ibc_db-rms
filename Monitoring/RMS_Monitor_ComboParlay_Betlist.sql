@@ -193,17 +193,61 @@ BEGIN
 		DECLARE @min_transid BIGINT
 		SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans WITH (NOLOCK) WHERE statusID = 0
 
-		INSERT INTO #bettrans (transid, bettype, matchid, refno)
-		SELECT b.transid, b.bettype, b.matchid, b.refno
-		FROM dbo.rmBettrans b WITH (NOLOCK)
-			INNER JOIN #bettype bt ON b.bettype = bt.bettype
-			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
-			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
-		WHERE b.transid >= @min_transid
+
+		-- Get main ticket
+
+		IF EXISTS (SELECT 1 FROM #bettype WHERE bettype = 29)
+		BEGIN
+			INSERT INTO #bettrans (transid, bettype, matchid, refno)
+			SELECT  b.transid, b.bettype, b.matchid, b.refno
+			FROM dbo.rmBettrans b WITH (NOLOCK)
+				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+			CROSS APPLY 
+					(
+						SELECT ma.leagueid 
+						FROM bodb02.dbo.bettransm m WITH(NOLOCK)
+						INNER JOIN bodb02.dbo.match ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+						WHERE m.refno = b.refno AND (m.winlostdate > @MoveBetsDay OR m.winlostdate IS NULL)
+						
+						UNION 
+						
+						SELECT ma.leagueid 
+						FROM bodb02.dbo.bettransm14 m WITH(NOLOCK)
+						INNER JOIN bodb02.dbo.match14 ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+						WHERE m.refno = b.refno AND m.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+					
+						UNION  
+
+						SELECT ma.leagueid
+						FROM dbo.rmBettransm_bk m WITH(NOLOCK)
+						INNER JOIN dbo.rmMatch_bk ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+						WHERE m.refno = b.refno AND m.winlostdate < @BalanceUpDay 
+				
+					) u
+
+			WHERE b.transid >= @min_transid
 			AND b.statusID = 0
 			AND b.currency <> 20
+			AND b.bettype = 29 AND u.leagueid IN  (SELECT x.LeagueId FROM #League x)
+		END
 
-		
+		IF EXISTS (SELECT 1 FROM #bettype WHERE bettype IN (38, 376))
+		BEGIN
+			INSERT INTO #bettrans (transid, bettype, matchid, refno)
+			SELECT  b.transid, b.bettype, b.matchid, b.refno
+			FROM dbo.rmBettrans b WITH (NOLOCK)
+				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
+
+			WHERE b.transid >= @min_transid
+			AND b.statusID = 0
+			AND b.currency <> 20
+			AND b.bettype IN (38, 376) AND m.leagueid IN  (SELECT x.LeagueId FROM #League x)
+		END
+
+
 		DROP TABLE #bettype
 		DROP TABLE #tmpSelection
 		DROP TABLE #tmpSport
@@ -212,12 +256,7 @@ BEGIN
 
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype IN (38, 376))
 		BEGIN
-			DELETE b
-			FROM #bettrans b
-				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
-			WHERE m.leagueid NOT IN (SELECT x.leagueid FROM #League x)
-				AND  b.bettype IN (38, 376)
-
+	
 			UPDATE b
 			SET b.market = CASE
 								WHEN m.eventdate = @today THEN 1 -- today only
@@ -234,33 +273,7 @@ BEGIN
 
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype = 29)
 		BEGIN
-
-			DELETE t
-			FROM #bettrans t
-			CROSS APPLY 
-			(
-				SELECT ma.leagueid 
-				FROM bodb02.dbo.bettransm m WITH(NOLOCK)
-				INNER JOIN bodb02.dbo.match ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-				WHERE m.refno = t.refno AND (m.winlostdate > @MoveBetsDay OR m.winlostdate IS NULL)
-						
-				UNION 
-						
-				SELECT ma.leagueid 
-				FROM bodb02.dbo.bettransm14 m WITH(NOLOCK)
-				INNER JOIN bodb02.dbo.match14 ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-				WHERE m.refno = t.refno AND m.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
-					
-				UNION  
-
-				SELECT ma.leagueid
-				FROM dbo.rmBettransm_bk m WITH(NOLOCK)
-				INNER JOIN dbo.rmMatch_bk ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-				WHERE m.refno = t.refno AND m.winlostdate < @BalanceUpDay 
-				
-			) u
-			WHERE t.bettype = 29 AND NOT EXISTS  (SELECT x.LeagueId FROM #League x WHERE x.LeagueID = u.leagueid)
-			
+		
 			UPDATE b
 			SET b.NumberWon = bm.NumberWon
 				,b.market = CASE
