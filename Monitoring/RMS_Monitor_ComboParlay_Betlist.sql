@@ -195,8 +195,20 @@ BEGIN
 
 
 		-- Get main ticket
+		IF EXISTS (SELECT 1 FROM @leagueGroupIdTab WHERE LeagueGroupId = -1)
+		BEGIN
+			INSERT INTO #bettrans (transid, bettype, matchid, refno)
+			SELECT  b.transid, b.bettype, b.matchid, b.refno
+			FROM dbo.rmBettrans b WITH (NOLOCK)
+				INNER JOIN #bettype t ON b.bettype = t.bettype
+				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+				WHERE b.transid >= @min_transid
+					AND b.statusID = 0
+					AND b.currency <> 20
+		END
 
-		IF EXISTS (SELECT 1 FROM #bettype WHERE bettype = 29)
+		IF EXISTS (SELECT 1 FROM #bettype WHERE bettype = 29) 
 		BEGIN
 			INSERT INTO #bettrans (transid, bettype, matchid, refno)
 			SELECT  b.transid, b.bettype, b.matchid, b.refno
@@ -232,7 +244,7 @@ BEGIN
 			AND b.bettype = 29 AND u.leagueid IN  (SELECT x.LeagueId FROM #League x)
 		END
 
-		IF EXISTS (SELECT 1 FROM #bettype WHERE bettype IN (38, 376))
+		IF EXISTS (SELECT 1 FROM #bettype WHERE bettype IN (38, 376)) 
 		BEGIN
 			INSERT INTO #bettrans (transid, bettype, matchid, refno)
 			SELECT  b.transid, b.bettype, b.matchid, b.refno
