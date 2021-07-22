@@ -135,6 +135,15 @@ BEGIN
 	FROM  dbo.rmLeague  t WITH(NOLOCK)
 	INNER JOIN @leagueGroupIdTab tb ON t.GroupId = tb.LeagueGroupId
 
+	IF EXISTS (SELECT 1 FROM @leagueGroupIdTab WHERE LeagueGroupId = -1)
+	BEGIN
+		INSERT INTO #League (LeagueID)
+		SELECT l.LeagueID 
+		FROM   bodb02.dbo.League  l WITH(NOLOCK)
+		LEFT JOIN dbo.rmLeague  t WITH(NOLOCK) ON l.leagueid = t.LeagueId
+		WHERE t.LeagueId IS NULL
+	END
+
 
 	-- get data
 	BEGIN
@@ -195,23 +204,10 @@ BEGIN
 
 
 		-- Get main ticket
-		IF EXISTS (SELECT 1 FROM @leagueGroupIdTab WHERE LeagueGroupId = -1)
-		BEGIN
-			INSERT INTO #bettrans (transid, bettype, matchid, refno)
-			SELECT  b.transid, b.bettype, b.matchid, b.refno
-			FROM dbo.rmBettrans b WITH (NOLOCK)
-				INNER JOIN #bettype t ON b.bettype = t.bettype
-				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
-				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
-				WHERE b.transid >= @min_transid
-					AND b.statusID = 0
-					AND b.currency <> 20
-		END
-
 		IF EXISTS (SELECT 1 FROM #bettype WHERE bettype = 29) 
 		BEGIN
 			INSERT INTO #bettrans (transid, bettype, matchid, refno)
-			SELECT  b.transid, b.bettype, b.matchid, b.refno
+			SELECT  DISTINCT b.transid, b.bettype, b.matchid, b.refno
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
