@@ -11,6 +11,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_Winloss_Risk_Control_Agent]
 	@PageIndex		INT = 0,
 	@TotalRecords   INT =0  OUTPUT,
 	@Site			NVARCHAR(50) = ''
+
 AS
 
 /*
@@ -19,7 +20,8 @@ AS
 	Task: report winloss risk control
 		
 	Revisions:	
-		- 20201030@Danny: Initialize SP [RedmineID: #144471]		
+		- 20201030@Danny: Initialize SP [RedmineID: #144471]	
+		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		
 	
 	Parameter's Explanation:th
@@ -177,7 +179,8 @@ BEGIN
 			Commission money,
 			RealIncome money,
 			RealTurnover money,
-			BetCount INT
+			BetCount INT,
+			CustomerClass SMALLINT
 		)
 
 	-- get data Credit
@@ -382,7 +385,7 @@ BEGIN
 		INSERT INTO #rptRiskWLControl_Summary(
 					CustID,
 					UserName, 
-					RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover)
+					RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover, CustomerClass)
 		SELECT		
 					b.CustID,
 					c.UserName,
@@ -394,10 +397,11 @@ BEGIN
 					SUM(ExtraPT)  ExtraPT,
 					SUM(Commission)  Commission,
 					SUM(RealIncome) RealIncome ,
-					SUM(RealTurnover) RealTurnover 
+					SUM(RealTurnover) RealTurnover ,
+					c.CustomerClass
 		FROM		#rptRiskWLControl b
 		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.CustID
-		GROUP BY	b.CustID,c.UserName,c.RoleID
+		GROUP BY	b.CustID,c.UserName,c.RoleID,c.CustomerClass
 
 		IF @PageSize <=0 AND @PageIndex <=0 
 		BEGIN
@@ -411,7 +415,8 @@ BEGIN
 				ExtraPT, 
 				Commission, 
 				RealIncome, 
-				RealTurnover
+				RealTurnover,
+				CustomerClass
 			FROM #rptRiskWLControl_Summary
 			ORDER BY UserName
 
@@ -444,6 +449,7 @@ BEGIN
 					Commission, 
 					RealIncome, 
 					RealTurnover,
+					CustomerClass,
 					ROW_NUMBER() over(order by UserName) as RowNum,
 					@Site as Site
 				FROM #rptRiskWLControl_Summary
@@ -467,7 +473,8 @@ BEGIN
 			Commission, 
 			RealIncome, 
 			RealTurnover,
-			@Site as Site
+			@Site as Site,
+			CustomerClass
 	FROM #rptRiskWLControl_Summary
 	ORDER BY UserName
 	

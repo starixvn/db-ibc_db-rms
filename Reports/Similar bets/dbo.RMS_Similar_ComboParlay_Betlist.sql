@@ -19,6 +19,7 @@ AS
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210303@Danny: Add Filter won ticket  [RedmineID: #148137]
 		- 20210628@Danny: Add Column Member Potential Winning [RedmineID: #156979]
+		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 */
 
 BEGIN
@@ -224,7 +225,9 @@ BEGIN
 			CAST(CASE WHEN p.bettype = 29 AND p.betteam= N'1' AND p.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 			,p.statusID as statusID
 			,(p.odds2 - 1) * p.stake * p.actualrate AS potentialWinningAmt
+			,ci.CustomerClass
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
+			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
 		WHERE transid = @transid
 
@@ -237,9 +240,11 @@ BEGIN
 			,CASE WHEN @statusID = 0  THEN stake * (odds2 - 1) * actualrate * (1 - p.tpositiontaking) ELSE ((p.winlost - p.actual_stake) * p.actualrate) END  AS net_win
 			,cnt AS similar_selection
 			,(p.stake * p.actualrate * (1 - p.tpositiontaking) / p.TotalBet) AS stake
+			,ci.CustomerClass
 			,(p.odds2 - 1) * p.stake * p.actualrate AS potentialWinningAmt
 		FROM @result r
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
+			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
 		ORDER BY cnt DESC
 	END
@@ -265,8 +270,9 @@ BEGIN
 			CAST(CASE WHEN p.bettype = 29 AND p.betteam= N'1' AND p.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 			,p.statusID as statusID
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate  AS houseLoseAmt
-
+			,ci.CustomerClass
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
+			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
 		WHERE transid = @transid
 
@@ -291,8 +297,9 @@ BEGIN
 			CAST(CASE WHEN p.bettype = 29 AND p.betteam= N'1' AND p.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 			,p.statusID as statusID
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate  AS houseLoseAmt
-
+			,ci.CustomerClass
 		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
+			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
 		WHERE transid = @transid
 
@@ -307,8 +314,11 @@ BEGIN
 			,cnt AS similar_selection
 			,(p.stake * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) * p.actualrate) AS stake
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate AS houseLoseAmt
+			,ci.CustomerClass
+
 		FROM @result r
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
+			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
 		UNION ALL
 		SELECT
@@ -321,8 +331,11 @@ BEGIN
 			,cnt AS similar_selection
 			,(p.stake * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) * p.actualrate) AS stake
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate AS houseLoseAmt
+			,ci.CustomerClass
+
 		FROM @result r
 			INNER JOIN dbo.rmBettrans_Old p WITH (NOLOCK) ON r.transid = p.transid
+			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
 		ORDER BY cnt DESC
 	END

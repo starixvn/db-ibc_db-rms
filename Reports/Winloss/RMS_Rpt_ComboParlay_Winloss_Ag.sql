@@ -24,6 +24,7 @@ AS
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
+		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -138,6 +139,7 @@ BEGIN
 			,member_lose	MONEY
 			,ourPT_won		MONEY
 			,ourPT_lose		MONEY
+			,CustomerClass  SMALLINT
 		)
 
 		-- rmBettrans
@@ -158,10 +160,11 @@ BEGIN
 				,member_lose
 				,ourPT_won 
 				,ourPT_lose
+				,CustomerClass
 			)
 			SELECT
 				CONVERT(VARCHAR(7), winlostdate, 120)
-				,username
+				,b.username
 				,SUM(CASE WHEN statusID = 112 THEN 1 ELSE 0 END) AS tickets_won
 				,SUM(CASE WHEN statusID = 113 THEN 1 ELSE 0 END) AS tickets_lose
 				,SUM(CASE WHEN statusID = 112 THEN stake * actualrate * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) ELSE 0 END) AS stake_won
@@ -170,14 +173,16 @@ BEGIN
 				,SUM(CASE WHEN statusID = 113 THEN -(winlost - actual_stake) * actualrate ELSE 0 END) AS member_lose
 				,SUM(CASE WHEN statusID = 112 THEN (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate ELSE 0 END) AS ourPT_won
 				,SUM(CASE WHEN statusID = 113 THEN (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate ELSE 0 END) AS ourPT_lose
+				,ci.CustomerClass
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 				INNER JOIN #recommend r ON r.recommend = b.recommend
+				INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (112, 113)
-				AND currency <> 20
+				AND b.currency <> 20
 				AND 1 = CASE
 							WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
 									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
@@ -188,7 +193,7 @@ BEGIN
 									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
 									ELSE 0 END
 							ELSE 1 END
-			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), username
+			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), b.username, ci.CustomerClass
 		END
 
 		-- rmSumWinloss
@@ -209,10 +214,11 @@ BEGIN
 				,member_lose
 				,ourPT_won 
 				,ourPT_lose
+				,CustomerClass
 			)
 			SELECT 
 				CONVERT(VARCHAR(7), winlostdate, 120)
-				,username
+				,a.username
 				,SUM(CASE WHEN statusID = 112 THEN betcount ELSE 0 END) AS tickets_won
 				,SUM(CASE WHEN statusID = 113 THEN betcount ELSE 0 END) AS tickets_lose
 				,SUM(CASE WHEN statusID = 112 THEN company_stake*actualrate - ISNULL(a.Extra_stake, 0) * actualrate ELSE 0 END) AS stake_won
@@ -221,15 +227,17 @@ BEGIN
 				,SUM(CASE WHEN statusID = 113 THEN -(a.winlost-a.stake)*actualrate ELSE 0 END) AS member_lose
 				,SUM(CASE WHEN statusID = 112 THEN (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) * actualrate ELSE 0 END) AS ourPT_won
 				,SUM(CASE WHEN statusID = 113 THEN (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) * actualrate ELSE 0 END) AS ourPT_lose		
+				,ci.CustomerClass
 			FROM dbo.rmSumWinloss a WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
 				INNER JOIN #recommend r ON a.recommend = r.recommend
+				INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON a.custid = ci.custid
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
-				AND currency <> 20
+				AND a.currency <> 20
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
-			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), username
+			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), a.username, ci.CustomerClass
 		END
 
 		-- rmSumWinloss_Old
@@ -250,10 +258,11 @@ BEGIN
 				,member_lose
 				,ourPT_won 
 				,ourPT_lose
+				,CustomerClass
 			)
 			SELECT 
 				CONVERT(VARCHAR(7), winlostdate, 120)
-				,username
+				,a.username
 				,SUM(CASE WHEN statusID = 112 THEN betcount ELSE 0 END) AS tickets_won
 				,SUM(CASE WHEN statusID = 113 THEN betcount ELSE 0 END) AS tickets_lose
 				,SUM(CASE WHEN statusID = 112 THEN company_stake*actualrate - ISNULL(a.Extra_stake, 0) * actualrate ELSE 0 END) AS stake_won
@@ -262,15 +271,18 @@ BEGIN
 				,SUM(CASE WHEN statusID = 113 THEN -(a.winlost-a.stake)*actualrate ELSE 0 END) AS member_lose
 				,SUM(CASE WHEN statusID = 112 THEN (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) * actualrate ELSE 0 END) AS ourPT_won
 				,SUM(CASE WHEN statusID = 113 THEN (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) * actualrate ELSE 0 END) AS ourPT_lose		
+				,ci.CustomerClass
 			FROM dbo.rmSumWinloss_Old a WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
 				INNER JOIN #recommend r ON a.recommend = r.recommend
+				INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON a.custid = ci.custid
+	
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
-				AND currency <> 20
+				AND a.currency <> 20
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
-			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), username
+			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), a.username, ci.CustomerClass
 		END
 	END
 	
@@ -284,8 +296,9 @@ BEGIN
 		,SUM(member_lose)	AS member_lose
 		,SUM(ourPT_won)		AS ourPT_won
 		,SUM(ourPT_lose)	AS ourPT_lose
+		,CustomerClass
 	FROM #tmpSum
-	GROUP BY month, username
+	GROUP BY month, username, CustomerClass
 	ORDER BY month, username
 
 	DROP TABLE #bettype

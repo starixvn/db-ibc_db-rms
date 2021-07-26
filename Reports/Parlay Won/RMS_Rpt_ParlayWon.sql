@@ -17,6 +17,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ParlayWon]
 	,@Currency		VARCHAR(MAX) = ''
 	,@Site			TINYINT = 2
 	,@LiveStatus	TINYINT = 3
+	,@CustomerClass	SMALLINT = NULL
 AS
 /*
 	Created: 20200512@Percy
@@ -30,6 +31,7 @@ AS
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210303@Danny: Filter by Currency  [RedmineID: #148137]
 		- 20210428@Danny: Add filtering by Site, Live status[RedmineID: #153874]
+		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 
 	Parameter's Explanation:
 		- @selection:
@@ -191,6 +193,7 @@ BEGIN
 			,SportType			SMALLINT
 			,IP					NVARCHAR(15)
 			,currencyName		NVARCHAR(50)
+			,CustomerClass		SMALLINT
 		)
 
 		IF @ToDate > @MoveBetsDay
@@ -201,10 +204,10 @@ BEGIN
 		
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName
+				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
 			)
 			SELECT
-				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName
+				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
 			FROM
 			(
 				SELECT
@@ -224,11 +227,13 @@ BEGIN
 					,b.transid2 AS SportType
 					,b.IP
 					,b.CurrencyName
+					,ci.CustomerClass
 				FROM dbo.rmBettrans b WITH (NOLOCK)
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
 					CROSS APPLY (SELECT TOP 1 sp.sporttype FROM @tmpSport sp WHERE b.transid2 = sp.sporttype) sp
 					CROSS APPLY (SELECT TOP 1 tc.currency FROM @tmpCurrency tc WHERE b.currency = tc.currency) tc
 					INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
+					INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
 				WHERE b.winlostdate BETWEEN @FDate AND @TDate
 					AND b.bettype IN (29, 38, 376)
 					AND CHARINDEX(',' + CONVERT(VARCHAR(10), b.bettype) + ',', ',' + @bettypes + ',') > 0
@@ -247,6 +252,7 @@ BEGIN
 								ELSE 1 END
 					AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 					AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
+					AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 			) r
 			WHERE @ToHouseAmt = 0 OR HouseLoseAmount <= @ToHouseAmt
 		END
@@ -258,10 +264,10 @@ BEGIN
 
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName
+				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
 			)
 			SELECT
-				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName
+				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
 			FROM
 			(
 				SELECT
@@ -281,11 +287,13 @@ BEGIN
 					,b.transid2 AS SportType
 					,b.IP
 					,b.CurrencyName
+					,ci.CustomerClass
 				FROM dbo.rmBettrans_Old b WITH (NOLOCK)
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
 					CROSS APPLY (SELECT TOP 1 sp.sporttype FROM @tmpSport sp WHERE b.transid2 = sp.sporttype) sp
 					CROSS APPLY (SELECT TOP 1 tc.currency FROM @tmpCurrency tc WHERE b.currency = tc.currency) tc
 					INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
+					INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
 				WHERE b.winlostdate BETWEEN @FDate AND @TDate
 					AND b.bettype IN (29, 38, 376)
 					AND CHARINDEX(',' + CONVERT(VARCHAR(10), b.bettype) + ',', ',' + @bettypes + ',') > 0
@@ -304,6 +312,7 @@ BEGIN
 								ELSE 1 END
 					AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 					AND (b.livehomescore = @LiveStatus OR @LiveStatus = 3)
+					AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 			) r
 			WHERE @ToHouseAmt = 0 OR HouseLoseAmount <= @ToHouseAmt
 		END
@@ -352,11 +361,11 @@ BEGIN
 		DECLARE @SQL VARCHAR(MAX)
 		SELECT  @SQL = 'CREATE INDEX IX_Index ON #rmBettrans (' + @sortedColumn + ')' + CHAR(13)
 		SELECT  @SQL = @SQL
-						+  'SELECT transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName
+						+  'SELECT transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName, CustomerClass
 							FROM
 							(
 								SELECT
-									b.transdate,b.transid,b.refno,b.custid,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName
+									b.transdate,b.transid,b.refno,b.custid,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName, b.CustomerClass
 									,ROW_NUMBER() OVER(ORDER BY b.' + @sortedColumn + CASE WHEN @IsSortAsc = 0 THEN ' DESC' ELSE ' ' END + ') AS rn
 								FROM #rmBettrans b
 									LEFT JOIN dbo.rmCustomer c WITH (NOLOCK) ON b.custid = c.custid

@@ -21,6 +21,7 @@ AS
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210628@Danny: Add Column Member Potential Winning [RedmineID: #156979]
+		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 	
 	Parameter's Explanation:
 		- @selection:
@@ -133,15 +134,17 @@ BEGIN
 		BEGIN
 
 			SELECT
-				custid,
-				username,
+				rb.custid,
+				rb.username,
 				SUM(stake * actualrate * (1 - tpositiontaking)) AS stakePT,
 				SUM(stake * actualrate * (odds2 - 1) * (1 - tpositiontaking)) AS net_win,
 				COUNT(1) AS betcount,
-				(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt
+				SUM((rb.odds2 - 1) * rb.stake * rb.actualrate)  AS potentialWinningAmt,
+				ci.CustomerClass
 			FROM rmBettrans rb WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
+				INNER JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custID = rb.custid
 			CROSS APPLY
 			(
 				SELECT SUM(t.CornerParlay) as CornerParlay
@@ -171,23 +174,25 @@ BEGIN
 									ELSE 0 END
 							ELSE 1 END
 				AND t.CornerParlay > 0
-			GROUP BY custid, username
+			GROUP BY rb.custid,	rb.username, ci.CustomerClass
 			ORDER  BY net_win DESC
 
 		END
 		ELSE
 		BEGIN
 			SELECT
-				custid,
-				username,
+				rb.custid,
+				rb.username,
 				SUM(stake * actualrate * (1 - tpositiontaking)) AS stakePT,
 				SUM(stake * actualrate * (odds2 - 1) * (1 - tpositiontaking)) AS net_win,
 				COUNT(1) AS betcount,
-				(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt
+				SUM((rb.odds2 - 1) * rb.stake * rb.actualrate)  AS potentialWinningAmt,
+				ci.CustomerClass
 		FROM rmBettrans rb WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
-			WHERE recommend = @custid
+				INNER JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custID = rb.custid
+			WHERE rb.recommend = @custid
 				AND statusid = 0
 				AND 1 = CASE
 							WHEN rb.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
@@ -199,7 +204,7 @@ BEGIN
 									WHEN @ComboType = 6 AND (rb.betteam <> N'1' OR (rb.betteam = N'1' AND rb.oddsspread <> 1)) THEN 1
 									ELSE 0 END
 							ELSE 1 END
-			GROUP BY custid, username
+			GROUP BY  rb.custid, rb.username, ci.CustomerClass
 			ORDER  BY net_win DESC
 		END
 
