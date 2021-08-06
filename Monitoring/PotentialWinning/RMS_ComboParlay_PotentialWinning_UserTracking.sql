@@ -60,6 +60,7 @@ BEGIN
 				SELECT @statusID = 1
 				SELECT @message = @message + CAST(transid AS VARCHAR(20)) + ':' + username+ ','
 				FROM dbo.rmUserTrackingLog r WITH(NOLOCK)
+				WHERE transid IN (SELECT x.transid FROM @transidTab x)
 			END
 			ELSE
 			BEGIN
@@ -71,6 +72,7 @@ BEGIN
 				SELECT  @statusID = 0
 				SELECT @message = @message + CAST(transid AS VARCHAR(20)) + ':' + username+ ','
 				FROM dbo.rmUserTrackingLog r WITH(NOLOCK)
+				WHERE transid IN (SELECT x.transid FROM @transidTab x)
 			END
 
 		END
