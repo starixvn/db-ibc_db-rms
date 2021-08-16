@@ -27,7 +27,7 @@ BEGIN
 	-- Handle transid list
 		DECLARE @transidTab TABLE (transID BIGINT)
 		INSERT INTO @transidTab (transID)
-		SELECT CAST (val AS BIGINT) from RMS_strSplit(@transid, ',')
+		SELECT CAST (val AS BIGINT) from f_RMS_strSplit(@transid, ',')
 
 		-- Remove settle ticket by user
 		BEGIN
