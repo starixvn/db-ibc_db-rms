@@ -74,13 +74,13 @@ select  t1.transid,
 CREATE CLUSTERED INDEX cix_#rmRunningTicketMonitor_selection ON #rmRunningTicketMonitor(selection,sportType)
 
 
-SELECT	t.selection, 
+SELECT	t.selection, t.NoSelection,
 		CASE WHEN t.SportType = 1  THEN 'Soccer Only'
 			 WHEN t.SportType = -4 THEN'Virtual Soccer Only'
 			 WHEN t.SportType = -5 THEN'Virtual Basketball Only'
 			 ELSE 'Others'
 			 END  AS SportType,
-		SUM(ISNULL(t.PotentialWinningAnt,0)) PotentialWinningAnt,
+		SUM(ISNULL(t.PotentialWinningAnt,0)) PotentialWinningAmt,
 		STUFF((SELECT  ',' + CAST(t1.transid  AS VARCHAR(15))
 			FROM #rmRunningTicketMonitor t1
 			WHERE t.selection = t1.selection AND t.NoSelection = t1.NoSelection
@@ -88,7 +88,7 @@ SELECT	t.selection,
 			).value('.', 'NVARCHAR(MAX)')  
 		,1,1,'') transList
 FROM	#rmRunningTicketMonitor t
-GROUP BY t.selection, CASE WHEN t.SportType = 1  THEN 'Soccer Only'
+GROUP BY t.selection, t.NoSelection, CASE WHEN t.SportType = 1  THEN 'Soccer Only'
 			 WHEN t.SportType = -4 THEN'Virtual Soccer Only'
 			 WHEN t.SportType = -5 THEN'Virtual Basketball Only'
 			 ELSE 'Others'
