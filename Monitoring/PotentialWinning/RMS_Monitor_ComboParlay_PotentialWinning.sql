@@ -27,6 +27,8 @@ AS
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210302@Danny: Changes on Potential Winning Monitor Tool [RedmineID: #146930]
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
+		- 20210701@Danny: Track User Monitoring [RedmineID: #153875]
+
 
 	Parameter's Explanation:
 		- @selection:
@@ -283,7 +285,6 @@ BEGIN
 		BEGIN
 			SET @limitRowcount = 1000000
 		END
-
 			SELECT TOP(@limitRowcount) 
 				MAX(b.transdate) AS transdate
 				,b.custid
@@ -296,7 +297,9 @@ BEGIN
 				,b.level  AS level
 				,b.CurrencyName AS currency
 				,b.CustomerClass
+				,SUM(CASE WHEN l.transid IS NOT NULL THEN 1 ELSE 0 END)  AS TotalTrackingBets
 			FROM #bettrans_details b WITH(NOLOCK)
+			LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON b.transid = l.transid
 			WHERE
 				b.level IN(SELECT level FROM #level)
 				AND 1 = CASE
