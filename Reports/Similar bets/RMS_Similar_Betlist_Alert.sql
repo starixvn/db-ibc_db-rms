@@ -49,11 +49,11 @@ CROSS APPLY(
 		from bodb02.dbo.bettransm14 t3 WITH(NOLOCK) 
 		where t1.refno = t3.refno AND  t3.custID > 0 AND t3.winlostdate between @BalanceUpDay AND @MoveBetsDay
 
-		--UNION ALL
+		UNION ALL
 
-		--SELECT CAST(t3.matchid AS VARCHAR(15))+'-'+ CAST(t3.betteam AS VARCHAR(5)) +'-' +CAST (t3.bettype AS VARCHAR(4))
-		--from dbo.rmBettransm_bk t3 WITH(NOLOCK) 
-		--where t1.refno = t3.refno AND t3.winlostdate < @BalanceUpDay
+		SELECT CAST(t3.matchid AS VARCHAR(15))+'-'+ CAST(t3.betteam AS VARCHAR(5)) +'-' +CAST (t3.bettype AS VARCHAR(4))
+		from dbo.rmBettransm_bk t3 WITH(NOLOCK) 
+		where t1.refno = t3.refno AND t3.winlostdate < @BalanceUpDay
 		) x 
 
 
