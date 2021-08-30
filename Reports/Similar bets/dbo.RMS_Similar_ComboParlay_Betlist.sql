@@ -68,7 +68,7 @@ BEGIN
 			INSERT INTO @Selection (matchid, bettype, betteam)
 			SELECT a.matchid, a.bettype, a.betteam
 			FROM bodb02.dbo.bettransm a WITH (NOLOCK)
-			WHERE a.refno = @refno AND (a.statusID IN (0, 1) OR a.winlostdate > @MoveBetsDay)
+			WHERE a.refno = @refno AND (a.winlostdate IS NULL OR a.winlostdate > @MoveBetsDay)
 			UNION ALL
 			SELECT a.matchid, a.bettype, a.betteam
 			FROM bodb02.dbo.bettransm14 a WITH (NOLOCK)
@@ -98,7 +98,7 @@ BEGIN
 				CROSS APPLY (
 					SELECT bm.matchid, bm.bettype, bm.betteam
 					FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-					WHERE bm.refno = b.refno AND (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
+					WHERE bm.refno = b.refno AND (bm.winlostdate IS NULL OR bm.winlostdate > @MoveBetsDay)
 					UNION ALL
 					SELECT bm.matchid, bm.bettype, bm.betteam
 					FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
