@@ -68,8 +68,8 @@ select  t1.transid,
 		t1.PotentialWinningAnt, 
 		t1.combo,
 		CASE WHEN t1.transid2 = 1  THEN 'Soccer Only'
-			WHEN t1.transid2 = -4 THEN'Virtual Soccer Only'
-			WHEN t1.transid2 = -5 THEN'Virtual Basketball Only'
+			WHEN t1.transid2 = -4 THEN 'Virtual Soccer Only'
+			WHEN t1.transid2 = -5 THEN 'Virtual Basketball Only'
 			ELSE 'Others'
 			END  AS SportType
 	from #main t1 WITH(NOLOCK) 
@@ -89,9 +89,9 @@ SELECT	t.selection, t.NoSelection,
 		,1,1,'') transList
 FROM	#rmRunningTicketMonitor t
 GROUP BY t.selection, t.NoSelection, t.SportType
-HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE  WHEN SportType = 1 THEN 200000
-													 WHEN SportType = -4 THEN 50000
-													 WHEN SportType = -5 THEN 50000
+HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE  WHEN SportType = 'Soccer Only' THEN 200000
+													 WHEN SportType = 'Virtual Soccer Only' THEN 50000
+													 WHEN SportType = 'Virtual Basketball Only' THEN 50000
 													 ELSE 100000 END
 
 DROP TABLE  #main
