@@ -106,12 +106,13 @@ BEGIN
 					UNION ALL
 					SELECT a.matchid, a.bettype, a.betteam
 					FROM dbo.rmBettransm_bk a WITH (NOLOCK)
-					WHERE a.refno = @refno AND a.winlostdate < @BalanceUpDay 
+					WHERE a.refno = b.refno AND a.winlostdate < @BalanceUpDay 
 
 				) r
 				INNER JOIN @Selection s ON r.matchid = s.matchid AND r.bettype = s.bettype AND r.betteam = s.betteam
 			GROUP BY b.transid
 			HAVING COUNT(1) >= @filter
+
 
 			SELECT @cnt_bets = @@ROWCOUNT
 			SELECT  @NumberWon = COUNT(1) FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate > @MoveBetsDay
@@ -173,7 +174,7 @@ BEGIN
 					UNION ALL
 					SELECT a.matchid, a.bettype, a.betteam
 					FROM dbo.rmBettransm_bk a WITH (NOLOCK)
-					WHERE a.refno = @refno AND a.winlostdate < @BalanceUpDay 
+					WHERE a.refno = b.refno AND a.winlostdate < @BalanceUpDay 
 
 				) r
 				INNER JOIN @Selection s ON r.matchid = s.matchid AND r.bettype = s.bettype AND r.betteam = s.betteam
