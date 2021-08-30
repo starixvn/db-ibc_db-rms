@@ -72,10 +72,15 @@ BEGIN
 			SELECT a.matchid, a.bettype, a.betteam
 			FROM bodb02.dbo.bettransm a WITH (NOLOCK)
 			WHERE a.refno = @refno AND (a.statusID IN (0, 1) OR a.winlostdate > @MoveBetsDay)
-			UNION
+			UNION ALL
 			SELECT a.matchid, a.bettype, a.betteam
 			FROM bodb02.dbo.bettransm14 a WITH (NOLOCK)
 			WHERE a.refno = @refno AND a.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+			UNION ALL
+			SELECT a.matchid, a.bettype, a.betteam
+			FROM dbo.rmBettransm_bk a WITH (NOLOCK)
+			WHERE a.refno = @refno AND a.winlostdate < @BalanceUpDay 
+
 
 			INSERT INTO @bettrans (transid, refno)
 			SELECT transid, refno
@@ -93,10 +98,15 @@ BEGIN
 					SELECT bm.matchid, bm.bettype, bm.betteam
 					FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
 					WHERE bm.refno = b.refno AND (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
-					UNION
+					UNION ALL
 					SELECT bm.matchid, bm.bettype, bm.betteam
 					FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
 					WHERE bm.refno = b.refno AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+					UNION ALL
+					SELECT a.matchid, a.bettype, a.betteam
+					FROM dbo.rmBettransm_bk a WITH (NOLOCK)
+					WHERE a.refno = @refno AND a.winlostdate < @BalanceUpDay 
+
 				) r
 				INNER JOIN @Selection s ON r.matchid = s.matchid AND r.bettype = s.bettype AND r.betteam = s.betteam
 			GROUP BY b.transid
