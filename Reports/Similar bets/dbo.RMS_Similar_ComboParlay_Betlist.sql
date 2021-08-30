@@ -85,7 +85,11 @@ BEGIN
 			WHERE bettype = 29
 				AND combo = @combo
 				AND statusID = @statusID
-				AND winlostdate >= @yesterday
+				AND (
+					(winlostdate >= @yesterday AND @isSimilar = 0)
+					OR 
+					(winlostdate = @winlostdate AND @isSimilar = 1)
+					)
 				AND refno <> @refno
 
 			INSERT INTO @result (transid, cnt)
@@ -140,6 +144,9 @@ BEGIN
 				AND statusID = @statusID
 				AND refno <> @refno
 				AND winlostdate > @MoveBetsDay
+				AND (
+					(winlostdate = @winlostdate  AND @isSimilar = 1) OR (@isSimilar = 0)
+					)
 			UNION ALL
 			SELECT transid, refno
 			FROM dbo.rmBettrans_Old WITH (NOLOCK)
@@ -148,6 +155,9 @@ BEGIN
 				AND statusID = @statusID
 				AND refno <> @refno
 				AND winlostdate BETWEEN @BalanceUpDay AND  @MoveBetsDay
+				AND (
+				(winlostdate = @winlostdate  AND @isSimilar = 1) OR (@isSimilar = 0)
+				)
 
 			INSERT INTO @result (transid, cnt)
 			SELECT b.transid, COUNT(1)
