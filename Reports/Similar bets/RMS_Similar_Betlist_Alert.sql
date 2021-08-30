@@ -21,7 +21,7 @@ EXEC bodb02.dbo.Age_SelBalanceUpDay
 
 	SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @MBBU
 
-CREATE TABLE #rmRunningTicketMonitor (transid BIGINT, selection VARBINARY(16), PotentialWinningAnt MONEY, NoSelection SMALLINT,  SportType INT )
+CREATE TABLE #rmRunningTicketMonitor (transid BIGINT, selection VARBINARY(16), PotentialWinningAnt MONEY, NoSelection SMALLINT,  SportType VARCHAR(200) )
 
 CREATE TABLE #main (transid BIGINT, PotentialWinningAnt MONEY ,combo INT , refno BIGINT, transid2 BIGINT)
 INSERT INTO #main (transid, PotentialWinningAnt, combo, refno, transid2)
@@ -67,7 +67,11 @@ select  t1.transid,
 		selection, 
 		t1.PotentialWinningAnt, 
 		t1.combo,
-		t1.transid2
+		CASE WHEN t1.transid2 = 1  THEN 'Soccer Only'
+			WHEN t1.transid2 = -4 THEN'Virtual Soccer Only'
+			WHEN t1.transid2 = -5 THEN'Virtual Basketball Only'
+			ELSE 'Others'
+			END  AS SportType
 	from #main t1 WITH(NOLOCK) 
 
 
@@ -75,24 +79,16 @@ CREATE CLUSTERED INDEX cix_#rmRunningTicketMonitor_selection ON #rmRunningTicket
 
 
 SELECT	t.selection, t.NoSelection,
-		CASE WHEN t.SportType = 1  THEN 'Soccer Only'
-			 WHEN t.SportType = -4 THEN'Virtual Soccer Only'
-			 WHEN t.SportType = -5 THEN'Virtual Basketball Only'
-			 ELSE 'Others'
-			 END  AS SportType,
+		t.SportType,
 		SUM(ISNULL(t.PotentialWinningAnt,0)) PotentialWinningAmt,
 		STUFF((SELECT  ',' + CAST(t1.transid  AS VARCHAR(15))
 			FROM #rmRunningTicketMonitor t1
-			WHERE t.selection = t1.selection AND t.NoSelection = t1.NoSelection
+			WHERE t.selection = t1.selection AND t.NoSelection = t1.NoSelection AND t.SportType = t1.SportType
 			FOR XML PATH(''), TYPE
 			).value('.', 'NVARCHAR(MAX)')  
 		,1,1,'') transList
 FROM	#rmRunningTicketMonitor t
-GROUP BY t.selection, t.NoSelection, CASE WHEN t.SportType = 1  THEN 'Soccer Only'
-			 WHEN t.SportType = -4 THEN'Virtual Soccer Only'
-			 WHEN t.SportType = -5 THEN'Virtual Basketball Only'
-			 ELSE 'Others'
-			 END, t.NoSelection, SportType
+GROUP BY t.selection, t.NoSelection, t.SportType
 HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE  WHEN SportType = 1 THEN 200000
 													 WHEN SportType = -4 THEN 50000
 													 WHEN SportType = -5 THEN 50000
