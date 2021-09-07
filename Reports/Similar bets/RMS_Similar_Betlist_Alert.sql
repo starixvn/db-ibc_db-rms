@@ -15,6 +15,9 @@ BEGIN
 SET NOCOUNT ON
 DECLARE @MoveBetsDay SMALLDATETIME, @BalanceUpDay SMALLDATETIME, @ErrCode INT, @ErrMsg VARCHAR(4000)
 
+DECLARE @yesterday DATETIME
+SELECT  @yesterday = CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
+
 DECLARE @MBBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
 EXEC bodb02.dbo.Age_SelBalanceUpDay
@@ -27,7 +30,8 @@ CREATE TABLE #main (transid BIGINT, PotentialWinningAnt MONEY ,combo INT , refno
 INSERT INTO #main (transid, PotentialWinningAnt, combo, refno, transid2)
 SELECT  t1.transid , t1.stake * (t1.odds2 - 1)* t1.actualrate  AS PotentialWinningAnt,  t1.combo, t1.refno ,transid2
 from rmBettrans t1 WITH(NOLOCK) 
-where t1.bettype = 29  
+where   t1.winlostdate > @yesterday
+		AND t1.bettype = 29  
 		and t1.statusid = 0 
 		AND t1.currency <> 20 
 

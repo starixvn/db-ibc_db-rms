@@ -85,8 +85,9 @@ BEGIN
 			WHERE bettype = 29
 				AND combo = @combo
 				AND statusID = @statusID
+				AND winlostdate >= @yesterday
 				AND (
-					(winlostdate >= @yesterday AND @isSimilar = 0)
+					@isSimilar = 0
 					OR 
 					(winlostdate = @winlostdate AND @isSimilar = 1)
 					)
