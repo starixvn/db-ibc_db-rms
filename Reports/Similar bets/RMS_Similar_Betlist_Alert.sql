@@ -66,6 +66,7 @@ select  t1.transid,
 		hashbytes('MD5',(SELECT  ',' + t.extra 
 			from #temp t
 			WHERE t.transid = t1.transid
+			ORDER BY t.extra 
 			FOR XML PATH(''), TYPE
 			).value('.', 'NVARCHAR(MAX)'))
 		selection, 
