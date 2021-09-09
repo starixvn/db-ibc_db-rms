@@ -50,7 +50,7 @@ BEGIN
 
 
 	DECLARE @filter INT 
-	SELECT @filter = CASE WHEN @isSimilar = 0 THEN CASE WHEN @combo = 2 THEN @combo ELSE (@combo * 1.0 / 2) + 1 END ELSE @combo END
+	SELECT @filter = CASE WHEN @isSimilar = 0 THEN CASE WHEN @combo = 2 THEN @combo ELSE CEILING(@combo * 1.0 / 2) END ELSE @combo END
 
 	IF (@@ROWCOUNT = 0 OR @statusID IN (111, 113) OR @winlostdate < @BalanceUpDay)
 		RETURN
