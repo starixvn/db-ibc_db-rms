@@ -1,6 +1,7 @@
 ﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Similar_ComboParlay_Betlist]
-	@transid BIGINT
+	@transid BIGINT,
+	@isSimilar BIT = 0 --100%
 AS
 
 /*
@@ -20,6 +21,7 @@ AS
 		- 20210303@Danny: Add Filter won ticket  [RedmineID: #148137]
 		- 20210628@Danny: Add Column Member Potential Winning [RedmineID: #156979]
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
+		- 20210029@Danny: Support filter tickets having 100% of selections Similar Bets [RedmineID: #159304]
 */
 
 BEGIN
@@ -46,6 +48,10 @@ BEGIN
 		FROM dbo.rmBettrans_Old WITH (NOLOCK) WHERE transid = @transid
 	) t
 
+
+	DECLARE @filter INT 
+	SELECT @filter = CASE WHEN @isSimilar = 0 THEN CASE WHEN @combo = 2 THEN @combo ELSE CEILING(@combo * 1.0 / 2) END ELSE @combo END
+
 	IF (@@ROWCOUNT = 0 OR @statusID IN (111, 113) OR @winlostdate < @BalanceUpDay)
 		RETURN
 
@@ -62,11 +68,16 @@ BEGIN
 			INSERT INTO @Selection (matchid, bettype, betteam)
 			SELECT a.matchid, a.bettype, a.betteam
 			FROM bodb02.dbo.bettransm a WITH (NOLOCK)
-			WHERE a.refno = @refno AND (a.statusID IN (0, 1) OR a.winlostdate > @MoveBetsDay)
-			UNION
+			WHERE a.refno = @refno AND (a.winlostdate IS NULL OR a.winlostdate > @MoveBetsDay)
+			UNION ALL
 			SELECT a.matchid, a.bettype, a.betteam
 			FROM bodb02.dbo.bettransm14 a WITH (NOLOCK)
 			WHERE a.refno = @refno AND a.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+			UNION ALL
+			SELECT a.matchid, a.bettype, a.betteam
+			FROM dbo.rmBettransm_bk a WITH (NOLOCK)
+			WHERE a.refno = @refno AND a.winlostdate < @BalanceUpDay 
+
 
 			INSERT INTO @bettrans (transid, refno)
 			SELECT transid, refno
@@ -75,6 +86,11 @@ BEGIN
 				AND combo = @combo
 				AND statusID = @statusID
 				AND winlostdate >= @yesterday
+				AND (
+					@isSimilar = 0
+					OR 
+					(winlostdate = @winlostdate AND @isSimilar = 1)
+					)
 				AND refno <> @refno
 
 			INSERT INTO @result (transid, cnt)
@@ -83,26 +99,93 @@ BEGIN
 				CROSS APPLY (
 					SELECT bm.matchid, bm.bettype, bm.betteam
 					FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-					WHERE bm.refno = b.refno AND (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
-					UNION
+					WHERE bm.refno = b.refno AND (bm.winlostdate IS NULL OR bm.winlostdate > @MoveBetsDay)
+					UNION ALL
 					SELECT bm.matchid, bm.bettype, bm.betteam
 					FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
 					WHERE bm.refno = b.refno AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+					UNION ALL
+					SELECT a.matchid, a.bettype, a.betteam
+					FROM dbo.rmBettransm_bk a WITH (NOLOCK)
+					WHERE a.refno = b.refno AND a.winlostdate < @BalanceUpDay 
+
 				) r
 				INNER JOIN @Selection s ON r.matchid = s.matchid AND r.bettype = s.bettype AND r.betteam = s.betteam
 			GROUP BY b.transid
-			HAVING COUNT(1) >= CASE WHEN @combo = 2 THEN @combo ELSE (@combo * 1.0 / 2) END
+			HAVING COUNT(1) >= @filter
+
 
 			SELECT @cnt_bets = @@ROWCOUNT
 			SELECT  @NumberWon = COUNT(1) FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate > @MoveBetsDay
 			SELECT  @NumberWon = @NumberWon + COUNT(1) FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+			SELECT  @NumberWon = @NumberWon + COUNT(1) FROM dbo.rmBettransm_bk WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate < @BalanceUpDay 
 		END
 	
 		IF @statusID = 112
 		BEGIN
 			
+			INSERT INTO @Selection (matchid, bettype, betteam)
+			SELECT a.matchid, a.bettype, a.betteam
+			FROM bodb02.dbo.bettransm a WITH (NOLOCK)
+			WHERE a.refno = @refno AND a.winlostdate > @MoveBetsDay
+			UNION ALL
+			SELECT a.matchid, a.bettype, a.betteam
+			FROM bodb02.dbo.bettransm14 a WITH (NOLOCK)
+			WHERE a.refno = @refno AND a.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+			UNION ALL
+			SELECT a.matchid, a.bettype, a.betteam
+			FROM dbo.rmBettransm_bk a WITH (NOLOCK)
+			WHERE a.refno = @refno AND a.winlostdate < @BalanceUpDay 
+
+
+			INSERT INTO @bettrans (transid, refno)
+			SELECT transid, refno
+			FROM dbo.rmBettrans WITH (NOLOCK)
+			WHERE bettype = 29
+				AND combo = @combo
+				AND statusID = @statusID
+				AND refno <> @refno
+				AND winlostdate > @MoveBetsDay
+				AND (
+					(winlostdate = @winlostdate  AND @isSimilar = 1) OR (@isSimilar = 0)
+					)
+			UNION ALL
+			SELECT transid, refno
+			FROM dbo.rmBettrans_Old WITH (NOLOCK)
+			WHERE bettype = 29
+				AND combo = @combo
+				AND statusID = @statusID
+				AND refno <> @refno
+				AND winlostdate BETWEEN @BalanceUpDay AND  @MoveBetsDay
+				AND (
+				(winlostdate = @winlostdate  AND @isSimilar = 1) OR (@isSimilar = 0)
+				)
+
 			INSERT INTO @result (transid, cnt)
-			EXEC DBARC.bodb_Archive.dbo.RMS_ARC_ComboParlayBetList_Sel @winlostdate = @winlostdate, @refno = @refno, @combo = @combo, @statusID = @statusID,  @cnt_bets = @cnt_bets OUTPUT,  @NumberWon = @NumberWon OUTPUT
+			SELECT b.transid, COUNT(1)
+			FROM @bettrans b
+				CROSS APPLY (
+					SELECT bm.matchid, bm.bettype, bm.betteam
+					FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
+					WHERE bm.refno = b.refno AND bm.winlostdate > @MoveBetsDay
+					UNION ALL
+					SELECT bm.matchid, bm.bettype, bm.betteam
+					FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
+					WHERE bm.refno = b.refno AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+					UNION ALL
+					SELECT a.matchid, a.bettype, a.betteam
+					FROM dbo.rmBettransm_bk a WITH (NOLOCK)
+					WHERE a.refno = b.refno AND a.winlostdate < @BalanceUpDay 
+
+				) r
+				INNER JOIN @Selection s ON r.matchid = s.matchid AND r.bettype = s.bettype AND r.betteam = s.betteam
+			GROUP BY b.transid
+			HAVING COUNT(1) >= @filter
+
+			SELECT @cnt_bets = @@ROWCOUNT
+			SELECT  @NumberWon = COUNT(1) FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate > @MoveBetsDay
+			SELECT  @NumberWon = @NumberWon + COUNT(1) FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+			SELECT  @NumberWon = @NumberWon + COUNT(1) FROM dbo.rmBettransm_bk WITH (NOLOCK) WHERE refno = @refno AND statusID = 112 AND winlostdate < @BalanceUpDay 
 		END
 
 	END
@@ -152,7 +235,7 @@ BEGIN
 		FROM @OriginalSMP_Selection r
 			INNER JOIN @SMP_Selection s ON r.SelectionType = s.SelectionType
 		GROUP BY s.transid
-		HAVING COUNT(1) >= CASE WHEN @combo = 2 THEN @combo ELSE (@combo * 1.0 / 2) END
+		HAVING COUNT(1) >= @filter
 
 		
 	END
@@ -197,7 +280,7 @@ BEGIN
 			CROSS JOIN CTE_number n
 		GROUP BY s.transid
 		HAVING SUM(CASE WHEN SUBSTRING(@betteam, n.number, 1) <> '-' AND SUBSTRING(@betteam, n.number, 1) = SUBSTRING(s.betteam, n.number, 1) THEN 1 ELSE 0 END)
-				>= CASE WHEN @combo = 2 THEN 2 ELSE @combo * 1.0 / 2 END
+				>= @filter
 		OPTION (MAXRECURSION 0)
 	END
 
