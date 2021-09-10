@@ -7,7 +7,8 @@ AS
 	Task: Get similar bets combo parlay tickets
 			
 	Revisions:
-		- 20210029@Danny: Support filter tickets having 100% of selections Similar Bets [RedmineID: #159304]
+		- 20210829@Danny: Support filter tickets having 100% of selections Similar Bets [RedmineID: #159304]
+		- 20210910@Danny: Enhance Similar Betlist Alert [RedmineID: #161419]
 
 	EXEC RMS_Similar_Betlist_Alert
 */
