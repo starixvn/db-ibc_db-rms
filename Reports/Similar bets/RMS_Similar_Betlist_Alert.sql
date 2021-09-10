@@ -94,7 +94,7 @@ SELECT	t.selection, t.NoSelection,
 		,1,1,'') transList
 FROM	#rmRunningTicketMonitor t
 GROUP BY t.selection, t.NoSelection, t.SportType
-HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE  WHEN SportType = 'Soccer Only' THEN 200000
+HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE  WHEN SportType = 'Soccer Only' THEN 500000
 													 WHEN SportType = 'Virtual Soccer Only' THEN 50000
 													 WHEN SportType = 'Virtual Basketball Only' THEN 50000
 													 ELSE 100000 END
