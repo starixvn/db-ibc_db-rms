@@ -25,11 +25,11 @@ EXEC bodb02.dbo.Age_SelBalanceUpDay
 
 	SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @MBBU
 
-CREATE TABLE #rmRunningTicketMonitor (transid BIGINT, selection VARBINARY(16), PotentialWinningAnt MONEY, NoSelection SMALLINT,  SportType VARCHAR(200) )
+CREATE TABLE #rmRunningTicketMonitor (transid BIGINT, selection VARBINARY(16), PotentialWinningAnt MONEY, NoSelection SMALLINT,  SportType VARCHAR(200) ,TotalMemberStake MONEY)
 
-CREATE TABLE #main (transid BIGINT, PotentialWinningAnt MONEY ,combo INT , refno BIGINT, transid2 BIGINT)
-INSERT INTO #main (transid, PotentialWinningAnt, combo, refno, transid2)
-SELECT  t1.transid , t1.stake * (t1.odds2 - 1)* t1.actualrate  AS PotentialWinningAnt,  t1.combo, t1.refno ,transid2
+CREATE TABLE #main (transid BIGINT, PotentialWinningAnt MONEY ,combo INT , refno BIGINT, transid2 BIGINT, TotalMemberStake MONEY)
+INSERT INTO #main (transid, PotentialWinningAnt, combo, refno, transid2, TotalMemberStake)
+SELECT  t1.transid , t1.stake * (t1.odds2 - 1)* t1.actualrate  AS PotentialWinningAnt,  t1.combo, t1.refno ,transid2, (t1.stake * t1.actualrate) AS TotalMemberStake
 from rmBettrans t1 WITH(NOLOCK) 
 where   t1.winlostdate > @yesterday
 		AND t1.bettype = 29  
@@ -62,7 +62,7 @@ CROSS APPLY(
 		) x 
 
 
-INSERT INTO #rmRunningTicketMonitor(transid , selection , PotentialWinningAnt , NoSelection , SportType )
+INSERT INTO #rmRunningTicketMonitor(transid , selection , PotentialWinningAnt , NoSelection , SportType ,TotalMemberStake)
 select  t1.transid,
 		hashbytes('MD5',(SELECT  ',' + t.extra 
 			from #temp t
@@ -77,7 +77,8 @@ select  t1.transid,
 			WHEN t1.transid2 = -4 THEN 'Virtual Soccer Only'
 			WHEN t1.transid2 = -5 THEN 'Virtual Basketball Only'
 			ELSE 'Others'
-			END  AS SportType
+			END  AS SportType,
+		t1.TotalMemberStake
 	from #main t1 WITH(NOLOCK) 
 
 
@@ -92,7 +93,8 @@ SELECT	t.selection, t.NoSelection,
 			WHERE t.selection = t1.selection AND t.NoSelection = t1.NoSelection AND t.SportType = t1.SportType
 			FOR XML PATH(''), TYPE
 			).value('.', 'NVARCHAR(MAX)')  
-		,1,1,'') transList
+		,1,1,'') transList,
+		SUM(ISNULL(t.TotalMemberStake,0)) TotalMemberStake
 FROM	#rmRunningTicketMonitor t
 GROUP BY t.selection, t.NoSelection, t.SportType
 HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE  WHEN SportType = 'Soccer Only' THEN 500000
