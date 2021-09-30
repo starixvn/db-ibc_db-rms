@@ -34,6 +34,7 @@ AS
 		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
 		- 20210628@Danny: Add Column Member Potential Winning [RedmineID: #156979]
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
+		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
 
 
 	
@@ -388,7 +389,7 @@ BEGIN
 			,maxpayout MONEY
 			,TotalSelection INT
 			,TotalBet INT
-			,IP NVARCHAR(15)
+			,IP VARCHAR(39)
 			,level TINYINT
 			,NumberWon INT
 			,bettype INT

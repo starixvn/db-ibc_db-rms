@@ -32,6 +32,7 @@ AS
 		- 20210303@Danny: Filter by Currency  [RedmineID: #148137]
 		- 20210428@Danny: Add filtering by Site, Live status[RedmineID: #153874]
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
+		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
 
 	Parameter's Explanation:
 		- @selection:
@@ -191,7 +192,7 @@ BEGIN
 			,TotalBet			INT
 			,TotalSelection		INT
 			,SportType			SMALLINT
-			,IP					NVARCHAR(15)
+			,IP					VARCHAR(39)
 			,currencyName		NVARCHAR(50)
 			,CustomerClass		SMALLINT
 		)

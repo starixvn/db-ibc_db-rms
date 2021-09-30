@@ -1,6 +1,6 @@
 ﻿ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_BetsStatisticsByIP_Sporttype]
 	@fromdate		DATETIME,
-	@IP				VARCHAR(30),
+	@IP				VARCHAR(39),
 	@custid			INT,
 	@sporttype		INT
 AS
@@ -13,6 +13,8 @@ AS
 		Parameter's Explanation:
 			@sporttype = '1': soccer only
 						= 2: others
+		Revisions:	
+		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
 		
 	*/
 BEGIN
