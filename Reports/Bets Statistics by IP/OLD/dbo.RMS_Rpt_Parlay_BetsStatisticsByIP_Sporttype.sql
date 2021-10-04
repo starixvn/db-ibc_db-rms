@@ -1,6 +1,6 @@
 ﻿ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_BetsStatisticsByIP_Sporttype]
 	@fromdate		DATETIME,
-	@IP				VARCHAR(39),
+	@IP				VARCHAR(45),
 	@custid			INT,
 	@sporttype		INT
 AS

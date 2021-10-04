@@ -192,7 +192,7 @@ BEGIN
 			,TotalBet			INT
 			,TotalSelection		INT
 			,SportType			SMALLINT
-			,IP					VARCHAR(39)
+			,IP					VARCHAR(45)
 			,currencyName		NVARCHAR(50)
 			,CustomerClass		SMALLINT
 		)

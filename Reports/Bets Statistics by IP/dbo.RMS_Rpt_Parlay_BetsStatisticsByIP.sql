@@ -1,6 +1,6 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_BetsStatisticsByIP]
-	@IP			VARCHAR(39)
+	@IP			VARCHAR(45)
 	,@fromdate	DATETIME
 AS
 

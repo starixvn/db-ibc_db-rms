@@ -389,7 +389,7 @@ BEGIN
 			,maxpayout MONEY
 			,TotalSelection INT
 			,TotalBet INT
-			,IP VARCHAR(39)
+			,IP VARCHAR(45)
 			,level TINYINT
 			,NumberWon INT
 			,bettype INT
