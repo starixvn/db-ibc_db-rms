@@ -1,7 +1,7 @@
 ﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_BetsStatisticsByIP_Sporttype]
 	@fromdate  DATETIME,
-	@IP        VARCHAR(30),
+	@IP        VARCHAR(45),
 	@custid    INT,
 	@sporttype TINYINT
 AS
@@ -16,6 +16,7 @@ AS
 		- 20200510@Percy: Add Penalty Shootout Combo [RedmineID: #133961]
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
+		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
 
 
 	Parameter's Explanation:

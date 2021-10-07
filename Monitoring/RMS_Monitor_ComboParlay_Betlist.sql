@@ -34,6 +34,7 @@ AS
 		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
 		- 20210628@Danny: Add Column Member Potential Winning [RedmineID: #156979]
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
+		- 20211001@Danny: Change dataType to support IPv6 and enhance performance [RedmineID: #162348]
 
 
 	
@@ -158,8 +159,9 @@ BEGIN
 			,IsLive				BIT DEFAULT(0)
 			,IsBlacklistLeague	BIT DEFAULT(0)
 			,IsCornerParlay		BIT DEFAULT(0)
+			,isSelected			BIT DEFAULT(0)
 		)
-
+		
 		CREATE TABLE #bettype (bettype SMALLINT)
 
 		-- Combo parlay
@@ -211,39 +213,16 @@ BEGIN
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
-			CROSS APPLY 
-					(
-						SELECT ma.leagueid 
-						FROM bodb02.dbo.bettransm m WITH(NOLOCK)
-						INNER JOIN bodb02.dbo.match ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-						WHERE m.refno = b.refno AND (m.winlostdate > @MoveBetsDay OR m.winlostdate IS NULL)
-						
-						UNION 
-						
-						SELECT ma.leagueid 
-						FROM bodb02.dbo.bettransm14 m WITH(NOLOCK)
-						INNER JOIN bodb02.dbo.match14 ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-						WHERE m.refno = b.refno AND m.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
-					
-						UNION  
-
-						SELECT ma.leagueid
-						FROM dbo.rmBettransm_bk m WITH(NOLOCK)
-						INNER JOIN dbo.rmMatch_bk ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-						WHERE m.refno = b.refno AND m.winlostdate < @BalanceUpDay 
-				
-					) u
-
 			WHERE b.transid >= @min_transid
 			AND b.statusID = 0
 			AND b.currency <> 20
-			AND b.bettype = 29 AND u.leagueid IN  (SELECT x.LeagueId FROM #League x)
+			AND b.bettype = 29 
 		END
-
+	
 		IF EXISTS (SELECT 1 FROM #bettype WHERE bettype IN (38, 376)) 
 		BEGIN
-			INSERT INTO #bettrans (transid, bettype, matchid, refno)
-			SELECT  b.transid, b.bettype, b.matchid, b.refno
+			INSERT INTO #bettrans (transid, bettype, matchid, refno, isSelected)
+			SELECT  b.transid, b.bettype, b.matchid, b.refno, 1
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
@@ -255,12 +234,11 @@ BEGIN
 			AND b.bettype IN (38, 376) AND m.leagueid IN  (SELECT x.LeagueId FROM #League x)
 		END
 
-
 		DROP TABLE #bettype
 		DROP TABLE #tmpSelection
 		DROP TABLE #tmpSport
 
-		CREATE CLUSTERED INDEX CIX_bettype ON #bettrans (bettype)
+		CREATE CLUSTERED INDEX cix_#bettrans ON #bettrans(bettype, refno)
 
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype IN (38, 376))
 		BEGIN
@@ -279,9 +257,59 @@ BEGIN
 			WHERE b.bettype IN (38, 376)
 		END
 
+		DECLARE @minRefno BIGINT,
+				@maxRefno BIGINT
+
+		CREATE TABLE #bettransmInfo (
+			refno			BIGINT, 
+			LeagueId		INT, 
+			StatusID		SMALLINT, 
+			matchdate		SMALLDATETIME, 
+			GlobalShowTime  SMALLDATETIME,
+			eventstatus		NVARCHAR(50),
+			ChildMatchType	TINYINT,
+			isSelected		INT,
+			IsBlacklistLeague INT
+		)
+
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype = 29)
 		BEGIN
-		
+
+			SELECT	@minRefno = MIN(refno), @maxRefno = MAX(refno)
+			FROM	#bettrans
+			WHERE	bettype = 29
+
+			INSERT INTO #bettransmInfo (refno, LeagueId, StatusID, matchdate, GlobalShowTime, eventstatus, ChildMatchType, isSelected, IsBlacklistLeague)
+			SELECT bm.refno, m.leagueid, bm.statusID, bm.matchdate, m.GlobalShowTime, m.eventstatus, m.ChildMatchType, CASE WHEN lg.LeagueID IS NULL THEN 0 ELSE 1 END isSelected, CASE WHEN l.LeagueId IS NULL THEN 0 ELSE 1 END IsBlacklistLeague
+			FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
+				INNER JOIN #bettrans bt ON bt.refno = bm.refno
+				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
+				LEFT JOIN #League lg ON lg.LeagueID = m.leagueid
+				LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
+			WHERE bm.refno BETWEEN @minRefno AND @maxRefno  AND (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
+
+			UNION ALL
+
+			SELECT bm.refno, m.leagueid, bm.statusID, bm.matchdate, m.GlobalShowTime, m.eventstatus, m.ChildMatchType, CASE WHEN lg.LeagueID IS NULL THEN 0 ELSE 1 END isSelected, CASE WHEN l.LeagueId IS NULL THEN 0 ELSE 1 END IsBlacklistLeague
+			FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
+				INNER JOIN #bettrans bt ON bt.refno = bm.refno
+				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
+				LEFT JOIN #League lg ON lg.LeagueID = m.leagueid
+				LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
+			WHERE  bm.refno BETWEEN @minRefno AND @maxRefno AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+
+			UNION ALL
+
+			SELECT bm.refno, m.leagueid, bm.statusID, bm.matchdate, m.GlobalShowTime, m.eventstatus, m.ChildMatchType, CASE WHEN lg.LeagueID IS NULL THEN 0 ELSE 1 END isSelected, CASE WHEN l.LeagueId IS NULL THEN 0 ELSE 1 END IsBlacklistLeague
+			FROM dbo.rmBettransm_bk bm WITH (NOLOCK)
+				INNER JOIN #bettrans bt ON bt.refno = bm.refno
+				INNER JOIN  dbo.rmMatch_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
+				LEFT JOIN #League lg ON lg.LeagueID = m.leagueid
+				LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
+			WHERE  bm.refno BETWEEN @minRefno AND @maxRefno AND bm.winlostdate < @BalanceUpDay 
+
+			CREATE CLUSTERED INDEX cix_#bettransmInfo ON #bettransmInfo (refno)
+
 			UPDATE b
 			SET b.NumberWon = bm.NumberWon
 				,b.market = CASE
@@ -289,82 +317,22 @@ BEGIN
 								WHEN today = 0 AND early = 1 THEN 2 -- early only
 								ELSE 3 END -- combined
 				,b.IsLive = bm.IsLive
-				,b.IsBlacklistLeague = bm.IsBlacklistLeague
-				,b.IsCornerParlay = CASE WHEN bm.IsCornerParlay > 0 THEN 1 ELSE 0 END
+				,b.IsBlacklistLeague = CASE WHEN bm.IsBlacklistLeague > 0 THEN 1 ELSE 0 END
+				,b.IsCornerParlay	 =  bm.IsCornerParlay
+				,b.isSelected		 = CASE WHEN  bm.isSelected > 0 THEN 1 ELSE 0 END
 			FROM #bettrans b
-				CROSS APPLY (
-					SELECT SUM(NumberWon) AS NumberWon, MAX(today) AS today, MAX(early) AS early, MIN(IsLive) AS IsLive, MAX(IsBlacklistLeague) AS IsBlacklistLeague, SUM(IsCornerParlay) as IsCornerParlay
-					FROM (
-						SELECT
-							SUM(CASE WHEN bm.StatusID = 112 THEN 1 ELSE 0 END) AS NumberWon
-							,MAX(CASE WHEN bm.matchdate = @today THEN 1 ELSE 0 END) AS today
-							,MAX(CASE WHEN bm.matchdate = @today THEN 0 ELSE 1 END) AS early
-							,MIN(CASE WHEN m.GlobalShowTime < GETDATE() AND m.eventstatus <> 'Completed' THEN 1 ELSE 0 END) AS IsLive
-							,MAX(CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END) AS IsBlacklistLeague
-							,SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS IsCornerParlay
-						FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-							INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
-							LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
-						WHERE b.refno = bm.refno
-							AND (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
-
-						UNION ALL
-						SELECT
-							SUM(CASE WHEN bm.StatusID = 112 THEN 1 ELSE 0 END) AS NumberWon
-							,MAX(CASE WHEN bm.matchdate = @today THEN 1 ELSE 0 END) AS today
-							,MAX(CASE WHEN bm.matchdate = @today THEN 0 ELSE 1 END) AS early
-							,MIN(CASE WHEN m.GlobalShowTime < GETDATE() AND m.eventstatus <> 'Completed' THEN 1 ELSE 0 END) AS IsLive
-							,MAX(CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END) AS IsBlacklistLeague
-							,SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS IsCornerParlay
-						FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
-							INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
-							LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
-						WHERE b.refno = bm.refno
-							AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
-
-						UNION ALL
-
-						SELECT
-							SUM(CASE WHEN bm.StatusID = 112 THEN 1 ELSE 0 END) AS NumberWon
-							,MAX(CASE WHEN bm.matchdate = @today THEN 1 ELSE 0 END) AS today
-							,MAX(CASE WHEN bm.matchdate = @today THEN 0 ELSE 1 END) AS early
-							,MIN(CASE WHEN m.GlobalShowTime < GETDATE() AND m.eventstatus <> 'Completed' THEN 1 ELSE 0 END) AS IsLive
-							,MAX(CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END) AS IsBlacklistLeague
-							,SUM(CASE WHEN m.ChildMatchType = 204 THEN 1 ELSE 0 END) AS IsCornerParlay
-						FROM dbo.rmBettransm_bk bm WITH (NOLOCK)
-							INNER JOIN dbo.rmMatch_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
-							LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
-						WHERE b.refno = bm.refno
-							AND bm.winlostdate < @BalanceUpDay 
-
+			CROSS APPLY(
+							SELECT		SUM(CASE WHEN bm.StatusID = 112 THEN 1 ELSE 0 END) AS NumberWon,
+										MAX(CASE WHEN bm.matchdate = @today THEN 1 ELSE 0 END) AS today,
+										MAX(CASE WHEN bm.matchdate = @today THEN 0 ELSE 1 END) AS early,
+										MIN(CASE WHEN bm.GlobalShowTime < GETDATE() AND bm.eventstatus <> 'Completed' THEN 1 ELSE 0 END) AS IsLive,
+										SUM(IsBlacklistLeague) AS IsBlacklistLeague,
+										MAX(CASE WHEN bm.ChildMatchType = 204 THEN 1 ELSE 0 END) AS IsCornerParlay,
+										SUM(bm.isSelected) AS isSelected
+							FROM 		#bettransmInfo bm
+							WHERE		bm.refno = b.refno
 					) bm
-				) bm
-			WHERE b.bettype = 29
-		END
-
-		-- filter by market
-		BEGIN
-			DECLARE @tmpMarket TABLE (market TINYINT)
-			INSERT INTO @tmpMarket (market)
-			SELECT DISTINCT val FROM dbo.f_RMS_strSplit(@Market, ',')
-
-			IF @@ROWCOUNT < 3
-			BEGIN
-				DELETE b
-				FROM #bettrans b
-					LEFT JOIN @tmpMarket m ON b.market = m.market
-				WHERE m.market IS NULL
-			END
-		END
-
-		-- filter by Corner Parlay Tickets
-		BEGIN
-			IF @IsCornerParlay = 1 
-			BEGIN
-				DELETE b
-				FROM #bettrans b
-				WHERE b.IsCornerParlay = 0
-			END
+			WHERE b.bettype = 29 
 		END
 	END
 
@@ -388,7 +356,7 @@ BEGIN
 			,maxpayout MONEY
 			,TotalSelection INT
 			,TotalBet INT
-			,IP NVARCHAR(15)
+			,IP VARCHAR(45)
 			,level TINYINT
 			,NumberWon INT
 			,bettype INT
@@ -430,19 +398,17 @@ BEGIN
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate
 			,ci.CustomerClass
 		FROM rmBettrans rb WITH (NOLOCK)
-			INNER JOIN #bettrans b ON rb.transid = b.transid
+			INNER JOIN #bettrans b ON rb.transid = b.transid AND b.isSelected = 1
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rb.custid = ci.custid
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
 		WHERE ISNULL(mc.level, 0) IN (SELECT level FROM #level)
 		AND ((rb.odds2 * rb.TotalBet) <= @Odds OR @Odds IS NULL)
 			AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
+			AND  (rb.stake * rb.actualrate * (1 - rb.tpositiontaking) / rb.TotalBet) >= CASE WHEN @reportType = 1 THEN @stake ELSE 0 END
+			AND  ((rb.odds2 - 1) * rb.stake * rb.actualrate * (1 - rb.tpositiontaking)) >= CASE WHEN @reportType = 2 THEN @maxpayout ELSE 0 END
+			AND  b.market IN (SELECT DISTINCT val FROM dbo.f_RMS_strSplit(@Market, ','))
+			AND b.IsCornerParlay = CASE WHEN @IsCornerParlay = 1 THEN 1 ELSE b.IsCornerParlay END
 
-
-		IF @reportType = 1
-			DELETE #Result WHERE stake < @stake
-		ELSE IF @reportType = 2
-			DELETE #Result WHERE maxpayout < @maxpayout
-		
 		IF @ComboType IN (1,2,3,4,5,6)
 		BEGIN
 			CREATE CLUSTERED INDEX CIX_#Result ON #Result (bettype, betteam, oddsspread)
@@ -474,6 +440,7 @@ BEGIN
 		WHERE rn <= @limitRowCount
 	END
 	
+	DROP TABLE #bettransmInfo
 	DROP TABLE #bettrans
 	DROP TABLE #level
 	DROP TABLE #Result
