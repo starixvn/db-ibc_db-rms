@@ -35,6 +35,7 @@ AS
 		- 20210628@Danny: Add Column Member Potential Winning [RedmineID: #156979]
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20211001@Danny: Change dataType to support IPv6 and enhance performance [RedmineID: #162348]
+		- 20211007@Danny: Track User Monitoring [RedmineID: #162872]
 
 
 	
@@ -397,10 +398,12 @@ BEGIN
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate
 			,ci.CustomerClass
+			,l.username AS TrackingUser
 		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN #bettrans b ON rb.transid = b.transid AND b.isSelected = 1
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rb.custid = ci.custid
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
+			LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON rb.transid = l.transid
 		WHERE ISNULL(mc.level, 0) IN (SELECT level FROM #level)
 		AND ((rb.odds2 * rb.TotalBet) <= @Odds OR @Odds IS NULL)
 			AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
@@ -430,10 +433,10 @@ BEGIN
 		CREATE INDEX IX_Index ON #Result (transid)
 		
 		SELECT custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
-			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt, CustomerClass
+			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt, CustomerClass, TrackingUser
 		FROM (
 				SELECT custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
-					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt, CustomerClass
+					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt, CustomerClass, TrackingUser
 					,ROW_NUMBER() OVER(ORDER BY transid DESC) AS rn
 				FROM #Result
 			) r
