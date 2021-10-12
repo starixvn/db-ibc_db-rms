@@ -15,6 +15,7 @@ AS
 
 	Revisions:
 		- 20210701@Danny: Track User Monitoring [RedmineID: #153875]
+		- 20211007@Danny: Track User Monitoring on ComboParlay_Betlist Report [RedmineID: #162872]
 
 	Parameter's Explanation:
 */
@@ -49,7 +50,7 @@ BEGIN
 
 		-- Insert new tracking log
 		BEGIN
-			IF EXISTS (SELECT 1 FROM dbo.rmUserTrackingLog WITH(NOLOCK) WHERE userid <> @userid AND transid IN (SELECT transid FROM @transidTab))
+			IF EXISTS (SELECT 1 FROM dbo.rmUserTrackingLog WITH(NOLOCK) WHERE transid IN (SELECT transid FROM @transidTab))
 			BEGIN
 				INSERT INTO dbo.rmUserTrackingLog (userid, username, transid, transdate)
 				SELECT @userid, @username, t.transid, @logtime
@@ -67,7 +68,6 @@ BEGIN
 				INSERT INTO dbo.rmUserTrackingLog (userid, username, transid, transdate)
 				SELECT @userid, @username, transid, @logtime
 				FROM @transidTab
-
 
 				SELECT  @statusID = 0
 				SELECT @message = @message + CAST(transid AS VARCHAR(20)) + ':' + username+ ','
