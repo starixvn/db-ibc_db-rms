@@ -368,11 +368,12 @@ BEGIN
 			,IsGOF BIT
 			,potentialWinningAmt MONEY
 			,CustomerClass SMALLINT
+			,TrackingUser NVARCHAR(50)
 		)
 		INSERT INTO #Result
 		(
 			custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
-			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF, potentialWinningAmt, CustomerClass 
+			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF, potentialWinningAmt, CustomerClass , TrackingUser
 		)
 		SELECT
 			rb.custid
