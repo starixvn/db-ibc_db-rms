@@ -225,6 +225,7 @@ BEGIN
 			INSERT INTO #bettrans (transid, bettype, matchid, refno, isSelected)
 			SELECT  b.transid, b.bettype, b.matchid, b.refno, 1
 			FROM dbo.rmBettrans b WITH (NOLOCK)
+				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
@@ -232,7 +233,7 @@ BEGIN
 			WHERE b.transid >= @min_transid
 			AND b.statusID = 0
 			AND b.currency <> 20
-			AND b.bettype IN (38, 376) AND m.leagueid IN  (SELECT x.LeagueId FROM #League x)
+			AND m.leagueid IN  (SELECT x.LeagueId FROM #League x)
 		END
 
 		DROP TABLE #bettype
