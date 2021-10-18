@@ -9,6 +9,7 @@ AS
 	Revisions:
 		- 20210829@Danny: Support filter tickets having 100% of selections Similar Bets [RedmineID: #159304]
 		- 20210910@Danny: Enhance Similar Betlist Alert [RedmineID: #161419]
+		- 20211018@Danny: Notification by Group based on SportType [RedmineID: #163354]
 
 	EXEC RMS_Similar_Betlist_Alert
 */
@@ -25,7 +26,7 @@ EXEC bodb02.dbo.Age_SelBalanceUpDay
 
 	SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @MBBU
 
-CREATE TABLE #rmRunningTicketMonitor (transid BIGINT, selection VARBINARY(16), PotentialWinningAnt MONEY, NoSelection SMALLINT,  SportType VARCHAR(200) ,TotalMemberStake MONEY)
+CREATE TABLE #rmRunningTicketMonitor (transid BIGINT, selection VARBINARY(16), PotentialWinningAnt MONEY, NoSelection SMALLINT,  SportType VARCHAR(200) ,TotalMemberStake MONEY, SportTypeID INT)
 
 CREATE TABLE #main (transid BIGINT, PotentialWinningAnt MONEY ,combo INT , refno BIGINT, transid2 BIGINT, TotalMemberStake MONEY)
 INSERT INTO #main (transid, PotentialWinningAnt, combo, refno, transid2, TotalMemberStake)
@@ -62,7 +63,7 @@ CROSS APPLY(
 		) x 
 
 
-INSERT INTO #rmRunningTicketMonitor(transid , selection , PotentialWinningAnt , NoSelection , SportType ,TotalMemberStake)
+INSERT INTO #rmRunningTicketMonitor(transid , selection , PotentialWinningAnt , NoSelection , SportType ,TotalMemberStake, SportTypeID)
 select  t1.transid,
 		hashbytes('MD5',(SELECT  ',' + t.extra 
 			from #temp t
@@ -74,12 +75,16 @@ select  t1.transid,
 		t1.PotentialWinningAnt, 
 		t1.combo,
 		CASE WHEN t1.transid2 = 1  THEN 'Soccer Only'
-			WHEN t1.transid2 = -4 THEN 'Virtual Soccer Only'
-			WHEN t1.transid2 = -5 THEN 'Virtual Basketball Only'
-			ELSE 'Others'
+			 WHEN t1.transid2 = -4 THEN 'Virtual Soccer Only'
+			 WHEN t1.transid2 = -5 THEN 'Virtual Basketball Only'
+			 WHEN t1.transid2 = -3 THEN 'Combined Sports'
+			 WHEN t1.transid2 = -1 THEN 'Combined Other Sports'
+			 WHEN t1.transid2 NOT IN (1, -4, -5, -3, -1) THEN s.SportName
 			END  AS SportType,
-		t1.TotalMemberStake
+		t1.TotalMemberStake,
+		transid2 AS SportTypeID
 	from #main t1 WITH(NOLOCK) 
+	LEFT JOIN bodb02.dbo.Sports s WITH(NOLOCK) ON t1.transid2 = s.SportType
 
 
 CREATE CLUSTERED INDEX cix_#rmRunningTicketMonitor_selection ON #rmRunningTicketMonitor(selection,sportType)
@@ -94,12 +99,18 @@ SELECT	t.selection, t.NoSelection,
 			FOR XML PATH(''), TYPE
 			).value('.', 'NVARCHAR(MAX)')  
 		,1,1,'') transList,
-		SUM(ISNULL(t.TotalMemberStake,0)) TotalMemberStake
+		SUM(ISNULL(t.TotalMemberStake,0)) TotalMemberStake,
+		CASE WHEN t.SportTypeID IN (1, -4) THEN 'Soccer group'
+			 WHEN t.SportTypeID IN (2, -5) THEN 'Basketball group'
+			 ELSE 'Other sports group' END AS GroupName
 FROM	#rmRunningTicketMonitor t
-GROUP BY t.selection, t.NoSelection, t.SportType
-HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE  WHEN SportType = 'Soccer Only' THEN 500000
-													 WHEN SportType = 'Virtual Soccer Only' THEN 50000
-													 WHEN SportType = 'Virtual Basketball Only' THEN 50000
+GROUP BY t.selection, t.NoSelection, t.SportType, 
+		CASE WHEN t.SportTypeID IN (1, -4) THEN 'Soccer group'
+			WHEN t.SportTypeID IN (2, -5) THEN 'Basketball group'
+			ELSE 'Other sports group' END
+HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE  WHEN SportTypeID = 1 THEN 500000
+													 WHEN SportTypeID = -4 THEN 50000
+													 WHEN SportTypeID = -5 THEN 50000
 													 ELSE 100000 END
 
 DROP TABLE  #main
