@@ -104,7 +104,7 @@ SELECT	t.selection, t.NoSelection,
 			 WHEN t.SportTypeID IN (2, -5) THEN 'Basketball group'
 			 ELSE 'Other sports group' END AS GroupName
 FROM	#rmRunningTicketMonitor t
-GROUP BY t.selection, t.NoSelection, t.SportType, 
+GROUP BY t.selection, t.NoSelection, t.SportType, t.SportTypeID,
 		CASE WHEN t.SportTypeID IN (1, -4) THEN 'Soccer group'
 			WHEN t.SportTypeID IN (2, -5) THEN 'Basketball group'
 			ELSE 'Other sports group' END
