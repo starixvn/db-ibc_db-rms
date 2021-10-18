@@ -100,14 +100,14 @@ SELECT	t.selection, t.NoSelection,
 			).value('.', 'NVARCHAR(MAX)')  
 		,1,1,'') transList,
 		SUM(ISNULL(t.TotalMemberStake,0)) TotalMemberStake,
-		CASE WHEN t.SportTypeID IN (1, -4) THEN 'Soccer group'
-			 WHEN t.SportTypeID IN (2, -5) THEN 'Basketball group'
-			 ELSE 'Other sports group' END AS GroupName
+		CASE WHEN t.SportTypeID IN (1, -4) THEN 'Soccer'
+			 WHEN t.SportTypeID IN (2, -5) THEN 'Basketball'
+			 ELSE 'Other' END AS GroupName
 FROM	#rmRunningTicketMonitor t
 GROUP BY t.selection, t.NoSelection, t.SportType, t.SportTypeID,
-		CASE WHEN t.SportTypeID IN (1, -4) THEN 'Soccer group'
-			WHEN t.SportTypeID IN (2, -5) THEN 'Basketball group'
-			ELSE 'Other sports group' END
+		CASE WHEN t.SportTypeID IN (1, -4) THEN 'Soccer'
+			WHEN t.SportTypeID IN (2, -5) THEN 'Basketball'
+			ELSE 'Other' END
 HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE  WHEN SportTypeID = 1 THEN 500000
 													 WHEN SportTypeID = -4 THEN 50000
 													 WHEN SportTypeID = -5 THEN 50000
