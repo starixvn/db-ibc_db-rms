@@ -19,6 +19,7 @@ AS
 	
 	Revisions:
 		- 20210628@Danny: Implement League Winning Monitor Report [RedmineID: #156982]
+		- 20211111@Danny: Total Combo Bet data is incorrectly [RedmineID: #164563]
 		
 	Parameter's Explanation:
 		- @selection:
@@ -376,7 +377,7 @@ BEGIN
 					rm.stake * rm.actualrate as stake,
 					(rm.odds2 - 1) * rm.stake * rm.actualrate AS winningAmt,
 					(rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking) AS companyLoseAmt,
-					rm.combo,
+					rm.TotalBet AS  combo,
 					rm.hdp2 AS totalSelection,
 					CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE rm.transid2 END AS Sporttype,
 					rm.IP,
