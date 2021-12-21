@@ -10,6 +10,7 @@ AS
 		- 20210829@Danny: Support filter tickets having 100% of selections Similar Bets [RedmineID: #159304]
 		- 20210910@Danny: Enhance Similar Betlist Alert [RedmineID: #161419]
 		- 20211018@Danny: Notification by Group based on SportType [RedmineID: #163354]
+		- 20211208@Danny: Add Odds Info [RedmineID: #165789]
 
 	EXEC RMS_Similar_Betlist_Alert
 */
@@ -26,11 +27,13 @@ EXEC bodb02.dbo.Age_SelBalanceUpDay
 
 	SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @MBBU
 
-CREATE TABLE #rmRunningTicketMonitor (transid BIGINT, selection VARBINARY(16), PotentialWinningAnt MONEY, NoSelection SMALLINT,  SportType VARCHAR(200) ,TotalMemberStake MONEY, SportTypeID INT)
+CREATE TABLE #rmRunningTicketMonitor (transid BIGINT, selection VARBINARY(16), PotentialWinningAnt MONEY, NoSelection SMALLINT,  SportType VARCHAR(200) ,TotalMemberStake MONEY, SportTypeID INT, Odds MONEY)
 
-CREATE TABLE #main (transid BIGINT, PotentialWinningAnt MONEY ,combo INT , refno BIGINT, transid2 BIGINT, TotalMemberStake MONEY)
-INSERT INTO #main (transid, PotentialWinningAnt, combo, refno, transid2, TotalMemberStake)
-SELECT  t1.transid , t1.stake * (t1.odds2 - 1)* t1.actualrate  AS PotentialWinningAnt,  t1.combo, t1.refno ,transid2, (t1.stake * t1.actualrate) AS TotalMemberStake
+CREATE TABLE #main (transid BIGINT, PotentialWinningAnt MONEY ,combo INT , refno BIGINT, transid2 BIGINT, TotalMemberStake MONEY, Odds MONEY)
+CREATE CLUSTERED INDEX cix_#main ON #main(transid) 
+
+INSERT INTO #main (transid, PotentialWinningAnt, combo, refno, transid2, TotalMemberStake, Odds)
+SELECT  t1.transid , t1.stake * (t1.odds2 - 1)* t1.actualrate  AS PotentialWinningAnt,  t1.combo, t1.refno ,transid2, (t1.stake * t1.actualrate) AS TotalMemberStake, (t1.odds2 * t1.TotalBet) AS  Odds
 from rmBettrans t1 WITH(NOLOCK) 
 where   t1.winlostdate > @yesterday
 		AND t1.bettype = 29  
@@ -63,7 +66,7 @@ CROSS APPLY(
 		) x 
 
 
-INSERT INTO #rmRunningTicketMonitor(transid , selection , PotentialWinningAnt , NoSelection , SportType ,TotalMemberStake, SportTypeID)
+INSERT INTO #rmRunningTicketMonitor(transid , selection , PotentialWinningAnt , NoSelection , SportType ,TotalMemberStake, SportTypeID, Odds)
 select  t1.transid,
 		hashbytes('MD5',(SELECT  ',' + t.extra 
 			from #temp t
@@ -82,13 +85,24 @@ select  t1.transid,
 			 WHEN t1.transid2 NOT IN (1, -4, -5, -3, -1) THEN s.SportName
 			END  AS SportType,
 		t1.TotalMemberStake,
-		transid2 AS SportTypeID
+		transid2 AS SportTypeID,
+		t1.Odds
 	from #main t1 WITH(NOLOCK) 
 	LEFT JOIN bodb02.dbo.Sports s WITH(NOLOCK) ON t1.transid2 = s.SportType
 
 
 CREATE CLUSTERED INDEX cix_#rmRunningTicketMonitor_selection ON #rmRunningTicketMonitor(selection,sportType)
 
+CREATE TABLE #OddsInfo (selection VARBINARY(16), Odds MONEY)
+
+;WITH t AS
+(
+	SELECT  t.selection, MAX(transid) AS transid
+	FROM	#rmRunningTicketMonitor t
+	GROUP BY t.selection
+)INSERT INTO #OddsInfo  (selection, Odds)
+SELECT t.selection, m.Odds
+FROM t INNER JOIN #main m ON t.transid = m.transid
 
 SELECT	t.selection, t.NoSelection,
 		t.SportType,
@@ -102,17 +116,19 @@ SELECT	t.selection, t.NoSelection,
 		SUM(ISNULL(t.TotalMemberStake,0)) TotalMemberStake,
 		CASE WHEN t.SportTypeID IN (1, -4) THEN 'Soccer'
 			 WHEN t.SportTypeID IN (2, -5) THEN 'Basketball'
-			 ELSE 'Other' END AS GroupName
+			 ELSE 'Other' END AS GroupName,
+		o.Odds
 FROM	#rmRunningTicketMonitor t
+INNER JOIN #OddsInfo o ON t.selection = o.selection
 GROUP BY t.selection, t.NoSelection, t.SportType, t.SportTypeID,
 		CASE WHEN t.SportTypeID IN (1, -4) THEN 'Soccer'
 			WHEN t.SportTypeID IN (2, -5) THEN 'Basketball'
-			ELSE 'Other' END
+			ELSE 'Other' END, o.Odds
 HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE  WHEN SportTypeID = 1 THEN 500000
 													 WHEN SportTypeID = -4 THEN 50000
 													 WHEN SportTypeID = -5 THEN 50000
 													 ELSE 100000 END
-
+DROP TABLE  #OddsInfo
 DROP TABLE  #main
 DROP TABLE  #rmRunningTicketMonitor
 DROP TABLE  #temp
