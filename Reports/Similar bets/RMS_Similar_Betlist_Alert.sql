@@ -11,6 +11,7 @@ AS
 		- 20210910@Danny: Enhance Similar Betlist Alert [RedmineID: #161419]
 		- 20211018@Danny: Notification by Group based on SportType [RedmineID: #163354]
 		- 20211208@Danny: Add Odds Info [RedmineID: #165789]
+		- 20220210@Danny: Change alert threshold of 2 selections parlay ticket [RedmineID: #168366]
 
 	EXEC RMS_Similar_Betlist_Alert
 */
@@ -124,10 +125,14 @@ GROUP BY t.selection, t.NoSelection, t.SportType, t.SportTypeID,
 		CASE WHEN t.SportTypeID IN (1, -4) THEN 'Soccer'
 			WHEN t.SportTypeID IN (2, -5) THEN 'Basketball'
 			ELSE 'Other' END, o.Odds
-HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE  WHEN SportTypeID = 1 THEN 500000
-													 WHEN SportTypeID = -4 THEN 50000
-													 WHEN SportTypeID = -5 THEN 50000
-													 ELSE 100000 END
+HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE  WHEN SportTypeID = 1 AND NoSelection > 2  THEN 500000
+													 WHEN SportTypeID = -4 AND NoSelection > 2 THEN 50000
+													 WHEN SportTypeID = -5 AND NoSelection > 2 THEN 50000
+													 WHEN SportTypeID NOT IN (1, -4, -5) AND NoSelection > 2 THEN 100000
+													 WHEN SportTypeID = 1 AND NoSelection = 2  THEN 100000
+													 WHEN SportTypeID = -4 AND NoSelection = 2 THEN 30000
+													 WHEN SportTypeID = -5 AND NoSelection = 2 THEN 10000
+													 ELSE 30000 END
 DROP TABLE  #OddsInfo
 DROP TABLE  #main
 DROP TABLE  #rmRunningTicketMonitor
