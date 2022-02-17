@@ -6,7 +6,8 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_EventPerformance_Summary]
 	@level			VARCHAR(100) = '',
 	@limitRowCount	INT = 100,
 	@CustomerClass	SMALLINT = NULL,
-	@isViewDetail	BIT = 0
+	@isViewDetail	BIT = 0,
+	@SportType 		TINYINT = 43
 AS
 
 /*
@@ -143,7 +144,7 @@ BEGIN
 	INSERT INTO #match(matchID, homeID, awayID, leagueID)
 	SELECT  matchid, homeid, awayid, leagueid
 	FROM	bodb02.dbo.match WITH(NOLOCK)
-	WHERE	eventdate >= @yesterday AND sporttype = 43 and eventstatus = 'running'
+	WHERE	eventdate >= @yesterday AND sporttype = @SportType and eventstatus = 'running'
 			and leagueid IN ( SELECT x.LeagueID FROM #tmpLeague x)
 
 	INSERT INTO #bettransm(refno, bettype, betteam, matchID, odds)
@@ -224,8 +225,8 @@ BEGIN
 						CASE WHEN d.bettype IN (1,3,7,8,20) THEN d.bettype ELSE 0 END bettype, 
 						m.homeID,
 						m.awayID,
-						AVG(CASE WHEN d.betteam IN ('h','o') THEN d.odds ELSE 0 END) home_avg_odds,
-						AVG(CASE WHEN d.betteam IN ('a','u') THEN d.odds ELSE 0 END) away_avg_odds,
+						CASE WHEN SUM(CASE WHEN d.betteam IN ('h','o') THEN 1. ELSE 0 END) = 0 THEN 0 ELSE SUM(CASE WHEN d.betteam IN ('h','o') THEN d.odds ELSE 0 END) / SUM(CASE WHEN d.betteam IN ('h','o') THEN 1. ELSE 0 END) END home_avg_odds,
+						CASE WHEN  SUM(CASE WHEN d.betteam IN ('a','u') THEN 1. ELSE 0 END) = 0 THEN 0 ELSE  SUM(CASE WHEN d.betteam IN ('a','u') THEN d.odds ELSE 0 END) / SUM(CASE WHEN d.betteam IN ('a','u') THEN 1. ELSE 0 END) END away_avg_odds,
 						SUM(CASE WHEN d.betteam IN ('h','o') THEN d.Stake ELSE 0 END) home_total_stake,
 						SUM(CASE WHEN d.betteam IN ('a','u') THEN d.Stake ELSE 0 END) away_total_stake,
 						SUM(CASE WHEN d.betteam IN ('h','o') THEN d.Ticket ELSE 0 END) home_total_ticket,
