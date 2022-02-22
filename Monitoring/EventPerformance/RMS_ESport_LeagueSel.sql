@@ -1,5 +1,6 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0"></info>*/
 CREATE PROCEDURE [dbo].[RMS_ESport_LeagueSel]
+	@SportType TINYINT = 43 -- E-sport
 AS
 
 /*
@@ -21,7 +22,7 @@ BEGIN
 	SELECT DISTINCT m.leagueid, l.leaguename 
 	FROM bodb02.dbo.match m WITH(NOLOCK)
 	INNER JOIN bodb02.dbo.League l  WITH(NOLOCK) ON m.leagueid = l.leagueid
-	WHERE m.eventdate >= @yesterday AND m.sporttype = 43 and m.eventstatus = 'running'
+	WHERE m.eventdate >= @yesterday AND m.sporttype = @SportType and m.eventstatus = 'running'
 		AND l.isTest = 0 
 
 END
