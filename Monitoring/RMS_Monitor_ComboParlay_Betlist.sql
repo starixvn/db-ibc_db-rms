@@ -14,6 +14,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_Betlist]
 	,@Odds			SMALLMONEY = NULL
 	,@CustomerClass	SMALLINT = NULL
 	,@leagueGroupId VARCHAR(200)
+	,@company		VARCHAR(MAX) = '' 
 AS
 
 /*
@@ -36,9 +37,8 @@ AS
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20211001@Danny: Change dataType to support IPv6 and enhance performance [RedmineID: #162348]
 		- 20211007@Danny: Track User Monitoring [RedmineID: #162872]
+		- 20220301@Danny: add filter by Site [RedmineID: #169072]
 
-
-	
 	Parameter's Explanation:
 		- @selection:
 					. '2,3': 2,3 selections
@@ -81,6 +81,12 @@ BEGIN
 
 	DECLARE @today SMALLDATETIME
 	SELECT  @today = CONVERT(DATE, GETDATE())
+
+	CREATE TABLE #company(Site NVARCHAR(50))
+
+	INSERT INTO #company(Site)
+	select val from  dbo.f_RMS_strSplit(@company, ',')
+
 
 	-- selections
 	BEGIN
@@ -146,7 +152,6 @@ BEGIN
 		WHERE t.LeagueId IS NULL
 	END
 
-
 	-- get data
 	BEGIN
 		CREATE TABLE #bettrans
@@ -203,8 +208,7 @@ BEGIN
 			VALUES (376)
 
 		DECLARE @min_transid BIGINT
-		SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans WITH (NOLOCK) WHERE statusID = 0
-
+		SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans WITH (NOLOCK) WHERE  winlostdate >= @today AND  statusID = 0
 
 		-- Get main ticket
 		IF EXISTS (SELECT 1 FROM #bettype WHERE bettype = 29) 
@@ -214,6 +218,8 @@ BEGIN
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+				INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
+				INNER JOIN #company cp ON cp.Site = ct.site
 			WHERE b.transid >= @min_transid
 			AND b.statusID = 0
 			AND b.currency <> 20
@@ -229,6 +235,8 @@ BEGIN
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
+				INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
+				INNER JOIN #company cp ON cp.Site = ct.site
 
 			WHERE b.transid >= @min_transid
 			AND b.statusID = 0
@@ -239,6 +247,7 @@ BEGIN
 		DROP TABLE #bettype
 		DROP TABLE #tmpSelection
 		DROP TABLE #tmpSport
+		DROP TABLE #company
 
 		CREATE CLUSTERED INDEX cix_#bettrans ON #bettrans(bettype, refno)
 
@@ -450,5 +459,6 @@ BEGIN
 	DROP TABLE #level
 	DROP TABLE #Result
 	DROP TABLE #League
+
 END
 GO

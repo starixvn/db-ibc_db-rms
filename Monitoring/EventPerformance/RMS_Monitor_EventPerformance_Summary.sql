@@ -7,7 +7,9 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_EventPerformance_Summary]
 	@limitRowCount	INT = 100,
 	@CustomerClass	SMALLINT = NULL,
 	@isViewDetail	BIT = 0,
-	@SportType 		TINYINT = 43
+	@SportType 		TINYINT = 43,
+	@BetTypes		VARCHAR(MAX) = '',
+	@UserName		NVARCHAR(50) = ''
 AS
 
 /*
@@ -18,6 +20,7 @@ AS
 	Revisions:
 		- 20211221@Danny: Init SP #165096
 		- 20220311@Danny: Support Odd/Even for League Event Monitor [RedmineID: #169796]
+		- 20220321@Danny: Add filter by bettype [RedmineID: #169072]
 	
 	Parameter's Explanation:
 		- @selection:
@@ -103,6 +106,52 @@ BEGIN
 	INSERT INTO #level (level)
 	SELECT DISTINCT val FROM dbo.f_RMS_strSplit(@level, ',')
 
+	-- bettype selection
+	CREATE TABLE #bettype_selection (bettype SMALLINT)
+	INSERT INTO #bettype_selection(bettype)
+	SELECT DISTINCT val FROM dbo.f_RMS_strSplit(@BetTypes, ',')
+
+
+	-- Userlist
+	DECLARE @custID INT, @RoleID TINYINT
+	SELECT @custID = custid, @RoleID = roleid
+	FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+	WHERE  username = @UserName
+
+	CREATE TABLE #userList(custID INT) -- member
+
+	IF @RoleID = 4 
+		BEGIN
+		INSERT INTO #userList (custID)
+		SELECT	custid
+		FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+		WHERE  srecommend = @custID AND roleid = 1
+	END
+
+	IF @RoleID = 3 
+		BEGIN
+		INSERT INTO #userList (custID)
+		SELECT	custid
+		FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+		WHERE  mrecommend = @custID AND roleid = 1
+	END
+
+	IF @RoleID = 2 
+		BEGIN
+		INSERT INTO #userList (custID)
+		SELECT	custid
+		FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+		WHERE  recommend = @custID AND roleid = 1
+	END
+
+	IF @RoleID = 1 
+		BEGIN
+		INSERT INTO #userList (custID)
+		SELECT	custid
+		FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+		WHERE  custid = @custID AND roleid = 1
+	END
+
 	-- get data
 	BEGIN
 		-- Combo parlay
@@ -152,6 +201,7 @@ BEGIN
 	SELECT  refno, bettype, betteam, matchid, odds
 	FROM	bodb02.dbo.bettransm WITH(NOLOCK)
 	WHERE	matchid IN (SELECT x.matchID FROM #match x) AND statusID = 0
+	AND bettype IN (SELECT bs.bettype FROM #bettype_selection bs)
 
 	INSERT INTO  #tmpMainTicket (refno, stake, bettype, betteam, oddsspread)
 	SELECT  refno, stake * actualrate, bettype, betteam, oddsspread
@@ -164,6 +214,7 @@ BEGIN
 		AND hdp2 IN (SELECT z.selection FROM #tmpSelection z)
 		AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 		AND ISNULL(mc.level, 0) IN (SELECT level FROM #level)
+		AND ( rm.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
 
 	IF @ComboType IN (1,2,3,4,5,6)
 		BEGIN
@@ -185,16 +236,15 @@ BEGIN
 	END
 
 	IF @isViewDetail = 0
-	BEGIN
-
+	BEGIN	 
 		INSERT INTO #Result (leagueID, HomeTotalStake, HomeTotalTicket, AwayTotalStake, AwayTotalTicket, OtherTotalStake, OtherTotalTicket)
 		SELECT		m.leagueID, 
-					SUM (CASE WHEN sub.bettype IN (1,2,3,7,8,20)  AND sub.betteam IN ('h','o') THEN main.stake ELSE 0 END) HomeTotalStake,
-					SUM (CASE WHEN sub.bettype IN (1,2,3,7,8,20)  AND sub.betteam IN ('h','o') THEN 1 ELSE 0 END)			HomeTotalTicket,
-					SUM (CASE WHEN sub.bettype IN (1,2,3,7,8,20)  AND sub.betteam IN ('a','u','e') THEN main.stake ELSE 0 END) AwayTotalStake,
-					SUM (CASE WHEN sub.bettype IN (1,2,3,7,8,20)  AND sub.betteam IN ('a','u','e') THEN 1 ELSE 0 END)			AwayTotalTicket,
-					SUM (CASE WHEN sub.bettype NOT IN (1,2,3,7,8,20) THEN main.stake ELSE 0 END) OtherTotalStake,
-					SUM (CASE WHEN sub.bettype NOT IN (1,2,3,7,8,20) THEN 1 ELSE 0 END) OtherTotalTicket
+					SUM (CASE WHEN sub.betteam IN ('h','o','y') THEN main.stake ELSE 0 END)		HomeTotalStake,
+					SUM (CASE WHEN sub.betteam IN ('h','o','y') THEN 1 ELSE 0 END)				HomeTotalTicket,
+					SUM (CASE WHEN sub.betteam IN ('e','a','u','n') THEN main.stake ELSE 0 END) AwayTotalStake,
+					SUM (CASE WHEN sub.betteam IN ('e','a','u','n') THEN 1 ELSE 0 END)			AwayTotalTicket,
+					SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n') THEN main.stake ELSE 0 END) OtherTotalStake,
+					SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n') THEN 1 ELSE 0 END)			OtherTotalTicket
 		FROM		#tmpMainTicket main 
 		INNER JOIN	#bettransm sub ON main.refno = sub.refno
 		INNER JOIN	#match m ON sub.matchID = m.matchID
@@ -223,20 +273,24 @@ BEGIN
 		;WITH cte_data AS 
 		(
 			SELECT		d.matchID, 
-						CASE WHEN d.bettype IN (1,2,3,7,8,20) THEN d.bettype ELSE 0 END bettype, 
+						CASE WHEN d.betteam IN ('h','o','y','e','a','u','n') THEN d.bettype ELSE 0 END bettype, 
 						m.homeID,
 						m.awayID,
-						CASE WHEN SUM(CASE WHEN d.betteam IN ('h','o') THEN 1. ELSE 0 END) = 0 THEN 0 ELSE SUM(CASE WHEN d.betteam IN ('h','o') THEN d.odds ELSE 0 END) / SUM(CASE WHEN d.betteam IN ('h','o') THEN 1. ELSE 0 END) END home_avg_odds,
-						CASE WHEN  SUM(CASE WHEN d.betteam IN ('a','u','e') THEN 1. ELSE 0 END) = 0 THEN 0 ELSE  SUM(CASE WHEN d.betteam IN ('a','u','e') THEN d.odds ELSE 0 END) / SUM(CASE WHEN d.betteam IN ('a','u','e') THEN 1. ELSE 0 END) END away_avg_odds,
-						SUM(CASE WHEN d.betteam IN ('h','o') THEN d.Stake ELSE 0 END) home_total_stake,
-						SUM(CASE WHEN d.betteam IN ('a','u','e') THEN d.Stake ELSE 0 END) away_total_stake,
-						SUM(CASE WHEN d.betteam IN ('h','o') THEN d.Ticket ELSE 0 END) home_total_ticket,
-						SUM(CASE WHEN d.betteam IN ('a','u','e') THEN d.Ticket ELSE 0 END) away_total_ticket,
+						CASE WHEN SUM(CASE WHEN d.betteam IN ('h','o','y') THEN 1. ELSE 0 END) = 0 
+							 THEN 0 ELSE SUM(CASE WHEN d.betteam IN ('h','o','y') THEN d.odds ELSE 0 END) / SUM(CASE WHEN d.betteam IN ('h','o','y')  THEN 1. ELSE 0 END) END home_avg_odds,
+						CASE WHEN SUM(CASE WHEN d.betteam IN ('e','a','u','n') THEN 1. ELSE 0 END) = 0 
+							 THEN 0 ELSE SUM(CASE WHEN d.betteam IN ('e','a','u','n') THEN d.odds ELSE 0 END) / SUM(CASE WHEN d.betteam IN ('e','a','u','n')  THEN 1. ELSE 0 END) END away_avg_odds,
+						SUM(CASE WHEN d.betteam IN ('h','o','y') THEN d.Stake ELSE 0 END) home_total_stake,
+						SUM(CASE WHEN d.betteam IN ('e','a','u','n') THEN d.Stake ELSE 0 END) away_total_stake,
+						SUM(CASE WHEN d.betteam IN ('h','o','y') THEN d.Ticket ELSE 0 END) home_total_ticket,
+						SUM(CASE WHEN d.betteam IN ('e','a','u','n') THEN d.Ticket ELSE 0 END) away_total_ticket,
+						SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n') THEN d.Stake ELSE 0 END) other_stake,
+						SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n') THEN d.Ticket ELSE 0 END) other_Ticket,
 						SUM(d.Stake) AS total_stake
 			FROM		#Details d
 			INNER JOIN	#match m ON d.matchID = m.matchID
 			GROUP BY	d.matchID,
-						CASE WHEN d.bettype IN (1,2,3,7,8,20) THEN d.bettype ELSE 0 END,
+						CASE WHEN d.betteam IN ('h','o','y','e','a','u','n') THEN d.bettype ELSE 0 END,
 						m.homeID,
 						m.awayID
 		), sort AS
@@ -244,34 +298,25 @@ BEGIN
 			SELECT x.matchID, ROW_NUMBER() OVER(ORDER BY (x.stake) DESC)  AS rn
 			FROM
 			(
-
 				SELECT  matchID, 
 						SUM(Stake) AS Stake
 				FROM	#Details
 				GROUP BY matchID
 			) x
-		), bettypeList AS
-		(
-			SELECT	typeid AS bettype, typenamee AS market
-			FROM	bodb02.dbo.bettype WITH(NOLOCK)
-			WHERE	typeid IN (1,2,3,7,8,20)
-			UNION ALL
-			SELECT 0, 'Others'
 		)
-
 		SELECT	d.matchID,
 				h.teamname AS homeName, 
-				b.market,
+				ISNULL(b.typenamee,'Others') market,
 				d.home_avg_odds AS HomeAvgOdds,
-				d.home_total_stake AS HomeTotalStake,
-				d.home_total_ticket AS HomeTotalTicket,
+				CASE WHEN b.typeid IS NULL THEN d.other_stake ELSE  d.home_total_stake END AS HomeTotalStake,
+				CASE WHEN b.typeid IS NULL THEN d.other_ticket ELSE d.home_total_ticket END  AS HomeTotalTicket,
 				a.teamname AS awayName,
 				d.away_avg_odds AS AwayAvgOdds,
 				d.away_total_stake AS AwayTotalStake,
 				d.away_total_ticket AS AwayTotalTicket
 		FROM  cte_data d 
 		INNER JOIN sort r ON r.matchID = d.matchID
-		INNER JOIN bettypeList b ON d.bettype = b.bettype
+		LEFT JOIN bodb02.dbo.bettype b WITH(NOLOCK)  ON d.bettype = b.typeid
 		INNER JOIN bodb02.dbo.Team h  WITH (NOLOCK) ON d.homeID = h.teamid
 		INNER JOIN bodb02.dbo.Team a  WITH (NOLOCK) ON d.awayID = a.teamid
 		WHERE ( r.rn <= @limitRowCount OR @limitRowCount = 0)
@@ -284,6 +329,7 @@ BEGIN
 	DROP TABLE #match
 	DROP TABLE #bettransm
 	DROP TABLE #bettype
+	DROP TABLE #bettype_selection
 	DROP TABLE #Details
 	DROP TABLE #Result
 END
