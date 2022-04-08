@@ -21,6 +21,7 @@ AS
 		- 20211221@Danny: Init SP #165096
 		- 20220311@Danny: Support Odd/Even for League Event Monitor [RedmineID: #169796]
 		- 20220321@Danny: Add filter by bettype [RedmineID: #169072]
+		- 20220408@Danny: Enhance filter by bettype [RedmineID: #171303]
 	
 	Parameter's Explanation:
 		- @selection:
@@ -111,7 +112,6 @@ BEGIN
 	INSERT INTO #bettype_selection(bettype)
 	SELECT DISTINCT val FROM dbo.f_RMS_strSplit(@BetTypes, ',')
 
-
 	-- Userlist
 	DECLARE @custID INT, @RoleID TINYINT
 	SELECT @custID = custid, @RoleID = roleid
@@ -201,7 +201,6 @@ BEGIN
 	SELECT  refno, bettype, betteam, matchid, odds
 	FROM	bodb02.dbo.bettransm WITH(NOLOCK)
 	WHERE	matchid IN (SELECT x.matchID FROM #match x) AND statusID = 0
-	AND bettype IN (SELECT bs.bettype FROM #bettype_selection bs)
 
 	INSERT INTO  #tmpMainTicket (refno, stake, bettype, betteam, oddsspread)
 	SELECT  refno, stake * actualrate, bettype, betteam, oddsspread
@@ -239,15 +238,16 @@ BEGIN
 	BEGIN	 
 		INSERT INTO #Result (leagueID, HomeTotalStake, HomeTotalTicket, AwayTotalStake, AwayTotalTicket, OtherTotalStake, OtherTotalTicket)
 		SELECT		m.leagueID, 
-					SUM (CASE WHEN sub.betteam IN ('h','o','y') THEN main.stake ELSE 0 END)		HomeTotalStake,
-					SUM (CASE WHEN sub.betteam IN ('h','o','y') THEN 1 ELSE 0 END)				HomeTotalTicket,
-					SUM (CASE WHEN sub.betteam IN ('e','a','u','n') THEN main.stake ELSE 0 END) AwayTotalStake,
-					SUM (CASE WHEN sub.betteam IN ('e','a','u','n') THEN 1 ELSE 0 END)			AwayTotalTicket,
-					SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n') THEN main.stake ELSE 0 END) OtherTotalStake,
-					SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n') THEN 1 ELSE 0 END)			OtherTotalTicket
+					SUM (CASE WHEN sub.betteam IN ('h','o','y') AND z.bettype IS NOT NULL THEN main.stake ELSE 0 END)		HomeTotalStake,
+					SUM (CASE WHEN sub.betteam IN ('h','o','y') AND z.bettype IS NOT NULL THEN 1 ELSE 0 END)				HomeTotalTicket,
+					SUM (CASE WHEN sub.betteam IN ('e','a','u','n') AND z.bettype IS NOT NULL THEN main.stake ELSE 0 END) AwayTotalStake,
+					SUM (CASE WHEN sub.betteam IN ('e','a','u','n') AND z.bettype IS NOT NULL THEN 1 ELSE 0 END)			AwayTotalTicket,
+					SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n')  OR z.bettype IS NULL THEN main.stake ELSE 0 END) OtherTotalStake,
+					SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n')  OR z.bettype IS NULL THEN 1 ELSE 0 END)			OtherTotalTicket
 		FROM		#tmpMainTicket main 
 		INNER JOIN	#bettransm sub ON main.refno = sub.refno
 		INNER JOIN	#match m ON sub.matchID = m.matchID
+		LEFT JOIN   #bettype_selection z ON sub.bettype = z.bettype
 		GROUP BY	m.leagueID
 
 		;WITH cte AS 
@@ -273,7 +273,7 @@ BEGIN
 		;WITH cte_data AS 
 		(
 			SELECT		d.matchID, 
-						CASE WHEN d.betteam IN ('h','o','y','e','a','u','n') THEN d.bettype ELSE 0 END bettype, 
+						d.bettype bettype, 
 						m.homeID,
 						m.awayID,
 						CASE WHEN SUM(CASE WHEN d.betteam IN ('h','o','y') THEN 1. ELSE 0 END) = 0 
@@ -286,13 +286,18 @@ BEGIN
 						SUM(CASE WHEN d.betteam IN ('e','a','u','n') THEN d.Ticket ELSE 0 END) away_total_ticket,
 						SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n') THEN d.Stake ELSE 0 END) other_stake,
 						SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n') THEN d.Ticket ELSE 0 END) other_Ticket,
-						SUM(d.Stake) AS total_stake
+						CASE WHEN SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n') THEN 1. ELSE 0 END) = 0 
+							 THEN 0 ELSE SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n') THEN d.odds ELSE 0 END) / SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n')  THEN 1. ELSE 0 END) END other_avg_odds,
+						SUM(d.Stake) AS total_stake,
+						CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n')  OR z.bettype IS NULL THEN 1 ELSE 0 END isOther
 			FROM		#Details d
 			INNER JOIN	#match m ON d.matchID = m.matchID
+			LEFT JOIN   #bettype_selection z ON d.bettype = z.bettype
 			GROUP BY	d.matchID,
-						CASE WHEN d.betteam IN ('h','o','y','e','a','u','n') THEN d.bettype ELSE 0 END,
+						d.bettype,
 						m.homeID,
-						m.awayID
+						m.awayID,
+						CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n')  OR z.bettype IS NULL THEN 1 ELSE 0 END
 		), sort AS
 		(	
 			SELECT x.matchID, ROW_NUMBER() OVER(ORDER BY (x.stake) DESC)  AS rn
@@ -307,20 +312,23 @@ BEGIN
 		SELECT	d.matchID,
 				h.teamname AS homeName, 
 				ISNULL(b.typenamee,'Others') market,
-				d.home_avg_odds AS HomeAvgOdds,
-				CASE WHEN b.typeid IS NULL THEN d.other_stake ELSE  d.home_total_stake END AS HomeTotalStake,
-				CASE WHEN b.typeid IS NULL THEN d.other_ticket ELSE d.home_total_ticket END  AS HomeTotalTicket,
+				SUM(CASE WHEN d.isOther = 1 THEN d.other_avg_odds + d.home_avg_odds ELSE  d.home_avg_odds END) AS HomeAvgOdds,
+				SUM(CASE WHEN d.isOther = 1  THEN d.other_stake + d.home_total_stake ELSE  d.home_total_stake END) AS HomeTotalStake,
+				SUM(CASE WHEN d.isOther = 1  THEN d.other_ticket + home_total_ticket ELSE d.home_total_ticket END)  AS HomeTotalTicket,
 				a.teamname AS awayName,
-				d.away_avg_odds AS AwayAvgOdds,
-				d.away_total_stake AS AwayTotalStake,
-				d.away_total_ticket AS AwayTotalTicket
+				SUM(d.away_avg_odds) AS AwayAvgOdds,
+				SUM(d.away_total_stake) AS AwayTotalStake,
+				SUM(d.away_total_ticket) AS AwayTotalTicket,
+				d.isOther
 		FROM  cte_data d 
 		INNER JOIN sort r ON r.matchID = d.matchID
-		LEFT JOIN bodb02.dbo.bettype b WITH(NOLOCK)  ON d.bettype = b.typeid
 		INNER JOIN bodb02.dbo.Team h  WITH (NOLOCK) ON d.homeID = h.teamid
 		INNER JOIN bodb02.dbo.Team a  WITH (NOLOCK) ON d.awayID = a.teamid
+		LEFT JOIN #bettype_selection bs ON d.bettype = bs.bettype
+		LEFT JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON bs.bettype = b.typeid
 		WHERE ( r.rn <= @limitRowCount OR @limitRowCount = 0)
-		ORDER BY r.rn
+		GROUP BY d.matchID, h.teamname, ISNULL(b.typenamee,'Others'), a.teamname, d.isOther
+		--ORDER BY r.rn
 		
 	END
 
