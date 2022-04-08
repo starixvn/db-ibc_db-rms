@@ -8,6 +8,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_LeagueBettype_Analysis]
 	,@Site			TINYINT = 2
 	,@Ratio			FLOAT = 0
 	,@ReportBy		TINYINT = 1
+	,@SportType		SMALLINT = 1
 AS
 
 /*
@@ -17,6 +18,7 @@ AS
 
 	Revisions:
 		- 20200619@Percy: Initialize SP [RedmineID: #135326]
+		- 20220301@Danny: Support basketball Sport type data [RedmineID: #169072]
 
 	Param's Explanation:
 		. @ParlayType: '1,2'
@@ -43,25 +45,42 @@ BEGIN
 		SELECT val
 		FROM dbo.f_RMS_strSplit (@Leagues, ',')
 
-		UPDATE t
-		SET t.GroupName	= lg.GroupName
-		FROM #Leagues t
-			INNER JOIN dbo.rmLeague l WITH (NOLOCK) ON t.LeagueId = l.LeagueId
-			INNER JOIN dbo.rmLeagueGroup lg WITH (NOLOCK) ON l.GroupId = lg.GroupId
-		WHERE ',' + @LeagueGroups + ',' LIKE '%,' + CONVERT(VARCHAR(5), lg.GroupId)+ ',%'
+		IF @SportType = 1
+		BEGIN
 
-		DELETE #Leagues WHERE LeagueId <> -1 AND GroupName IS NULL
+			UPDATE t
+			SET t.GroupName	= lg.GroupName
+			FROM #Leagues t
+				INNER JOIN dbo.rmLeague l WITH (NOLOCK) ON t.LeagueId = l.LeagueId
+				INNER JOIN dbo.rmLeagueGroup lg WITH (NOLOCK) ON l.GroupId = lg.GroupId
+			WHERE ',' + @LeagueGroups + ',' LIKE '%,' + CONVERT(VARCHAR(5), lg.GroupId)+ ',%'
+
+			DELETE #Leagues WHERE LeagueId <> -1 AND GroupName IS NULL
 		
-		IF ',' + @LeagueGroups + ',' LIKE '%,-1,%' -- None
-			AND ',' + @Leagues + ',' LIKE '%,-1,%' -- None
-			INSERT INTO #Leagues (LeagueId, GroupName)
-			SELECT s.leagueId, 'None'
-			FROM dbo.rmSumByLeague s WITH (NOLOCK)
-			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
-				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
-				AND (@Site = 2 OR s.IsDeposit = @Site)
-				AND NOT EXISTS (SELECT 1 FROM dbo.rmLeague l WITH (NOLOCK) WHERE s.leagueId = l.LeagueId)
-			GROUP BY s.leagueId
+			IF ',' + @LeagueGroups + ',' LIKE '%,-1,%' -- None
+				AND ',' + @Leagues + ',' LIKE '%,-1,%' -- None
+				INSERT INTO #Leagues (LeagueId, GroupName)
+				SELECT s.leagueId, 'None'
+				FROM dbo.rmSumByLeague s WITH (NOLOCK)
+				WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
+					AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
+					AND (@Site = 2 OR s.IsDeposit = @Site)
+					AND NOT EXISTS (SELECT 1 FROM dbo.rmLeague l WITH (NOLOCK) WHERE s.leagueId = l.LeagueId)
+				GROUP BY s.leagueId
+		END
+
+		
+		IF @SportType = 2
+		BEGIN
+			UPDATE t
+			SET t.GroupName	= lg.GroupName
+			FROM #Leagues t
+				INNER JOIN bodb02.dbo.League l WITH(NOLOCK) ON t.LeagueId = l.leagueid
+				INNER JOIN bodb02.dbo.LeagueGroup lg WITH (NOLOCK) ON l.LeagueGroupID = lg.GroupID
+		END
+
+
+
 	END
 
 	IF @ReportBy = 1 -- view by league
@@ -89,15 +108,19 @@ BEGIN
 	END
 	ELSE IF @ReportBy = 2 -- view by bettype
 	BEGIN
-		-- all leagues --> leagueid = 0
-		IF EXISTS (SELECT 1 FROM #Leagues WHERE GroupName = 'None')
-			AND (SELECT COUNT(1) FROM  #Leagues WHERE GroupName <> 'None') = (SELECT COUNT(1) FROM dbo.rmLeague l WITH (NOLOCK))
-		BEGIN
-			DELETE #Leagues
 
-			INSERT INTO #Leagues (LeagueId)
-			VALUES (0)
-		END
+		IF @SportType = 1
+		BEGIN
+			-- all leagues --> leagueid = 0
+			IF EXISTS (SELECT 1 FROM #Leagues WHERE GroupName = 'None')
+				AND (SELECT COUNT(1) FROM  #Leagues WHERE GroupName <> 'None') = (SELECT COUNT(1) FROM dbo.rmLeague l WITH (NOLOCK))
+			BEGIN
+				DELETE #Leagues
+
+				INSERT INTO #Leagues (LeagueId)
+				VALUES (0)
+			END
+		END 
 
 		SELECT
 			s.Bettype
