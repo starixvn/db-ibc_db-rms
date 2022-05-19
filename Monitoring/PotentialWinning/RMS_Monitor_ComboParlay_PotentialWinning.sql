@@ -9,7 +9,9 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_PotentialWinning]
 	@IsCornerParlay BIT = 0,
 	@IsAgentView	BIT = 0,
 	@Recommend		INT = NULL,
-	@CustomerClass	SMALLINT = NULL
+	@CustomerClass	SMALLINT = NULL,
+	@company		VARCHAR(MAX) = '',
+	@UserName		NVARCHAR(50) = ''
 AS
 
 /*
@@ -28,7 +30,7 @@ AS
 		- 20210302@Danny: Changes on Potential Winning Monitor Tool [RedmineID: #146930]
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20210701@Danny: Track User Monitoring [RedmineID: #153875]
-
+		- 20220519@Danny: add filter by Site AND username [RedmineID: #172691]
 
 	Parameter's Explanation:
 		- @selection:
@@ -55,6 +57,59 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
+	CREATE TABLE #company(Site NVARCHAR(50))
+	INSERT INTO #company(Site)
+	select value from  STRING_SPLIT(@company, ',')
+
+	CREATE TABLE #level (level TINYINT)
+	INSERT INTO #level (level)
+	SELECT DISTINCT value FROM STRING_SPLIT(@level, ',')
+
+	CREATE TABLE #userList(custID INT) -- member	
+	DECLARE @custID INT, @RoleID TINYINT
+
+	IF @UserName <> ''
+	BEGIN
+		SELECT @custID = custid, @RoleID = roleid
+		FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+		WHERE  username = @UserName
+	
+		IF @RoleID = 4 
+			BEGIN
+			INSERT INTO #userList (custID)
+			SELECT	custid
+			FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+			WHERE  srecommend = @custID AND roleid = 1
+		END
+
+		IF @RoleID = 3 
+			BEGIN
+			INSERT INTO #userList (custID)
+			SELECT	custid
+			FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+			WHERE  mrecommend = @custID AND roleid = 1
+		END
+
+		IF @RoleID = 2 
+			BEGIN
+			INSERT INTO #userList (custID)
+			SELECT	custid
+			FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+			WHERE  recommend = @custID AND roleid = 1
+		END
+
+		IF @IsAgentView = 0
+		BEGIN
+			IF @RoleID = 1 
+				BEGIN
+				INSERT INTO #userList (custID)
+				SELECT	custid
+				FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+				WHERE  custid = @custID AND roleid = 1
+		END
+		END
+	END
+
 	-- selections
 	BEGIN
 		CREATE TABLE #tmpSelection (selection INT)
@@ -65,7 +120,7 @@ BEGIN
 			SELECT @selection = '2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
 		
 			INSERT INTO #tmpSelection (selection)
-			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
+			SELECT value FROM STRING_SPLIT(@selection, ',')
 		END
 		-- 10UP (add 11 --> 100)
 		ELSE IF ',' + @selection + ',' LIKE '%,10,%'
@@ -73,12 +128,12 @@ BEGIN
 			SELECT @selection = @selection + ',11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
 		
 			INSERT INTO #tmpSelection (selection)
-			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
+			SELECT value FROM STRING_SPLIT(@selection, ',')
 		END
 		ELSE
 		BEGIN
 			INSERT INTO #tmpSelection (selection)
-			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
+			SELECT value FROM STRING_SPLIT(@selection, ',')
 		END
 	END
 
@@ -86,7 +141,7 @@ BEGIN
 	BEGIN
 		CREATE TABLE #tmpSport (sporttype INT)
 		INSERT INTO #tmpSport (sporttype)
-		SELECT val FROM dbo.f_RMS_strSplit(@sporttype, ',')
+		SELECT value FROM STRING_SPLIT(@sporttype, ',')
 
 		IF ',' + @sporttype + ',' LIKE '%,-2,%'
 			INSERT INTO #tmpSport (sporttype)
@@ -135,15 +190,15 @@ BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
 
-			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT val) = 3 AND SUM(DISTINCT CAST(val as SMALLINT)) = 8 THEN 7 
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 3 THEN 6
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 6 THEN 4
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 7 THEN 5
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 1 THEN 1
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 2 THEN 2
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 5 THEN 3
+			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT value) = 3 AND SUM(DISTINCT CAST(value as SMALLINT)) = 8 THEN 7 
+										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 3 THEN 6
+										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 6 THEN 4
+										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 7 THEN 5
+										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 1 THEN 1
+										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 2 THEN 2
+										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 5 THEN 3
 								END
-			FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2,5)
+			FROM STRING_SPLIT(@ParlayType, ',') WHERE value IN (1,2,5)
 		END
 
 		-- Single match parlay
@@ -188,15 +243,30 @@ BEGIN
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 				INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
+				INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
+				INNER JOIN #company cp ON cp.Site = ct.site
 				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
 			WHERE b.statusID = 0
 				AND b.currency <> 20
 				AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
+				AND	ISNULL(mc.level,0) IN (SELECT l.level FROM #level l)
+				AND 1 = CASE
+							WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
+							WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
+							WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
+							WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
+							WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
+							WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
+							WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
+							ELSE 0 END
+								ELSE 1 END
+				AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
 
 			DROP TABLE #rmTransRecommend
 		END
 		ELSE
 		BEGIN
+
 			INSERT INTO #bettrans_details(refno,bettype,transid,custID,username,betteam,CurrencyName,Odds,stake,WinningAmount,CompanyLoseAmount, transdate,recommend,level,oddsspread, CustomerClass)
 			SELECT	b.refno, 
 					b.bettype, 
@@ -219,10 +289,24 @@ BEGIN
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 				INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
+				INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
+				INNER JOIN #company cp ON cp.Site = ct.site
 				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
 			WHERE b.statusID = 0
 				AND b.currency <> 20
 				AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
+				AND	ISNULL(mc.level,0) IN(SELECT l.level FROM #level l)
+				AND 1 = CASE
+							WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
+							WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
+							WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
+							WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
+							WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
+							WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
+							WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
+							ELSE 0 END
+								ELSE 1 END
+				AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
 		END
 
 
@@ -271,13 +355,8 @@ BEGIN
 		DROP TABLE #tmpSport
 		
 	END
-
 	-- Return data
 	BEGIN
-		CREATE TABLE #level (level TINYINT)
-		INSERT INTO #level (level)
-		SELECT DISTINCT val FROM dbo.f_RMS_strSplit(@level, ',')
-
 		IF @IsAgentView = 0
 		BEGIN
 
@@ -300,19 +379,6 @@ BEGIN
 				,SUM(CASE WHEN l.transid IS NOT NULL THEN 1 ELSE 0 END)  AS TotalTrackingBets
 			FROM #bettrans_details b WITH(NOLOCK)
 			LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON b.transid = l.transid
-			WHERE
-				b.level IN(SELECT level FROM #level)
-				AND 1 = CASE
-							WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
-							WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
-							WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
-							WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
-							WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
-							WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
-							WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
-							ELSE 0 END
-								ELSE 1 END
-
 			GROUP BY
 				b.custid
 				,b.username 
@@ -334,18 +400,6 @@ BEGIN
 				,b.recommend
 			FROM  #bettrans_details b WITH(NOLOCK) 
 			LEFT JOIN bodb02.dbo.custInfo  mc WITH (NOLOCK)  ON b.recommend = mc.custid
-			WHERE
-			b.level IN(SELECT level FROM #level)
-			AND 1 = CASE
-									WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
-									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
-									WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
-									WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
-									WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
-									WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
-									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
-									ELSE 0 END
-								ELSE 1 END
 			GROUP BY
 				mc.username
 				,b.recommend
