@@ -22,6 +22,7 @@ AS
 		- 20220311@Danny: Support Odd/Even for League Event Monitor [RedmineID: #169796]
 		- 20220321@Danny: Add filter by bettype [RedmineID: #169072]
 		- 20220408@Danny: Enhance filter by bettype [RedmineID: #171303]
+		- 20220425@Danny: Monitor detail Performance for Event/Bettype/BetChoice [RedmineID: #170032]
 	
 	Parameter's Explanation:
 		- @selection:
@@ -312,6 +313,7 @@ BEGIN
 		SELECT	d.matchID,
 				h.teamname AS homeName, 
 				ISNULL(b.typenamee,'Others') market,
+				ISNULL(b.typeid,0) bettype,
 				SUM(CASE WHEN d.isOther = 1 THEN d.other_avg_odds + d.home_avg_odds ELSE  d.home_avg_odds END) AS HomeAvgOdds,
 				SUM(CASE WHEN d.isOther = 1  THEN d.other_stake + d.home_total_stake ELSE  d.home_total_stake END) AS HomeTotalStake,
 				SUM(CASE WHEN d.isOther = 1  THEN d.other_ticket + home_total_ticket ELSE d.home_total_ticket END)  AS HomeTotalTicket,
@@ -327,7 +329,7 @@ BEGIN
 		LEFT JOIN #bettype_selection bs ON d.bettype = bs.bettype
 		LEFT JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON bs.bettype = b.typeid
 		WHERE ( r.rn <= @limitRowCount OR @limitRowCount = 0)
-		GROUP BY d.matchID, h.teamname, ISNULL(b.typenamee,'Others'), a.teamname, d.isOther
+		GROUP BY d.matchID, h.teamname, ISNULL(b.typenamee,'Others'), a.teamname, d.isOther, ISNULL(b.typeid,0)
 		--ORDER BY r.rn
 		
 	END
