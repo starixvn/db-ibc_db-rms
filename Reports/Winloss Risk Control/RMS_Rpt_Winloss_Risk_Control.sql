@@ -6,7 +6,8 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_Winloss_Risk_Control]
 	@ParlayType		VARCHAR(20) = '',
 	@sporttype		VARCHAR(100) = '',
 	@ReportBy		TINYINT = 1,
-	@Selection		VARCHAR(MAX) = ''
+	@Selection		VARCHAR(MAX) = '',
+	@LiveStatus		TINYINT = 3
 AS
 
 /*
@@ -17,6 +18,7 @@ AS
 	Revisions:	
 		- 20201030@Danny: Initialize SP [RedmineID: #144471]		
 		- 20220301@Danny: Add filter by combo [RedmineID: #169072]
+		- 20220519@Danny: add filter by Live Status [RedmineID: #172691]
 		
 	
 	Parameter's Explanation:
@@ -65,19 +67,19 @@ BEGIN
 			SELECT @selection = '2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
 		
 			INSERT INTO #tmpSelection (selection)
-			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
+			SELECT value FROM STRING_SPLIT(@selection, ',')
 		END
 		-- 10UP (add 11 --> 100)
 		ELSE IF ',' + @selection + ',' LIKE '%,10,%'
 		BEGIN
 			SELECT @selection = @selection + ',11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
 			INSERT INTO #tmpSelection (selection)
-			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
+			SELECT value FROM STRING_SPLIT(@selection, ',')
 		END
 		ELSE
 		BEGIN
 			INSERT INTO #tmpSelection (selection)
-			SELECT val FROM dbo.f_RMS_strSplit(@selection, ',')
+			SELECT value FROM STRING_SPLIT(@selection, ',')
 		END
 	END
 
@@ -85,7 +87,7 @@ BEGIN
 	BEGIN
 		CREATE TABLE #tmpSport (sporttype INT)
 		INSERT INTO #tmpSport (sporttype)
-		SELECT val FROM dbo.f_RMS_strSplit(@sporttype, ',')
+		SELECT value FROM STRING_SPLIT(@sporttype, ',')
 
 		IF ',' + @sporttype + ',' LIKE '%,-2,%'
 			INSERT INTO #tmpSport (sporttype)
@@ -113,15 +115,15 @@ BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
 
-			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT val) = 3 AND SUM(DISTINCT CAST(val as SMALLINT)) = 8 THEN 7 
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 3 THEN 6
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 6 THEN 4
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 7 THEN 5
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 1 THEN 1
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 2 THEN 2
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 5 THEN 3
+			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT value) = 3 AND SUM(DISTINCT CAST(value as SMALLINT)) = 8 THEN 7 
+										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 3 THEN 6
+										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 6 THEN 4
+										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 7 THEN 5
+										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 1 THEN 1
+										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 2 THEN 2
+										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 5 THEN 3
 								END
-			FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2,5)
+			FROM STRING_SPLIT(@ParlayType, ',') WHERE value IN (1,2,5)
 		END
 
 		-- Single match parlay
@@ -216,6 +218,7 @@ BEGIN
 									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
 									ELSE 0 END
 								ELSE 1 END
+				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 		END
 
 		-- rmSumWinloss
@@ -261,6 +264,7 @@ BEGIN
 				AND statusID IN (111,112, 113)
 				AND b.currency <> 20
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), b.ParlayType - 1) + ',%'
+				AND (b.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 
 		END
 
@@ -305,6 +309,7 @@ BEGIN
 				AND statusID IN (111,112, 113)
 				AND b.currency <> 20
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), b.ParlayType - 1) + ',%'
+				AND (b.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 		END
 
 
@@ -330,7 +335,7 @@ BEGIN
 	CREATE TABLE #company(Site NVARCHAR(50))
 
 	INSERT INTO #company(Site)
-	select val from  dbo.f_RMS_strSplit(@company, ',')
+	select value from  STRING_SPLIT(@company, ',')
 
 	select	t.Site as  Username, 
 			t.IsDeposit, 
