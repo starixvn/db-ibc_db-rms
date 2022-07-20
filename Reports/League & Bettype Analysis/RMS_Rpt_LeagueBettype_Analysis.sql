@@ -19,6 +19,7 @@ AS
 	Revisions:
 		- 20200619@Percy: Initialize SP [RedmineID: #135326]
 		- 20220301@Danny: Support basketball Sport type data [RedmineID: #169072]
+		- 20220719@Danny: Fix issue Show result of Basketball when selecting Sport is Soccer [RedmineID: #175613]
 
 	Param's Explanation:
 		. @ParlayType: '1,2'
@@ -62,10 +63,12 @@ BEGIN
 				INSERT INTO #Leagues (LeagueId, GroupName)
 				SELECT s.leagueId, 'None'
 				FROM dbo.rmSumByLeague s WITH (NOLOCK)
+				INNER JOIN	bodb02.dbo.League l WITH(NOLOCK) ON s.leagueId = l.leagueid
 				WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
 					AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
 					AND (@Site = 2 OR s.IsDeposit = @Site)
 					AND NOT EXISTS (SELECT 1 FROM dbo.rmLeague l WITH (NOLOCK) WHERE s.leagueId = l.LeagueId)
+					AND l.sporttype = 1
 				GROUP BY s.leagueId
 		END
 
