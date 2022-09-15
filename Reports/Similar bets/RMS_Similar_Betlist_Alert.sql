@@ -12,6 +12,7 @@ AS
 		- 20211018@Danny: Notification by Group based on SportType [RedmineID: #163354]
 		- 20211208@Danny: Add Odds Info [RedmineID: #165789]
 		- 20220210@Danny: Change alert threshold of 2 selections parlay ticket [RedmineID: #168366]
+		- 20220829@Danny: Extend data length for support new transid [RedmineID: #177153]
 
 	EXEC RMS_Similar_Betlist_Alert
 */
@@ -49,19 +50,19 @@ SELECT t1.transid, x.Extra
 from #main t1 WITH(NOLOCK) 
 CROSS APPLY(
 
-		SELECT  CAST(t2.matchid AS VARCHAR(15))+'-'+ CAST(t2.betteam AS VARCHAR(5)) +'-' +CAST (t2.bettype AS VARCHAR(4)) AS Extra
+		SELECT  CAST(t2.matchid AS VARCHAR(20))+'-'+ CAST(t2.betteam AS VARCHAR(5)) +'-' +CAST (t2.bettype AS VARCHAR(4)) AS Extra
 		from bodb02.dbo.bettransm t2 WITH(NOLOCK) 
 		where t1.refno = t2.refno AND (t2.winlostdate > @MoveBetsDay OR t2.winlostdate IS NULL)
 
 		UNION ALL
 
-		SELECT  CAST(t3.matchid AS VARCHAR(15))+'-'+ CAST(t3.betteam AS VARCHAR(5)) +'-' +CAST (t3.bettype AS VARCHAR(4))
+		SELECT  CAST(t3.matchid AS VARCHAR(20))+'-'+ CAST(t3.betteam AS VARCHAR(5)) +'-' +CAST (t3.bettype AS VARCHAR(4))
 		from bodb02.dbo.bettransm14 t3 WITH(NOLOCK) 
 		where t1.refno = t3.refno AND  t3.custID > 0 AND t3.winlostdate between @BalanceUpDay AND @MoveBetsDay
 
 		UNION ALL
 
-		SELECT CAST(t3.matchid AS VARCHAR(15))+'-'+ CAST(t3.betteam AS VARCHAR(5)) +'-' +CAST (t3.bettype AS VARCHAR(4))
+		SELECT CAST(t3.matchid AS VARCHAR(20))+'-'+ CAST(t3.betteam AS VARCHAR(5)) +'-' +CAST (t3.bettype AS VARCHAR(4))
 		from dbo.rmBettransm_bk t3 WITH(NOLOCK) 
 		where t1.refno = t3.refno AND t3.winlostdate < @BalanceUpDay
 		) x 
@@ -108,7 +109,7 @@ FROM t INNER JOIN #main m ON t.transid = m.transid
 SELECT	t.selection, t.NoSelection,
 		t.SportType,
 		SUM(ISNULL(t.PotentialWinningAnt,0)) PotentialWinningAmt,
-		STUFF((SELECT  ',' + CAST(t1.transid  AS VARCHAR(15))
+		STUFF((SELECT  ',' + CAST(t1.transid  AS VARCHAR(30))
 			FROM #rmRunningTicketMonitor t1
 			WHERE t.selection = t1.selection AND t.NoSelection = t1.NoSelection AND t.SportType = t1.SportType
 			FOR XML PATH(''), TYPE
