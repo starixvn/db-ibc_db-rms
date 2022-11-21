@@ -40,6 +40,7 @@ AS
 		- 20211007@Danny: Track User Monitoring [RedmineID: #162872]
 		- 20220301@Danny: add filter by Site [RedmineID: #169072]
 		- 20220519@Danny: add filter by username [RedmineID: #172691]
+		- 20221121@Danny: enhance perfomance [RedmineID: #180707]
 
 	Parameter's Explanation:
 		- @selection:
@@ -248,9 +249,6 @@ BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (376)
 
-		DECLARE @min_transid BIGINT
-		SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans WITH (NOLOCK) WHERE  winlostdate >= @today AND  statusID = 0
-
 		-- Get main ticket
 		IF EXISTS (SELECT 1 FROM #bettype WHERE bettype = 29) 
 		BEGIN
@@ -261,17 +259,24 @@ BEGIN
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 				INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
 				INNER JOIN #company cp ON cp.Site = ct.site
-			WHERE b.transid >= @min_transid
+			WHERE b.winlostdate >= @today
+			AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
+			AND b.matchid = 29
 			AND b.statusID = 0
 			AND b.currency <> 20
 			AND b.bettype = 29 
-			AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
+			
 		END
 	
 		IF EXISTS (SELECT 1 FROM #bettype WHERE bettype IN (38, 376)) 
 		BEGIN
-			INSERT INTO #bettrans (transid, bettype, matchid, refno, isSelected)
-			SELECT  b.transid, b.bettype, b.matchid, b.refno, 1
+			INSERT INTO #bettrans (transid, bettype, matchid, refno, isSelected, market, IsLive, IsBlacklistLeague)
+			SELECT  b.transid, b.bettype, b.matchid, b.refno, 1, 
+					CASE WHEN m.eventdate = @today THEN 1 -- today only
+					ELSE 2 END market, -- early only
+					CASE WHEN m.GlobalShowTime < GETDATE() AND m.eventstatus <> 'Completed' THEN 1
+					ELSE 0 END  IsLive,
+					 CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END IsBlacklistLeague
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
@@ -279,12 +284,15 @@ BEGIN
 				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
 				INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
 				INNER JOIN #company cp ON cp.Site = ct.site
+				LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
 
-			WHERE b.transid >= @min_transid
+			WHERE b.winlostdate >= @today
+			AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
 			AND b.statusID = 0
 			AND b.currency <> 20
+			AND b.bettype IN (38, 376)
 			AND m.leagueid IN  (SELECT x.LeagueId FROM #League x)
-			AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
+			
 		END
 
 		DROP TABLE #bettype
@@ -293,26 +301,6 @@ BEGIN
 		DROP TABLE #company
 
 		CREATE CLUSTERED INDEX cix_#bettrans ON #bettrans(bettype, refno)
-
-		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype IN (38, 376))
-		BEGIN
-	
-			UPDATE b
-			SET b.market = CASE
-								WHEN m.eventdate = @today THEN 1 -- today only
-								ELSE 2 END -- early only
-				,b.IsLive = CASE
-								WHEN m.GlobalShowTime < GETDATE() AND m.eventstatus <> 'Completed' THEN 1
-								ELSE 0 END
-				,b.IsBlacklistLeague = CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END
-			FROM #bettrans b
-				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
-				LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
-			WHERE b.bettype IN (38, 376)
-		END
-
-		DECLARE @minRefno BIGINT,
-				@maxRefno BIGINT
 
 		CREATE TABLE #bettransmInfo (
 			refno			BIGINT, 
@@ -329,38 +317,31 @@ BEGIN
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype = 29)
 		BEGIN
 
-			SELECT	@minRefno = MIN(refno), @maxRefno = MAX(refno)
-			FROM	#bettrans
-			WHERE	bettype = 29
-
 			INSERT INTO #bettransmInfo (refno, LeagueId, StatusID, matchdate, GlobalShowTime, eventstatus, ChildMatchType, isSelected, IsBlacklistLeague)
-			SELECT bm.refno, m.leagueid, bm.statusID, bm.matchdate, m.GlobalShowTime, m.eventstatus, m.ChildMatchType, CASE WHEN lg.LeagueID IS NULL THEN 0 ELSE 1 END isSelected, CASE WHEN l.LeagueId IS NULL THEN 0 ELSE 1 END IsBlacklistLeague
-			FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-				INNER JOIN #bettrans bt ON bt.refno = bm.refno
+			SELECT bm.refno, bm.leagueid, bm.statusID, bm.matchdate, bm.GlobalShowTime, bm.eventstatus, bm.ChildMatchType,  CASE WHEN lg.LeagueID IS NULL THEN 0 ELSE 1 END isSelected, CASE WHEN l.LeagueId IS NULL THEN 0 ELSE 1 END IsBlacklistLeague
+			FROM    #bettrans bt
+			CROSS APPLY(
+				SELECT bm.refno, m.leagueid, bm.statusID, bm.matchdate, m.GlobalShowTime, m.eventstatus, m.ChildMatchType
+				FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
 				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
-				LEFT JOIN #League lg ON lg.LeagueID = m.leagueid
-				LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
-			WHERE bm.refno BETWEEN @minRefno AND @maxRefno  AND (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
+				WHERE  bm.refno = bt.refno AND  (bm.statusID IN (0, 1) OR bm.winlostdate > @MoveBetsDay)
 
-			UNION ALL
+				UNION ALL
 
-			SELECT bm.refno, m.leagueid, bm.statusID, bm.matchdate, m.GlobalShowTime, m.eventstatus, m.ChildMatchType, CASE WHEN lg.LeagueID IS NULL THEN 0 ELSE 1 END isSelected, CASE WHEN l.LeagueId IS NULL THEN 0 ELSE 1 END IsBlacklistLeague
-			FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
-				INNER JOIN #bettrans bt ON bt.refno = bm.refno
-				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
-				LEFT JOIN #League lg ON lg.LeagueID = m.leagueid
-				LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
-			WHERE  bm.refno BETWEEN @minRefno AND @maxRefno AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+				SELECT bm.refno, m.leagueid, bm.statusID, bm.matchdate, m.GlobalShowTime, m.eventstatus, m.ChildMatchType
+				FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
+					INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
+				WHERE  bm.refno = bt.refno AND  bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 
-			UNION ALL
+				UNION ALL
+				SELECT bm.refno, m.leagueid, bm.statusID, bm.matchdate, m.GlobalShowTime, m.eventstatus, m.ChildMatchType
+				FROM dbo.rmBettransm_bk bm WITH (NOLOCK)
+					INNER JOIN  dbo.rmMatch_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
+				WHERE bm.refno = bt.refno AND   bm.winlostdate >= DATEADD(DAY, -21, @BalanceUpDay)  and  bm.winlostdate < @BalanceUpDay 
 
-			SELECT bm.refno, m.leagueid, bm.statusID, bm.matchdate, m.GlobalShowTime, m.eventstatus, m.ChildMatchType, CASE WHEN lg.LeagueID IS NULL THEN 0 ELSE 1 END isSelected, CASE WHEN l.LeagueId IS NULL THEN 0 ELSE 1 END IsBlacklistLeague
-			FROM dbo.rmBettransm_bk bm WITH (NOLOCK)
-				INNER JOIN #bettrans bt ON bt.refno = bm.refno
-				INNER JOIN  dbo.rmMatch_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
-				LEFT JOIN #League lg ON lg.LeagueID = m.leagueid
-				LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON m.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
-			WHERE  bm.refno BETWEEN @minRefno AND @maxRefno AND bm.winlostdate < @BalanceUpDay 
+			) bm
+			LEFT JOIN #League lg ON lg.LeagueID = bm.leagueid
+			LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON bm.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
 
 			CREATE CLUSTERED INDEX cix_#bettransmInfo ON #bettransmInfo (refno)
 
