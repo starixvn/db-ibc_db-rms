@@ -9,7 +9,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_EventPerformance_Detail]
 	@BetTypes		VARCHAR(MAX) = '',
 	@UserName		NVARCHAR(50) = '',
 	@matchid		INT, 
-	@betChoice		TINYINT, -- 1 Home, 0 Away, 2: All
+	@betChoice		TINYINT, -- 1 Home, 0 Away, 2: All, 3: Others
 	@detailBettype	INT -- 0: Other
 AS
 
@@ -20,7 +20,8 @@ AS
 
 	Revisions:
 		- 20220421@Danny: Init SP #170032
-	
+		- 20230130@Danny: Monitor detail Performance for Event/Bettype/BetChoice Soccer [RedmineID: #182724]
+
 	Parameter's Explanation:
 		- @selection:
 					. '2,3': 2,3 selections
@@ -106,9 +107,18 @@ BEGIN
 	SELECT DISTINCT value FROM STRING_SPLIT(@level, ',')
 
 	-- bettype selection
+	CREATE TABLE #bettype_list (bettype SMALLINT, bettypeName NVARCHAR(128), GroupID TINYINT)
+	INSERT INTO #bettype_list(bettype,bettypeName,GroupID)
+	EXEC RMS_BettypeSel @SportType = @SportType
+
+	-- bettype selection
 	CREATE TABLE #bettype_selection (bettype SMALLINT)
 	INSERT INTO #bettype_selection(bettype)
 	SELECT DISTINCT value FROM STRING_SPLIT(@BetTypes, ',')
+
+	DECLARE @GroupID TINYINT
+	SELECT @GroupID = GroupID
+	FROM #bettype_list WHERE  bettype = @detailBettype
 
 	-- Userlist
 	DECLARE @custID INT, @RoleID TINYINT
@@ -246,7 +256,14 @@ BEGIN
 			FROM #Details d
 			WHERE matchID = @matchid 
 			 AND bettype = @detailBettype
-			 AND ( @betChoice = CASE WHEN d.betteam NOT IN ('e','a','u','n') THEN 1 ELSE 0 END OR @betChoice = 2)
+			 AND ( @betChoice = CASE WHEN d.betteam IN ('h','o','y','1') AND @GroupID = 1 THEN 1
+									 WHEN d.betteam IN ('e','a','u','n','2') AND @GroupID = 1 THEN 0
+									 WHEN d.betteam NOT IN ('h','o','y','1','e','a','u','n','2') OR  @GroupID <> 1 THEN 3
+									 ELSE 0 
+								END 
+									
+				OR @betChoice = 2
+				)
 		)
 		SELECT
 			rb.custid

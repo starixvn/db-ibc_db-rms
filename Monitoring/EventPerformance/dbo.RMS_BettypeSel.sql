@@ -12,9 +12,10 @@ DB: DBRMS/bodb_RMS
 Revisions:
 
 - 20220301@Danny: Get data bettype by Sport [RedmineID: #169072]
+- 20230130@Danny: Monitor detail Performance for Event/Bettype/BetChoice Soccer [RedmineID: #182724]
 
 Parameter's Explanation:
-	 EXEC dbo.RMS_BettypeSel 2
+	 EXEC dbo.RMS_BettypeSel 1
 */
 BEGIN
 SET NOCOUNT ON;
@@ -25,6 +26,7 @@ SET NOCOUNT ON;
 						bt.typenamee, 
 						CASE WHEN SportType = 43 THEN CASE WHEN bettype IN (1,2,3,7,8,12,20,21) THEN 1  ELSE 2 END
 							 WHEN SportType = 2  THEN CASE WHEN bettype IN (1,2,3,7,8,12,20,21,609,610,611,612) THEN 1  ELSE 2 END
+							 WHEN SportType = 1  THEN CASE WHEN bettype IN (1,2,3,7,8,12,5,15) THEN 1  ELSE 2 END
 							 ELSE 0 END AS GroupID  -- 1 Major, 2 Minor
 		FROM bodb02.dbo.SportBettypeMatrix m WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.bettype bt WITH(NOLOCK) ON m.BetType = bt.typeid
