@@ -18,6 +18,7 @@ AS
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 		- 20210324@Danny: Get data from backup range  [RedmineID: #148137]
 		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
+		- 20230320@Cherry: Change formula of Stake (#185251)
 */
 
 BEGIN
@@ -142,7 +143,7 @@ BEGIN
 	SELECT
 		transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusID,status,livehomescore,liveawayscore
 		,liveindicator,leagueid,sporttype,isNeutral,matchid,matchcode,betstatus,betcheck
-		,(stake * (1 - @tpositiontaking) * @actualrate) AS stake,transdate,transdesc
+		,(stake * @actualrate) AS stake,transdate,transdesc
 		,IsBlacklistLeague
 	FROM @bettransm
 	ORDER BY transid

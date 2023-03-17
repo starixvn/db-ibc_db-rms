@@ -22,6 +22,7 @@ AS
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
 		- 20210701@Danny: Track User Monitoring [RedmineID: #153875]
+		- 20230320@Cherry: Change formula of Stake (#185251)
 
 	Parameter's Explanation:
 		- @selection:
@@ -219,7 +220,7 @@ BEGIN
 		,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype
 		,ISNULL(n.NumberWon, 0) AS NumberWon
 		,b.odds2 * b.TotalBet AS odds
-		,b.stake * b.actualrate / b.TotalBet AS Stake
+		,b.stake * b.actualrate AS Stake
 		,(b.odds2 - 1) * b.stake * b.actualrate AS WinningAmount
 		,(b.odds2 - 1) * b.stake * b.actualrate * (1 - b.tpositiontaking) AS CompanyLoseAmount
 		,b.ip
