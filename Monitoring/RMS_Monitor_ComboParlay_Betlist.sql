@@ -443,7 +443,7 @@ BEGIN
 		WHERE ISNULL(mc.level, 0) IN (SELECT level FROM #level)
 		AND ((rb.odds2 * rb.TotalBet) <= @Odds OR @Odds IS NULL)
 			AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
-			AND  (rb.stake * rb.actualrate * (1 - rb.tpositiontaking) / rb.TotalBet) >= CASE WHEN @reportType = 1 THEN @stake ELSE 0 END
+			AND  (rb.stake * rb.actualrate) >= CASE WHEN @reportType = 1 THEN @stake ELSE 0 END
 			AND  ((rb.odds2 - 1) * rb.stake * rb.actualrate * (1 - rb.tpositiontaking)) >= CASE WHEN @reportType = 2 THEN @maxpayout ELSE 0 END
 			AND  b.market IN (SELECT DISTINCT value FROM STRING_SPLIT(@Market, ','))
 			AND b.IsCornerParlay = CASE WHEN @IsCornerParlay = 1 THEN 1 ELSE b.IsCornerParlay END
