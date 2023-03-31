@@ -16,22 +16,36 @@ BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @min_tstamp BINARY(8), @max_tstamp BINARY(8)
+
 	SELECT  @min_tstamp = CONVERT(BINARY(8), CONVERT(BIGINT, ISNULL(VValue, 0)) + 1)
 	FROM dbo.rmSettings WITH (ROWLOCK)
 	WHERE VName = 'BigWinningAlert_LastTstamp'
 
 	SELECT  @max_tstamp = MAX(tstamp) FROM bodb02.dbo.bettrans WITH (NOLOCK)
 
+	CREATE TABLE #tmpBigWinning
+	(
+		TransID BIGINT,
+		SiteID INT,
+		CustID INT,
+		ParlayType TINYINT,
+		TotalSelection SMALLMONEY,
+		CurrencyID TINYINT,
+		Stake MONEY,
+		Winloss MONEY
+	)
+
 	SELECT
 		b.TransId
 		
 	FROM bodb02.dbo.bettrans b WITH (NOLOCK)
-		INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON b.currency = e.exchangeid
+		--INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON b.currency = e.exchangeid
 	WHERE b.tstamp between @min_tstamp and @max_tstamp
 		AND b.bettype IN (29, 38)
 		AND b.statusID = 112
 		AND b.currency <> 20
 		AND (b.winlost - b.actual_stake) * b.actualrate >= 65000
+		
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 4)
 
 	SELECT CONVERT(VARCHAR(200), CONVERT(BIGINT, @max_tstamp)) AS Tstamp
