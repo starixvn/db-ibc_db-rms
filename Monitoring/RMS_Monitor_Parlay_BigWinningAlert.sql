@@ -178,7 +178,7 @@ BEGIN
 
 					) r
 					INNER JOIN #tmpSelection s ON r.matchid = s.matchid AND r.bettype = s.bettype AND r.betteam = s.betteam
-				GROUP BY b.transid
+				GROUP BY b.transid, b.custid
 				HAVING COUNT(1) >= @combo
 		END		
 
@@ -205,55 +205,96 @@ BEGIN
 			SELECT s.transid, s.custid
 			FROM #tmpOriginalSMP_Selection r
 				INNER JOIN #tmpSMP_Selection s ON r.SelectionType = s.SelectionType
-			GROUP BY s.transid
+			GROUP BY s.transid, s.custid
 			HAVING COUNT(1) >= @combo
 		END
 
-		INSERT INTO #Result 
-		(
-			BigTransID,
-			BigCustID,
-			BigLicensee,
-			BigSystemID,
-			BigMemberID,
-			BigCustomerClass,
-			BigParlayType,
-			BigCurrencyID,
-			BigTotalSelection,
-			BigMemberStake,
-			BigWinningAmount,
-			SimilarTransID,
-			SimilarCustID,
-			SimilarSystemID,
-			SimilarMemberID,
-			SimilarCustomerClass 
-		)
-		SELECT
-			@transid,
-			@custid,
-			ab.[Site],
-			cb.username,
-			cb.username2,
-			ci.CustomerClass,
-			CASE WHEN @bettype = 29 AND @betteam = '1' THEN 'Mix Parlay'
-				WHEN @bettype = 29 AND @betteam <> '1' THEN 'Combo Parlay'
-				WHEN @bettype = 38 THEN 'Single Match Parlay'
-			END,
-			@currencyid,
-			@combo,
-			@stake,
-			@winloss,
-			s.Transid,
-			s.CustID,
-			cs.username,
-			cs.username2,
-			si.CustomerClass
-		FROM #tmpSimilar s 
-			LEFT JOIN bodb02.dbo.Customer cb WITH(NOLOCK) ON cb.custid = @custid
-			LEFT JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custid = @custid
-			LEFT JOIN bodb02.dbo.Customer ab WITH(NOLOCK) ON cb.recommend = ab.custid
-			LEFT JOIN bodb02.dbo.Customer cs WITH(NOLOCK) ON cs.custid = s.CustID
-			LEFT JOIN bodb02.dbo.custInfo si WITH(NOLOCK) ON si.custid = s.CustID
+		IF EXISTS(SELECT TOP 1 1 FROM #tmpSimilar)
+		BEGIN
+			INSERT INTO #Result 
+			(
+				BigTransID,
+				BigCustID,
+				BigLicensee,
+				BigSystemID,
+				BigMemberID,
+				BigCustomerClass,
+				BigParlayType,
+				BigCurrencyID,
+				BigTotalSelection,
+				BigMemberStake,
+				BigWinningAmount,
+				SimilarTransID,
+				SimilarCustID,
+				SimilarSystemID,
+				SimilarMemberID,
+				SimilarCustomerClass 
+			)
+			SELECT
+				@transid,
+				@custid,
+				ab.[Site],
+				cb.username,
+				substring(cb.username2, LEN(ab.[Site])+1, LEN(cb.username2)-LEN(ab.[Site])),
+				ci.CustomerClass,
+				CASE WHEN @bettype = 29 AND @betteam = '1' THEN 'Mix Parlay'
+					WHEN @bettype = 29 AND @betteam <> '1' THEN 'Combo Parlay'
+					WHEN @bettype = 38 THEN 'Single Match Parlay'
+				END,
+				@currencyid,
+				@combo,
+				@stake,
+				@winloss,
+				s.Transid,
+				s.CustID,
+				cs.username,
+				substring(cs.username2, LEN(sa.[Site])+1, LEN(cs.username2)-LEN(sa.[Site])), 
+				si.CustomerClass
+			FROM #tmpSimilar s 
+				LEFT JOIN bodb02.dbo.Customer cb WITH(NOLOCK) ON cb.custid = @custid
+				LEFT JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custid = @custid
+				LEFT JOIN bodb02.dbo.Customer ab WITH(NOLOCK) ON cb.recommend = ab.custid
+				LEFT JOIN bodb02.dbo.Customer cs WITH(NOLOCK) ON cs.custid = s.CustID
+				LEFT JOIN bodb02.dbo.custInfo si WITH(NOLOCK) ON si.custid = s.CustID
+				LEFT JOIN bodb02.dbo.Customer sa WITH(NOLOCK) ON cs.recommend = sa.custid
+		END
+
+		IF NOT EXISTS(SELECT TOP 1 1 FROM #tmpSimilar)
+		BEGIN
+			INSERT INTO #Result 
+			(
+				BigTransID,
+				BigCustID,
+				BigLicensee,
+				BigSystemID,
+				BigMemberID,
+				BigCustomerClass,
+				BigParlayType,
+				BigCurrencyID,
+				BigTotalSelection,
+				BigMemberStake,
+				BigWinningAmount
+			)
+			SELECT
+				@transid,
+				@custid,
+				ab.[Site],
+				cb.username,
+				substring(cb.username2, LEN(ab.[Site])+1, LEN(cb.username2)-LEN(ab.[Site])),
+				ci.CustomerClass,
+				CASE WHEN @bettype = 29 AND @betteam = '1' THEN 'Mix Parlay'
+					WHEN @bettype = 29 AND @betteam <> '1' THEN 'Combo Parlay'
+					WHEN @bettype = 38 THEN 'Single Match Parlay'
+				END,
+				@currencyid,
+				@combo,
+				@stake,
+				@winloss
+			FROM bodb02.dbo.Customer cb WITH(NOLOCK)
+				LEFT JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custid = @custid
+				LEFT JOIN bodb02.dbo.Customer ab WITH(NOLOCK) ON cb.recommend = ab.custid
+			WHERE cb.custid = @custid
+		END
 
 		DELETE FROM #tmpSimilar
 		DELETE FROM #tmpBigWinning WHERE TransID = @transid
