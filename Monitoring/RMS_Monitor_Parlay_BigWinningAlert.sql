@@ -159,6 +159,7 @@ BEGIN
 				AND currency <> 20
 				AND refno <> @refno
 				AND winlostdate = @winlostdate
+				AND srecommend IN (SELECT custid FROM bodb02.dbo.Dep_CustSuper WITH (NOLOCK) WHERE site <> 'Saba789')
 
 			INSERT INTO #tmpSimilar (Transid, CustID)
 				SELECT b.transid, b.custid
@@ -189,36 +190,17 @@ BEGIN
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
 			WHERE b.transid = @transid
-			UNION 
-			SELECT b.transid, a.SelectionType
-			FROM dbo.rmBettrans_Old b WITH (NOLOCK)
-				INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
-			WHERE b.transid = @transid
 			
-			IF @winlostdate > @MoveBetsDay
-			BEGIN
-				INSERT INTO #tmpSMP_Selection (TransId, SelectionType, Custid)
-				SELECT b.transid, a.SelectionType, b.custid
-				FROM dbo.rmBettrans b WITH (NOLOCK)
-					INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
-				WHERE b.hdp2 = @combo 		
-					AND statusid = 112
-					AND a.matchid = @MatchId
-					AND winlostdate >= CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
-					AND b.transid <> @transid
-			END
-			ELSE 
-			BEGIN
-				INSERT INTO #tmpSMP_Selection (TransId, SelectionType, Custid)
-				SELECT b.transid, a.SelectionType, b.custid
-				FROM dbo.rmBettrans_Old b WITH (NOLOCK)
-					INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
-				WHERE b.hdp2 = @combo 		
-					AND statusid = 112
-					AND a.matchid = @MatchId
-					AND winlostdate = @winlostdate
-					AND b.transid <> @transid
-			END
+			INSERT INTO #tmpSMP_Selection (TransId, SelectionType, Custid)
+			SELECT b.transid, a.SelectionType, b.custid
+			FROM dbo.rmBettrans b WITH (NOLOCK)
+				INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
+			WHERE b.hdp2 = @combo 		
+				AND statusid = 112
+				AND a.matchid = @MatchId
+				AND winlostdate >= CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
+				AND b.transid <> @transid
+				AND b.srecommend IN (SELECT custid FROM bodb02.dbo.Dep_CustSuper WITH (NOLOCK) WHERE site <> 'Saba789')
 
 			INSERT INTO #tmpSimilar (transid, custid)
 			SELECT s.transid, s.custid
@@ -232,23 +214,27 @@ BEGIN
 		(
 			BigTransID,
 			BigCustID,
-			--BigLicensee,
-			--BigSystemID,
-			--BigMemberID,
-			--BigCustomerClass,
+			BigLicensee,
+			BigSystemID,
+			BigMemberID,
+			BigCustomerClass,
 			BigParlayType,
 			BigTotalSelection,
 			BigMemberStake,
 			BigWinningAmount,
 			SimilarTransID,
-			SimilarCustID
-			--SimilarSystemID,
-			--SimilarMemberID,
-			--SimilarCustomerClass 
+			SimilarCustID,
+			SimilarSystemID,
+			SimilarMemberID,
+			SimilarCustomerClass 
 		)
 		SELECT
 			@transid,
 			@custid,
+			ab.[Site],
+			cb.username,
+			cb.username2,
+			ci.CustomerClass,
 			CASE WHEN @bettype = 29 AND @betteam = '1' THEN 'Mix Parlay'
 				WHEN @bettype = 29 AND @betteam <> '1' THEN 'Combo Parlay'
 				WHEN @bettype = 38 THEN 'Single Match Parlay'
@@ -256,9 +242,17 @@ BEGIN
 			@combo,
 			@stake,
 			@winloss,
-			Transid,
-			CustID
-		FROM #tmpSimilar
+			s.Transid,
+			s.CustID,
+			cs.username,
+			cs.username2,
+			si.CustomerClass
+		FROM #tmpSimilar s 
+			LEFT JOIN bodb02.dbo.Customer cb WITH(NOLOCK) ON cb.custid = @custid
+			LEFT JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custid = @custid
+			LEFT JOIN bodb02.dbo.Customer ab WITH(NOLOCK) ON cb.recommend = ab.custid
+			LEFT JOIN bodb02.dbo.Customer cs WITH(NOLOCK) ON cs.custid = s.CustID
+			LEFT JOIN bodb02.dbo.custInfo si WITH(NOLOCK) ON si.custid = s.CustID
 
 		DELETE FROM #tmpSimilar
 		DELETE FROM #tmpBigWinning WHERE TransID = @transid
