@@ -1,6 +1,6 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_BigWinningAlert]
-	@IsTest BIT = 0
+
 AS
 
 /*
@@ -39,7 +39,6 @@ BEGIN
 		Matchid INT,
 		Refno BIGINT,
 		Combo INT,
-		--StatusID TINYINT,
 		Winlostdate SMALLDATETIME,
 		Betcheck NVARCHAR(50),
 		CurrencyID TINYINT,
@@ -56,7 +55,6 @@ BEGIN
 		Matchid,
 		Refno,
 		Combo,
-		--StatusID,
 		Winlostdate,
 		Betcheck,
 		CurrencyID,
@@ -71,13 +69,12 @@ BEGIN
 		b.matchid,
 		b.refno,
 		b.hdp2,
-		--b.statusID,
 		b.winlostdate,
+		b.betcheck,
 		b.currency,
 		b.Stake,
 		b.winlost - b.actual_stake
 	FROM bodb02.dbo.bettrans b WITH (NOLOCK)
-		--INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON b.currency = e.exchangeid
 	WHERE b.tstamp between @min_tstamp and @max_tstamp
 		AND b.bettype IN (29, 38)
 		AND b.statusID = 112
@@ -101,6 +98,7 @@ BEGIN
 		BigMemberID VARCHAR(50),
 		BigCustomerClass SMALLINT,
 		BigParlayType VARCHAR(50),
+		BigCurrencyID INT,
 		BigTotalSelection INT,
 		BigMemberStake MONEY,
 		BigWinningAmount MONEY,
@@ -112,7 +110,7 @@ BEGIN
 	)
 
 	DECLARE @transid BIGINT, @bettype INT, @betteam NVARCHAR(10), @matchid INT, @refno BIGINT, 
-		@combo INT, @winlostdate SMALLDATETIME, @betcheck NVARCHAR(50), @custid INT,
+		@combo INT, @winlostdate SMALLDATETIME, @betcheck NVARCHAR(50), @custid INT, @currencyid INT,
 		@stake MONEY, @winloss MONEY
 
 	CREATE TABLE #tmpSelection (matchid INT, bettype INT, betteam NVARCHAR(10))
@@ -131,6 +129,7 @@ BEGIN
 				@winlostdate = winlostdate, 
 				@betcheck = betcheck,
 				@custid = CustID,
+				@currencyid = CurrencyID,
 				@stake = Stake,
 				@winloss = Winloss
 		FROM #tmpBigWinning
@@ -219,6 +218,7 @@ BEGIN
 			BigMemberID,
 			BigCustomerClass,
 			BigParlayType,
+			BigCurrencyID,
 			BigTotalSelection,
 			BigMemberStake,
 			BigWinningAmount,
@@ -239,6 +239,7 @@ BEGIN
 				WHEN @bettype = 29 AND @betteam <> '1' THEN 'Combo Parlay'
 				WHEN @bettype = 38 THEN 'Single Match Parlay'
 			END,
+			@currencyid,
 			@combo,
 			@stake,
 			@winloss,
@@ -259,7 +260,23 @@ BEGIN
 
 	END
 
-	SELECT * FROM #Result
+	SELECT BigLicensee,
+			BigSystemID,
+			BigMemberID,
+			BigCustomerClass,
+			BigTransID,
+			BigParlayType,
+			BigTotalSelection,
+			e.currency BigCurrency,
+			BigMemberStake,
+			BigWinningAmount,
+			SimilarSystemID,
+			SimilarMemberID,
+			SimilarCustomerClass,
+			SimilarTransID
+	FROM #Result d
+		INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON d.BigCurrencyID = e.exchangeid
+
 	SELECT CONVERT(VARCHAR(200), CONVERT(BIGINT, @max_tstamp)) AS Tstamp
 
 	DROP TABLE #Result
