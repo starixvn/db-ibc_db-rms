@@ -41,6 +41,7 @@ AS
 		- 20220301@Danny: add filter by Site [RedmineID: #169072]
 		- 20220519@Danny: add filter by username [RedmineID: #172691]
 		- 20221121@Danny: enhance perfomance [RedmineID: #180707]
+		- 20230320@Cherry: Change formula of Stake (#185251)
 
 	Parameter's Explanation:
 		- @selection:
@@ -418,7 +419,7 @@ BEGIN
 			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype
 			,rb.odds2 * rb.TotalBet AS odds
 			,rb.statusID
-			,rb.stake * rb.actualrate * (1 - rb.tpositiontaking) / rb.TotalBet AS stake
+			,rb.stake * rb.actualrate AS stake
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate * (1 - rb.tpositiontaking) AS maxpayout
 			,rb.hdp2 AS TotalSelection
 			,rb.TotalBet AS TotalBet
@@ -442,7 +443,7 @@ BEGIN
 		WHERE ISNULL(mc.level, 0) IN (SELECT level FROM #level)
 		AND ((rb.odds2 * rb.TotalBet) <= @Odds OR @Odds IS NULL)
 			AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
-			AND  (rb.stake * rb.actualrate * (1 - rb.tpositiontaking) / rb.TotalBet) >= CASE WHEN @reportType = 1 THEN @stake ELSE 0 END
+			AND  (rb.stake * rb.actualrate) >= CASE WHEN @reportType = 1 THEN @stake ELSE 0 END
 			AND  ((rb.odds2 - 1) * rb.stake * rb.actualrate * (1 - rb.tpositiontaking)) >= CASE WHEN @reportType = 2 THEN @maxpayout ELSE 0 END
 			AND  b.market IN (SELECT DISTINCT value FROM STRING_SPLIT(@Market, ','))
 			AND b.IsCornerParlay = CASE WHEN @IsCornerParlay = 1 THEN 1 ELSE b.IsCornerParlay END

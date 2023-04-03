@@ -22,6 +22,7 @@ AS
 		- 20210628@Danny: Add Column Member Potential Winning [RedmineID: #156979]
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20210029@Danny: Support filter tickets having 100% of selections Similar Bets [RedmineID: #159304]
+		- 20230320@Cherry: Change formula of Stake (#185251)
 */
 
 BEGIN
@@ -299,7 +300,7 @@ BEGIN
 			,ISNULL(c.level, 0) AS level
 			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE p.transid2 END AS Sporttype
 			,p.odds2 * p.TotalBet AS odds
-			,(p.stake * p.actualrate * (1 - p.tpositiontaking) / p.TotalBet) AS stake
+			,(p.stake * p.actualrate) AS stake
 			,(p.stake * (p.odds2 - 1) * p.actualrate * (1 - p.tpositiontaking)) AS net_win
 			,p.hdp2		AS TotalSelection
 			,ISNULL(@NumberWon, 0)	AS NumberWon
@@ -322,7 +323,7 @@ BEGIN
 			,ISNULL(c.level, 0) AS level
 			,CASE WHEN @statusID = 0  THEN stake * (odds2 - 1) * actualrate * (1 - p.tpositiontaking) ELSE ((p.winlost - p.actual_stake) * p.actualrate) END  AS net_win
 			,cnt AS similar_selection
-			,(p.stake * p.actualrate * (1 - p.tpositiontaking) / p.TotalBet) AS stake
+			,(p.stake * p.actualrate) AS stake
 			,ci.CustomerClass
 			,(p.odds2 - 1) * p.stake * p.actualrate AS potentialWinningAmt
 		FROM @result r
@@ -344,7 +345,7 @@ BEGIN
 			,ISNULL(c.level, 0) AS level
 			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE p.transid2 END AS Sporttype
 			,(p.winlost - p.actual_stake) / p.stake AS odds
-			,(p.stake * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) * p.actualrate) AS stake
+			,(p.stake * p.actualrate) AS stake
 			,((p.winlost - p.actual_stake) * p.actualrate) net_win
 			,p.hdp2		AS TotalSelection
 			,ISNULL(@NumberWon, 0)	AS NumberWon
@@ -371,7 +372,7 @@ BEGIN
 			,ISNULL(c.level, 0) AS level
 			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE p.transid2 END AS Sporttype
 			,(p.winlost - p.actual_stake) / p.stake AS odds
-			,(p.stake * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) * p.actualrate) AS stake
+			,(p.stake * p.actualrate) AS stake
 			,((p.winlost - p.actual_stake) * p.actualrate) net_win
 			,p.hdp2		AS TotalSelection
 			,ISNULL(@NumberWon, 0)	AS NumberWon
@@ -395,7 +396,7 @@ BEGIN
 			,ISNULL(c.level, 0) AS level
 			,CASE WHEN @statusID = 0  THEN stake * (odds2 - 1) * actualrate * (1 - p.tpositiontaking) ELSE ((p.winlost - p.actual_stake) * p.actualrate) END  AS net_win
 			,cnt AS similar_selection
-			,(p.stake * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) * p.actualrate) AS stake
+			,(p.stake * p.actualrate) AS stake
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate AS houseLoseAmt
 			,ci.CustomerClass
 
@@ -412,7 +413,7 @@ BEGIN
 			,ISNULL(c.level, 0) AS level
 			,CASE WHEN @statusID = 0  THEN stake * (odds2 - 1) * actualrate * (1 - p.tpositiontaking) ELSE ((p.winlost - p.actual_stake) * p.actualrate) END  AS net_win
 			,cnt AS similar_selection
-			,(p.stake * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) * p.actualrate) AS stake
+			,(p.stake * p.actualrate) AS stake
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate AS houseLoseAmt
 			,ci.CustomerClass
 
