@@ -77,14 +77,20 @@ BEGIN
 		b.currency,
 		b.Stake,
 		b.winlost - b.actual_stake
-	FROM bodb02.dbo.bettrans b WITH (NOLOCK)
+	FROM bodb02.dbo.bettrans b WITH (NOLOCK, INDEX = IX_tstamp_transid)
 	WHERE b.tstamp between @min_tstamp and @max_tstamp
 		AND b.bettype IN (29, 38)
 		AND b.statusID = 112
 		AND b.currency <> 20
 		AND (b.winlost - b.actual_stake) * b.actualrate >= 65000
-		AND b.srecommend IN (SELECT custid FROM bodb02.dbo.Dep_CustSuper WITH (NOLOCK) WHERE site <> 'Saba789')
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 4)	
+
+	DELETE t
+	FROM #tmpBigWinning t
+		INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON t.CustID = c.custid
+		INNER JOIN bodb02.dbo.Customer a WITH(NOLOCK) ON c.recommend = a.custid
+		INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON a.site = s.site
+	WHERE (s.isLicensee = 0 OR s.site = 'Saba789')
 
 	CREATE TABLE #tmpSimilar
 	(
@@ -161,7 +167,13 @@ BEGIN
 				AND currency <> 20
 				AND refno <> @refno
 				AND winlostdate = @winlostdate
-				AND srecommend IN (SELECT custid FROM bodb02.dbo.Dep_CustSuper WITH (NOLOCK) WHERE site <> 'Saba789')
+
+			DELETE t
+			FROM #tmpbettrans t
+				INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON t.CustID = c.custid
+				INNER JOIN bodb02.dbo.Customer a WITH(NOLOCK) ON c.recommend = a.custid
+				INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON a.site = s.site
+			WHERE (s.isLicensee = 0 OR s.site = 'Saba789')
 
 			INSERT INTO #tmpSimilar (Transid, CustID)
 				SELECT b.transid, b.custid
@@ -202,7 +214,13 @@ BEGIN
 				AND a.matchid = @MatchId
 				AND winlostdate >= CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
 				AND b.transid <> @transid
-				AND b.srecommend IN (SELECT custid FROM bodb02.dbo.Dep_CustSuper WITH (NOLOCK) WHERE site <> 'Saba789')
+
+			DELETE t
+			FROM #tmpSMP_Selection t
+				INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON t.CustID = c.custid
+				INNER JOIN bodb02.dbo.Customer a WITH(NOLOCK) ON c.recommend = a.custid
+				INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON a.site = s.site
+			WHERE (s.isLicensee = 0 OR s.site = 'Saba789')
 
 			INSERT INTO #tmpSimilar (transid, custid)
 			SELECT s.transid, s.custid
@@ -300,6 +318,7 @@ BEGIN
 		END
 
 		DELETE FROM #tmpSimilar
+		DELETE FROM #tmpSelection
 		DELETE FROM #tmpbettrans
 		DELETE FROM #tmpOriginalSMP_Selection
 		DELETE FROM #tmpSMP_Selection
