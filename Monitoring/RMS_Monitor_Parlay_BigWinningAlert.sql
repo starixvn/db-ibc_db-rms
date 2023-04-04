@@ -28,6 +28,9 @@ BEGIN
 	FROM dbo.rmSettings WITH (ROWLOCK)
 	WHERE VName = 'BigWinningAlert_LastTstamp'
 
+	IF @min_tstamp IS NULL
+		SELECT @min_tstamp = MIN(tstamp) FROM bodb02.dbo.bettrans WITH (NOLOCK) WHERE winlostdate > @MoveBetsDay
+
 	SELECT  @max_tstamp = MAX(tstamp) FROM bodb02.dbo.bettrans WITH (NOLOCK)
 
 	CREATE TABLE #tmpBigWinning
@@ -114,7 +117,7 @@ BEGIN
 		@stake MONEY, @winloss MONEY
 
 	CREATE TABLE #tmpSelection (matchid INT, bettype INT, betteam NVARCHAR(10))
-	CREATE TABLE #tmpbettrans (transid BIGINT PRIMARY KEY, refno BIGINT, custid INT)
+	CREATE TABLE #tmpbettrans (transid BIGINT, refno BIGINT, custid INT)
 	CREATE TABLE #tmpOriginalSMP_Selection (transid BIGINT, SelectionType INT)
 	CREATE TABLE #tmpSMP_Selection (transid BIGINT, SelectionType INT, custid INT)
 
@@ -297,6 +300,9 @@ BEGIN
 		END
 
 		DELETE FROM #tmpSimilar
+		DELETE FROM #tmpbettrans
+		DELETE FROM #tmpOriginalSMP_Selection
+		DELETE FROM #tmpSMP_Selection
 		DELETE FROM #tmpBigWinning WHERE TransID = @transid
 
 	END
