@@ -88,8 +88,7 @@ BEGIN
 	DELETE t
 	FROM #tmpBigWinning t
 		INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON t.CustID = c.custid
-		INNER JOIN bodb02.dbo.Customer a WITH(NOLOCK) ON c.recommend = a.custid
-		INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON a.site = s.site
+		INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
 	WHERE (s.isLicensee = 0 OR s.site = 'Saba789')
 
 	CREATE TABLE #tmpSimilar
@@ -171,8 +170,7 @@ BEGIN
 			DELETE t
 			FROM #tmpbettrans t
 				INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON t.CustID = c.custid
-				INNER JOIN bodb02.dbo.Customer a WITH(NOLOCK) ON c.recommend = a.custid
-				INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON a.site = s.site
+				INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
 			WHERE (s.isLicensee = 0 OR s.site = 'Saba789')
 
 			INSERT INTO #tmpSimilar (Transid, CustID)
@@ -218,8 +216,7 @@ BEGIN
 			DELETE t
 			FROM #tmpSMP_Selection t
 				INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON t.CustID = c.custid
-				INNER JOIN bodb02.dbo.Customer a WITH(NOLOCK) ON c.recommend = a.custid
-				INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON a.site = s.site
+				INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
 			WHERE (s.isLicensee = 0 OR s.site = 'Saba789')
 
 			INSERT INTO #tmpSimilar (transid, custid)
@@ -254,9 +251,9 @@ BEGIN
 			SELECT
 				@transid,
 				@custid,
-				ab.[Site],
+				cb.[Site],
 				cb.username,
-				substring(cb.username2, LEN(ab.[Site])+1, LEN(cb.username2)-LEN(ab.[Site])),
+				substring(cb.username2, LEN(cb.[Site])+1, LEN(cb.username2)-LEN(cb.[Site])),
 				ci.CustomerClass,
 				CASE WHEN @bettype = 29 AND @betteam = '1' THEN 'Mix Parlay'
 					WHEN @bettype = 29 AND @betteam <> '1' THEN 'Combo Parlay'
@@ -269,15 +266,13 @@ BEGIN
 				s.Transid,
 				s.CustID,
 				cs.username,
-				substring(cs.username2, LEN(sa.[Site])+1, LEN(cs.username2)-LEN(sa.[Site])), 
+				substring(cs.username2, LEN(cs.[Site])+1, LEN(cs.username2)-LEN(cs.[Site])), 
 				si.CustomerClass
 			FROM #tmpSimilar s 
 				LEFT JOIN bodb02.dbo.Customer cb WITH(NOLOCK) ON cb.custid = @custid
 				LEFT JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custid = @custid
-				LEFT JOIN bodb02.dbo.Customer ab WITH(NOLOCK) ON cb.recommend = ab.custid
 				LEFT JOIN bodb02.dbo.Customer cs WITH(NOLOCK) ON cs.custid = s.CustID
 				LEFT JOIN bodb02.dbo.custInfo si WITH(NOLOCK) ON si.custid = s.CustID
-				LEFT JOIN bodb02.dbo.Customer sa WITH(NOLOCK) ON cs.recommend = sa.custid
 		END
 
 		IF NOT EXISTS(SELECT TOP 1 1 FROM #tmpSimilar)
@@ -299,9 +294,9 @@ BEGIN
 			SELECT
 				@transid,
 				@custid,
-				ab.[Site],
+				cb.[Site],
 				cb.username,
-				substring(cb.username2, LEN(ab.[Site])+1, LEN(cb.username2)-LEN(ab.[Site])),
+				substring(cb.username2, LEN(cb.[Site])+1, LEN(cb.username2)-LEN(cb.[Site])),
 				ci.CustomerClass,
 				CASE WHEN @bettype = 29 AND @betteam = '1' THEN 'Mix Parlay'
 					WHEN @bettype = 29 AND @betteam <> '1' THEN 'Combo Parlay'
@@ -313,7 +308,6 @@ BEGIN
 				@winloss
 			FROM bodb02.dbo.Customer cb WITH(NOLOCK)
 				LEFT JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custid = @custid
-				LEFT JOIN bodb02.dbo.Customer ab WITH(NOLOCK) ON cb.recommend = ab.custid
 			WHERE cb.custid = @custid
 		END
 
