@@ -77,7 +77,7 @@ BEGIN
 		b.currency,
 		b.Stake,
 		b.winlost - b.actual_stake
-	FROM bodb02.dbo.bettrans b WITH (NOLOCK, INDEX = IX_tstamp_transid)
+	FROM bodb02.dbo.bettrans b WITH (NOLOCK)
 	WHERE b.tstamp between @min_tstamp and @max_tstamp
 		AND b.bettype IN (29, 38)
 		AND b.statusID = 112
@@ -159,9 +159,9 @@ BEGIN
 
 			INSERT INTO #tmpbettrans (transid, refno, custid)
 			SELECT transid, refno, custid
-			FROM dbo.rmBettrans WITH (NOLOCK)
+			FROM bodb02.dbo.bettrans WITH (NOLOCK)
 			WHERE bettype = 29
-				AND combo = @combo
+				AND hdp2 = @combo
 				AND statusID = 112
 				AND currency <> 20
 				AND refno <> @refno
@@ -199,13 +199,13 @@ BEGIN
 		BEGIN
 			INSERT INTO #tmpOriginalSMP_Selection (TransId, SelectionType)
 			SELECT b.transid, a.SelectionType
-			FROM dbo.rmBettrans b WITH (NOLOCK)
+			FROM bodb02.dbo.bettrans b WITH (NOLOCK)
 				INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
 			WHERE b.transid = @transid
 			
 			INSERT INTO #tmpSMP_Selection (TransId, SelectionType, Custid)
 			SELECT b.transid, a.SelectionType, b.custid
-			FROM dbo.rmBettrans b WITH (NOLOCK)
+			FROM bodb02.dbo.bettrans b WITH (NOLOCK)
 				INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
 			WHERE b.hdp2 = @combo 		
 				AND statusid = 112
