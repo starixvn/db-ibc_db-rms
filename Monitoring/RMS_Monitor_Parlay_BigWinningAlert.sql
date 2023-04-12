@@ -89,7 +89,7 @@ BEGIN
 	FROM #tmpBigWinning t
 		INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON t.CustID = c.custid
 		INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
-	WHERE (s.isLicensee = 0 OR s.site = 'Saba789')
+	WHERE (s.isDeposit = 0 OR s.site = 'Saba789')
 
 	CREATE TABLE #tmpSimilar
 	(
@@ -171,7 +171,7 @@ BEGIN
 			FROM #tmpbettrans t
 				INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON t.CustID = c.custid
 				INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
-			WHERE (s.isLicensee = 0 OR s.site = 'Saba789')
+			WHERE (s.isDeposit = 0 OR s.site = 'Saba789')
 
 			INSERT INTO #tmpSimilar (Transid, CustID)
 				SELECT b.transid, b.custid
@@ -217,7 +217,7 @@ BEGIN
 			FROM #tmpSMP_Selection t
 				INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON t.CustID = c.custid
 				INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
-			WHERE (s.isLicensee = 0 OR s.site = 'Saba789')
+			WHERE (s.isDeposit = 0 OR s.site = 'Saba789')
 
 			INSERT INTO #tmpSimilar (transid, custid)
 			SELECT s.transid, s.custid
