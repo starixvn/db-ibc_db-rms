@@ -253,7 +253,7 @@ BEGIN
 				@custid,
 				cb.[Site],
 				cb.username,
-				substring(cb.username2, LEN(cb.[Site])+1, LEN(cb.username2)-LEN(cb.[Site])),
+				substring(cb.username2, LEN(cb.[Site])+2, LEN(cb.username2)-LEN(cb.[Site])),
 				ci.CustomerClass,
 				CASE WHEN @bettype = 29 AND @betteam = '1' THEN 'Mix Parlay'
 					WHEN @bettype = 29 AND @betteam <> '1' THEN 'Combo Parlay'
@@ -266,7 +266,7 @@ BEGIN
 				s.Transid,
 				s.CustID,
 				cs.username,
-				substring(cs.username2, LEN(cs.[Site])+1, LEN(cs.username2)-LEN(cs.[Site])), 
+				substring(cs.username2, LEN(cs.[Site])+2, LEN(cs.username2)-LEN(cs.[Site])), 
 				si.CustomerClass
 			FROM #tmpSimilar s 
 				LEFT JOIN bodb02.dbo.Customer cb WITH(NOLOCK) ON cb.custid = @custid
@@ -296,7 +296,7 @@ BEGIN
 				@custid,
 				cb.[Site],
 				cb.username,
-				substring(cb.username2, LEN(cb.[Site])+1, LEN(cb.username2)-LEN(cb.[Site])),
+				substring(cb.username2, LEN(cb.[Site])+2, LEN(cb.username2)-LEN(cb.[Site])),
 				ci.CustomerClass,
 				CASE WHEN @bettype = 29 AND @betteam = '1' THEN 'Mix Parlay'
 					WHEN @bettype = 29 AND @betteam <> '1' THEN 'Combo Parlay'
