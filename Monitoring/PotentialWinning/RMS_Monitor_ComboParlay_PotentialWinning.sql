@@ -31,6 +31,7 @@ AS
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20210701@Danny: Track User Monitoring [RedmineID: #153875]
 		- 20220519@Danny: add filter by Site AND username [RedmineID: #172691]
+		- 20230412@Cherry: Add Site column (#186735)
 
 	Parameter's Explanation:
 		- @selection:
@@ -367,6 +368,7 @@ BEGIN
 			SELECT TOP(@limitRowcount) 
 				MAX(b.transdate) AS transdate
 				,b.custid
+				,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
 				,b.username
 				,AVG(b.Odds) AS Odds
 				,SUM(b.stake) AS stake
@@ -378,13 +380,16 @@ BEGIN
 				,b.CustomerClass
 				,SUM(CASE WHEN l.transid IS NOT NULL THEN 1 ELSE 0 END)  AS TotalTrackingBets
 			FROM #bettrans_details b WITH(NOLOCK)
-			LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON b.transid = l.transid
+				LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON b.transid = l.transid
+				INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custID = c.custid
+				INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
 			GROUP BY
 				b.custid
 				,b.username 
 				,b.level 
 				,b.CurrencyName
 				,b.CustomerClass
+				,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
 			HAVING SUM(b.WinningAmount) >= CASE WHEN @Recommend >0 THEN 0 ELSE @WinningAmount END
 			ORDER BY WinningAmount DESC
 
@@ -393,15 +398,19 @@ BEGIN
 		ELSE
 		BEGIN
 			SELECT TOP (@limitRowcount)
-				mc.username AgentName
+				CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+				,mc.username AgentName
 				,SUM(stake) TotalStake
 				,SUM(b.WinningAmount) AS WinningAmount
 				,COUNT(DISTINCT b.custid) TotalMember
 				,b.recommend
 			FROM  #bettrans_details b WITH(NOLOCK) 
-			LEFT JOIN bodb02.dbo.custInfo  mc WITH (NOLOCK)  ON b.recommend = mc.custid
+				LEFT JOIN bodb02.dbo.custInfo  mc WITH (NOLOCK)  ON b.recommend = mc.custid
+				INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.recommend = c.custid
+				INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
 			GROUP BY
-				mc.username
+				CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END 
+				,mc.username
 				,b.recommend
 			HAVING SUM(b.WinningAmount) >= @WinningAmount
 			ORDER BY WinningAmount DESC

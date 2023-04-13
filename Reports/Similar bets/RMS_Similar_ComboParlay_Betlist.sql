@@ -23,6 +23,7 @@ AS
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20210029@Danny: Support filter tickets having 100% of selections Similar Bets [RedmineID: #159304]
 		- 20230320@Cherry: Change formula of Stake (#185251)
+		- 20230412@Cherry: Add Site column (#186735)
 */
 
 BEGIN
@@ -294,10 +295,11 @@ BEGIN
 			p.transdate
 			,p.transid
 			,p.refno
+			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
 			,p.username
 			,p.custid
 			,p.bettype
-			,ISNULL(c.level, 0) AS level
+			,ISNULL(r.level, 0) AS level
 			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE p.transid2 END AS Sporttype
 			,p.odds2 * p.TotalBet AS odds
 			,(p.stake * p.actualrate) AS stake
@@ -312,15 +314,18 @@ BEGIN
 			,ci.CustomerClass
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
-			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
+			LEFT JOIN rmCustomer r WITH (NOLOCK) ON p.custid = r.custid
+			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
+			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE transid = @transid
 
 		SELECT
 			p.transid
 			,p.refno
+			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
 			,p.username
 			,p.custid
-			,ISNULL(c.level, 0) AS level
+			,ISNULL(rc.level, 0) AS level
 			,CASE WHEN @statusID = 0  THEN stake * (odds2 - 1) * actualrate * (1 - p.tpositiontaking) ELSE ((p.winlost - p.actual_stake) * p.actualrate) END  AS net_win
 			,cnt AS similar_selection
 			,(p.stake * p.actualrate) AS stake
@@ -329,7 +334,9 @@ BEGIN
 		FROM @result r
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
-			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
+			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
+			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
+			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		ORDER BY cnt DESC
 	END
 
@@ -339,10 +346,11 @@ BEGIN
 			p.transdate
 			,p.transid
 			,p.refno
+			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
 			,p.username
 			,p.custid
 			,p.bettype
-			,ISNULL(c.level, 0) AS level
+			,ISNULL(rc.level, 0) AS level
 			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE p.transid2 END AS Sporttype
 			,(p.winlost - p.actual_stake) / p.stake AS odds
 			,(p.stake * p.actualrate) AS stake
@@ -357,7 +365,9 @@ BEGIN
 			,ci.CustomerClass
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
-			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
+			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
+			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
+			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE transid = @transid
 
 		UNION 
@@ -366,10 +376,11 @@ BEGIN
 			p.transdate
 			,p.transid
 			,p.refno
+			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
 			,p.username
 			,p.custid
 			,p.bettype
-			,ISNULL(c.level, 0) AS level
+			,ISNULL(rc.level, 0) AS level
 			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE p.transid2 END AS Sporttype
 			,(p.winlost - p.actual_stake) / p.stake AS odds
 			,(p.stake * p.actualrate) AS stake
@@ -384,43 +395,49 @@ BEGIN
 			,ci.CustomerClass
 		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
-			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
+			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
+			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
+			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE transid = @transid
 
 
 		SELECT
 			p.transid
 			,p.refno
+			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
 			,p.username
 			,p.custid
-			,ISNULL(c.level, 0) AS level
+			,ISNULL(rc.level, 0) AS level
 			,CASE WHEN @statusID = 0  THEN stake * (odds2 - 1) * actualrate * (1 - p.tpositiontaking) ELSE ((p.winlost - p.actual_stake) * p.actualrate) END  AS net_win
 			,cnt AS similar_selection
 			,(p.stake * p.actualrate) AS stake
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate AS houseLoseAmt
 			,ci.CustomerClass
-
 		FROM @result r
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
-			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
+			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
+			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
+			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		UNION ALL
 		SELECT
 			p.transid
 			,p.refno
+			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
 			,p.username
 			,p.custid
-			,ISNULL(c.level, 0) AS level
+			,ISNULL(rc.level, 0) AS level
 			,CASE WHEN @statusID = 0  THEN stake * (odds2 - 1) * actualrate * (1 - p.tpositiontaking) ELSE ((p.winlost - p.actual_stake) * p.actualrate) END  AS net_win
 			,cnt AS similar_selection
 			,(p.stake * p.actualrate) AS stake
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate AS houseLoseAmt
 			,ci.CustomerClass
-
 		FROM @result r
 			INNER JOIN dbo.rmBettrans_Old p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
-			LEFT JOIN rmCustomer c WITH (NOLOCK) ON p.custid = c.custid
+			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
+			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
+			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		ORDER BY cnt DESC
 	END
 
