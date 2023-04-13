@@ -31,6 +31,7 @@ AS
 		- 20210303@Danny: Change on Report Top Winners [RedmineID: #146554]
 		- 20210428@Danny: Add filtering by Site[RedmineID: #153874]
 		- 20220519@Danny: add filter by Live Status [RedmineID: #172691]
+		- 20230412@Cherry: Add Site column (#186735)
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -292,7 +293,8 @@ BEGIN
 	)
 	SELECT
 		r.custid
-		,r.username
+		,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+		,r.username		
 		,e.currency
 		,stake
 		,winlost
@@ -303,12 +305,13 @@ BEGIN
 		,winlost_baseRM / stake_baseRM AS margin
 		,betcount
 		,avg_odds
-		,ISNULL(c.level, 0) AS level,
+		,ISNULL(rc.level, 0) AS level,
 		r.CustomerClass
 	FROM CTE_Result r
 		INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON r.currency = e.exchangeid
-		LEFT JOIN rmCustomer c WITH (NOLOCK) ON r.custid = c.custid
-	
+		LEFT JOIN rmCustomer rc WITH (NOLOCK) ON r.custid = rc.custid
+		INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON r.custid = c.custid
+		INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site	
 	ORDER BY winlost_baseRM desc
 
 	DROP TABLE #bettype

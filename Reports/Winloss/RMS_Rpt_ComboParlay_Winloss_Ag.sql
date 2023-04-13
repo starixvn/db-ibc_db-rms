@@ -132,6 +132,7 @@ BEGIN
 		CREATE TABLE #tmpSum
 		(
 			month			VARCHAR(7)
+			,custid			INT
 			,username		VARCHAR(50)
 			,tickets_won	INT
 			,tickets_lose	INT
@@ -153,6 +154,7 @@ BEGIN
 			INSERT INTO #tmpSum
 			(
 				month 
+				,custid
 				,username
 				,tickets_won
 				,tickets_lose 
@@ -166,6 +168,7 @@ BEGIN
 			)
 			SELECT
 				CONVERT(VARCHAR(7), winlostdate, 120)
+				,b.custid
 				,b.username
 				,SUM(CASE WHEN statusID = 112 THEN 1 ELSE 0 END) AS tickets_won
 				,SUM(CASE WHEN statusID = 113 THEN 1 ELSE 0 END) AS tickets_lose
@@ -208,6 +211,7 @@ BEGIN
 			INSERT INTO #tmpSum
 			(
 				month 
+				,custid
 				,username
 				,tickets_won
 				,tickets_lose 
@@ -221,6 +225,7 @@ BEGIN
 			)
 			SELECT 
 				CONVERT(VARCHAR(7), winlostdate, 120)
+				,a.custid
 				,a.username
 				,SUM(CASE WHEN statusID = 112 THEN betcount ELSE 0 END) AS tickets_won
 				,SUM(CASE WHEN statusID = 113 THEN betcount ELSE 0 END) AS tickets_lose
@@ -253,6 +258,7 @@ BEGIN
 			INSERT INTO #tmpSum
 			(
 				month 
+				,custid
 				,username
 				,tickets_won
 				,tickets_lose 
@@ -266,6 +272,7 @@ BEGIN
 			)
 			SELECT 
 				CONVERT(VARCHAR(7), winlostdate, 120)
+				,a.custid
 				,a.username
 				,SUM(CASE WHEN statusID = 112 THEN betcount ELSE 0 END) AS tickets_won
 				,SUM(CASE WHEN statusID = 113 THEN betcount ELSE 0 END) AS tickets_lose
@@ -292,19 +299,24 @@ BEGIN
 	END
 	
 	-- Return data
-	SELECT month, username
-		,SUM(tickets_won)	AS tickets_won
-		,SUM(tickets_lose)	AS tickets_lose
-		,SUM(stake_won)		AS stake_won
-		,SUM(stake_lose)	AS stake_lose
-		,SUM(member_won)	AS member_won
-		,SUM(member_lose)	AS member_lose
-		,SUM(ourPT_won)		AS ourPT_won
-		,SUM(ourPT_lose)	AS ourPT_lose
-		,CustomerClass
-	FROM #tmpSum
-	GROUP BY month, username, CustomerClass
-	ORDER BY month, username
+	SELECT b.month 
+		,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+		,b.username
+		,SUM(b.tickets_won)	AS tickets_won
+		,SUM(b.tickets_lose)	AS tickets_lose
+		,SUM(b.stake_won)		AS stake_won
+		,SUM(b.stake_lose)	AS stake_lose
+		,SUM(b.member_won)	AS member_won
+		,SUM(b.member_lose)	AS member_lose
+		,SUM(b.ourPT_won) AS ourPT_won
+		,SUM(b.ourPT_lose)	AS ourPT_lose
+		,b.CustomerClass
+	FROM #tmpSum b
+		INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
+		INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+	GROUP BY b.month, b.username, b.CustomerClass,
+		CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
+	ORDER BY b.month, b.username
 
 	DROP TABLE #bettype
 	DROP TABLE #recommend
