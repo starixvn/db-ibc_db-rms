@@ -1,5 +1,6 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_BigWinningAlert]
+	@IsTest BIT = 0
 
 AS
 
@@ -81,8 +82,10 @@ BEGIN
 	WHERE b.tstamp between @min_tstamp and @max_tstamp
 		AND b.bettype IN (29, 38)
 		AND b.statusID = 112
-		AND b.currency <> 20
-		AND (b.winlost - b.actual_stake) * b.actualrate >= 65000
+		 AND ((@IsTest = 1 AND b.currency = 20)
+              OR (@IsTest = 0 AND b.currency <> 20)
+			  )
+		AND (b.winlost - b.actual_stake) * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= 65000
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 4)	
 
 	DELETE t
@@ -163,7 +166,9 @@ BEGIN
 			WHERE bettype = 29
 				AND hdp2 = @combo
 				AND statusID = 112
-				AND currency <> 20
+				AND ((@IsTest = 1 AND currency = 20)
+					OR (@IsTest = 0 AND currency <> 20)
+					)
 				AND refno <> @refno
 				AND winlostdate = @winlostdate
 
@@ -209,7 +214,9 @@ BEGIN
 				INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
 			WHERE b.hdp2 = @combo 		
 				AND b.statusid = 112
-				AND b.currency <> 20
+				AND ((@IsTest = 1 AND b.currency = 20)
+					OR (@IsTest = 0 AND b.currency <> 20)
+					)
 				AND a.matchid = @MatchId
 				AND winlostdate >= CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
 				AND b.transid <> @transid
