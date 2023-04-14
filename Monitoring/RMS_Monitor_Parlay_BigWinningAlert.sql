@@ -208,7 +208,7 @@ BEGIN
 			FROM bodb02.dbo.bettrans b WITH (NOLOCK)
 				INNER JOIN bodb02.dbo.SMP_MarketSelection a WITH (NOLOCK) ON b.betcheck = a.MarketId
 			WHERE b.hdp2 = @combo 		
-				AND statusid = 112
+				AND b.statusid = 112
 				AND b.currency <> 20
 				AND a.matchid = @MatchId
 				AND winlostdate >= CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
