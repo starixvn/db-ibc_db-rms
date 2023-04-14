@@ -33,6 +33,7 @@ AS
 		- 20210428@Danny: Add filtering by Site, Live status[RedmineID: #153874]
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
+		- 20230412@Cherry: Add Site column (#186735)
 
 	Parameter's Explanation:
 		- @selection:
@@ -182,6 +183,7 @@ BEGIN
 			,transid			BIGINT
 			,refno				BIGINT
 			,custid				INT
+			,SiteGroup			VARCHAR(10)
 			,username			NVARCHAR(50)
 			,bettype			SMALLINT
 			,odds				SMALLMONEY
@@ -205,10 +207,10 @@ BEGIN
 		
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
 			)
 			SELECT
-				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
 			FROM
 			(
 				SELECT
@@ -216,6 +218,7 @@ BEGIN
 					,b.transid
 					,b.refno
 					,b.custid
+					,CASE WHEN st.isDeposit = 0 OR st.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
 					,b.Username
 					,b.bettype
 					,(b.winlost - b.actual_stake) / b.stake AS odds
@@ -235,6 +238,7 @@ BEGIN
 					CROSS APPLY (SELECT TOP 1 tc.currency FROM @tmpCurrency tc WHERE b.currency = tc.currency) tc
 					INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
 					INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
+					INNER JOIN bodb02.dbo.Site st WITH(NOLOCK) ON ct.site = st.site
 				WHERE b.winlostdate BETWEEN @FDate AND @TDate
 					AND b.bettype IN (29, 38, 376)
 					AND CHARINDEX(',' + CONVERT(VARCHAR(10), b.bettype) + ',', ',' + @bettypes + ',') > 0
@@ -265,10 +269,10 @@ BEGIN
 
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
 			)
 			SELECT
-				transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
 			FROM
 			(
 				SELECT
@@ -276,6 +280,7 @@ BEGIN
 					,b.transid
 					,b.refno
 					,b.custid
+					,CASE WHEN st.isDeposit = 0 OR st.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
 					,b.Username
 					,b.bettype
 					,(b.winlost - b.actual_stake) / b.stake AS odds
@@ -295,6 +300,7 @@ BEGIN
 					CROSS APPLY (SELECT TOP 1 tc.currency FROM @tmpCurrency tc WHERE b.currency = tc.currency) tc
 					INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
 					INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
+					INNER JOIN bodb02.dbo.Site st WITH(NOLOCK) ON ct.site = st.site
 				WHERE b.winlostdate BETWEEN @FDate AND @TDate
 					AND b.bettype IN (29, 38, 376)
 					AND CHARINDEX(',' + CONVERT(VARCHAR(10), b.bettype) + ',', ',' + @bettypes + ',') > 0
@@ -362,11 +368,11 @@ BEGIN
 		DECLARE @SQL VARCHAR(MAX)
 		SELECT  @SQL = 'CREATE INDEX IX_Index ON #rmBettrans (' + @sortedColumn + ')' + CHAR(13)
 		SELECT  @SQL = @SQL
-						+  'SELECT transdate,transid,refno,custid,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName, CustomerClass
+						+  'SELECT transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName, CustomerClass
 							FROM
 							(
 								SELECT
-									b.transdate,b.transid,b.refno,b.custid,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName, b.CustomerClass
+									b.transdate,b.transid,b.refno,b.custid,b.SiteGroup,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName, b.CustomerClass
 									,ROW_NUMBER() OVER(ORDER BY b.' + @sortedColumn + CASE WHEN @IsSortAsc = 0 THEN ' DESC' ELSE ' ' END + ') AS rn
 								FROM #rmBettrans b
 									LEFT JOIN dbo.rmCustomer c WITH (NOLOCK) ON b.custid = c.custid
