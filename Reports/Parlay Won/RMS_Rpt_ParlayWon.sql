@@ -33,7 +33,7 @@ AS
 		- 20210428@Danny: Add filtering by Site, Live status[RedmineID: #153874]
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
-		- 20230412@Cherry: Add Site column (#186735)
+		- 20230420@Cherry: Add Site column (#186735)
 
 	Parameter's Explanation:
 		- @selection:

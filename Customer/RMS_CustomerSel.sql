@@ -10,7 +10,7 @@ AS
 		DB: DB054.bodb_RMS
 		
 		Revisions:
-			- 20230412@Cherry: Add Site column (#186735)
+			- 20230420@Cherry: Add Site column (#186735)
 		
 		Parameter's Explanation:
 	*/ 

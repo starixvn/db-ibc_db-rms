@@ -20,7 +20,7 @@ AS
 	Revisions:
 		- 20210628@Danny: Implement League Winning Monitor Report [RedmineID: #156982]
 		- 20211111@Danny: Total Combo Bet data is incorrectly [RedmineID: #164563]
-		- 20230412@Cherry: Add Site column (#186735)
+		- 20230420@Cherry: Add Site column (#186735)
 		
 	Parameter's Explanation:
 		- @selection:

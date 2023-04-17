@@ -23,7 +23,8 @@ AS
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20210029@Danny: Support filter tickets having 100% of selections Similar Bets [RedmineID: #159304]
 		- 20230320@Cherry: Change formula of Stake (#185251)
-		- 20230412@Cherry: Add Site column (#186735)
+		- 20230417@Cherry: Duplicate data Similar Bet (#186993)
+		- 20230420@Cherry: Add Site column (#186735)
 */
 
 BEGIN
@@ -151,7 +152,7 @@ BEGIN
 				AND (
 					(winlostdate = @winlostdate  AND @isSimilar = 1) OR (@isSimilar = 0)
 					)
-			UNION ALL
+			UNION 
 			SELECT transid, refno
 			FROM dbo.rmBettrans_Old WITH (NOLOCK)
 			WHERE bettype = 29
@@ -419,7 +420,7 @@ BEGIN
 			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
 			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
-		UNION ALL
+		UNION 
 		SELECT
 			p.transid
 			,p.refno

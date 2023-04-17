@@ -27,6 +27,7 @@ AS
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20220519@Danny: add filter by Live Status [RedmineID: #172691]
+		- 20230420@Cherry: Add Site column (#186735)
 	
 	Parameter's Explanation:
 		- @sporttype:

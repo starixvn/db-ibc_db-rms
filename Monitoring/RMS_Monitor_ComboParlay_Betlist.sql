@@ -42,7 +42,7 @@ AS
 		- 20220519@Danny: add filter by username [RedmineID: #172691]
 		- 20221121@Danny: enhance perfomance [RedmineID: #180707]
 		- 20230320@Cherry: Change formula of Stake (#185251)
-		- 20230412@Cherry: Add Site column (#186735)
+		- 20230420@Cherry: Add Site column (#186735)
 
 	Parameter's Explanation:
 		- @selection:

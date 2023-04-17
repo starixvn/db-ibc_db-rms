@@ -31,7 +31,7 @@ AS
 		- 20210303@Danny: Change on Report Top Winners [RedmineID: #146554]
 		- 20210428@Danny: Add filtering by Site[RedmineID: #153874]
 		- 20220519@Danny: add filter by Live Status [RedmineID: #172691]
-		- 20230412@Cherry: Add Site column (#186735)
+		- 20230420@Cherry: Add Site column (#186735)
 	
 	Parameter's Explanation:
 		- @ParlayType:

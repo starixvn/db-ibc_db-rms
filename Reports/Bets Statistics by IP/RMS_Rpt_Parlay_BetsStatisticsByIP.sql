@@ -12,7 +12,7 @@ AS
 	Revisions:	
 		- 20200510@Percy: Change condition of transdate [RedmineID: #133961]
 		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
-		- 20230412@Cherry: Add Site column (#186735)
+		- 20230420@Cherry: Add Site column (#186735)
 */
 
 BEGIN 

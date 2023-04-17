@@ -31,7 +31,7 @@ AS
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20210701@Danny: Track User Monitoring [RedmineID: #153875]
 		- 20220519@Danny: add filter by Site AND username [RedmineID: #172691]
-		- 20230412@Cherry: Add Site column (#186735)
+		- 20230420@Cherry: Add Site column (#186735)
 
 	Parameter's Explanation:
 		- @selection:
