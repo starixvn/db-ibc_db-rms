@@ -1,6 +1,7 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_BigWinningAlert]
-	@IsTest BIT = 0
+	@IsTest BIT = 0,
+	@WinningAmount INT 
 
 AS
 
@@ -14,7 +15,7 @@ AS
 */
 
 BEGIN
-	SET NOCOUNT ON
+	SET NOCOUNT ON	
 
 	DECLARE @MBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 	INSERT INTO @MBU (BalanceUpDay, MoveBetsDay)
@@ -85,7 +86,7 @@ BEGIN
 		 AND ((@IsTest = 1 AND b.currency = 20)
               OR (@IsTest = 0 AND b.currency <> 20)
 			  )
-		AND (b.winlost - b.actual_stake) * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= 65000
+		AND (b.winlost - b.actual_stake) * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= @WinningAmount
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 4)	
 
 	DELETE t
@@ -117,7 +118,11 @@ BEGIN
 		SimilarCustID INT,
 		SimilarSystemID VARCHAR(50),
 		SimilarMemberID VARCHAR(50),
-		SimilarCustomerClass SMALLINT
+		SimilarCustomerClass SMALLINT,
+		SimilarCurrencyID INT,
+		SimilarStake MONEY,
+		SimilarWinningAmount MONEY,
+		SimilarWinningAmount_RM MONEY
 	)
 
 	DECLARE @transid BIGINT, @bettype INT, @betteam NVARCHAR(10), @matchid INT, @refno BIGINT, 
@@ -254,7 +259,11 @@ BEGIN
 				SimilarCustID,
 				SimilarSystemID,
 				SimilarMemberID,
-				SimilarCustomerClass 
+				SimilarCustomerClass,
+				SimilarCurrencyID,
+				SimilarStake,
+				SimilarWinningAmount,
+				SimilarWinningAmount_RM
 			)
 			SELECT
 				@transid,
@@ -275,8 +284,13 @@ BEGIN
 				s.CustID,
 				cs.username,
 				substring(cs.username2, LEN(cs.[Site])+2, LEN(cs.username2)-LEN(cs.[Site])), 
-				si.CustomerClass
+				si.CustomerClass,
+				b.currency,
+				b.Stake,
+				b.winlost - b.actual_stake,
+				(b.winlost - b.actual_stake) * b.actualrate
 			FROM #tmpSimilar s 
+				INNER JOIN bodb02.dbo.bettrans b WITH (NOLOCK) ON s.TransID = b.TransId
 				LEFT JOIN bodb02.dbo.Customer cb WITH(NOLOCK) ON cb.custid = @custid
 				LEFT JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custid = @custid
 				LEFT JOIN bodb02.dbo.Customer cs WITH(NOLOCK) ON cs.custid = s.CustID
@@ -341,9 +355,14 @@ BEGIN
 			SimilarSystemID,
 			SimilarMemberID,
 			SimilarCustomerClass,
-			SimilarTransID
+			SimilarTransID,
+			ex.currency SimilarCurrency,
+			SimilarStake,
+			SimilarWinningAmount,
+			SimilarWinningAmount_RM
 	FROM #Result d
-		INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON d.BigCurrencyID = e.exchangeid
+		LEFT JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON d.BigCurrencyID = e.exchangeid
+		LEFT JOIN bodb02.dbo.Exchange ex WITH (NOLOCK) ON d.SimilarCurrencyID = ex.exchangeid
 
 	SELECT CONVERT(VARCHAR(200), CONVERT(BIGINT, @max_tstamp)) AS Tstamp
 
