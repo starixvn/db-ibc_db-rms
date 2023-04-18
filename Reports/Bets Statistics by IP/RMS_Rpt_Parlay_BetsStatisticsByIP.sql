@@ -25,8 +25,8 @@ BEGIN
 		,SUM(CASE WHEN b.liveawayscore = 1 THEN 1 ELSE 0 END) as cnt_soccer
 		,SUM(CASE WHEN b.liveawayscore IN (2,3) THEN 1 ELSE 0 END) as cnt_others
 	FROM dbo.rmBettrans b WITH (NOLOCK)	
-		INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
-		INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+		LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
+		LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 	WHERE b.ip = @IP
 		AND transdate >= @fromdate AND transdate < DATEADD(DAY, 1, @fromdate)
 	GROUP BY b.custid, b.username,

@@ -381,8 +381,8 @@ BEGIN
 				,SUM(CASE WHEN l.transid IS NOT NULL THEN 1 ELSE 0 END)  AS TotalTrackingBets
 			FROM #bettrans_details b WITH(NOLOCK)
 				LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON b.transid = l.transid
-				INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custID = c.custid
-				INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
+				LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custID = c.custid
+				LEFT JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
 			GROUP BY
 				b.custid
 				,b.username 
@@ -406,8 +406,8 @@ BEGIN
 				,b.recommend
 			FROM  #bettrans_details b WITH(NOLOCK) 
 				LEFT JOIN bodb02.dbo.custInfo  mc WITH (NOLOCK)  ON b.recommend = mc.custid
-				INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.recommend = c.custid
-				INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
+				LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.recommend = c.custid
+				LEFT JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
 			GROUP BY
 				CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END 
 				,mc.username

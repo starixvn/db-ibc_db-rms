@@ -313,8 +313,8 @@ BEGIN
 		,SUM(b.ourPT_lose)	AS ourPT_lose
 		,b.CustomerClass
 	FROM #tmpSum b
-		INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
-		INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+		LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
+		LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 	GROUP BY b.month, b.username, b.CustomerClass,
 		CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
 	ORDER BY b.month, b.username

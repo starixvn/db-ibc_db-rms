@@ -310,8 +310,8 @@ BEGIN
 	FROM CTE_Result r
 		INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON r.currency = e.exchangeid
 		LEFT JOIN rmCustomer rc WITH (NOLOCK) ON r.custid = rc.custid
-		INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON r.custid = c.custid
-		INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site	
+		LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON r.custid = c.custid
+		LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site	
 	ORDER BY winlost_baseRM desc
 
 	DROP TABLE #bettype

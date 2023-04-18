@@ -443,8 +443,8 @@ BEGIN
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rb.custid = ci.custid
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
 			LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON rb.transid = l.transid
-			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.custid = rb.custid
-			INNER JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.custid = rb.custid
+			LEFT JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
 		WHERE ISNULL(mc.level, 0) IN (SELECT level FROM #level)
 		AND ((rb.odds2 * rb.TotalBet) <= @Odds OR @Odds IS NULL)
 			AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)

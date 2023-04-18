@@ -316,8 +316,8 @@ BEGIN
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer r WITH (NOLOCK) ON p.custid = r.custid
-			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
-			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
+			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE transid = @transid
 
 		SELECT
@@ -336,8 +336,8 @@ BEGIN
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
-			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
-			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
+			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		ORDER BY cnt DESC
 	END
 
@@ -367,8 +367,8 @@ BEGIN
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
-			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
-			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
+			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE transid = @transid
 
 		UNION 
@@ -397,8 +397,8 @@ BEGIN
 		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
-			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
-			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
+			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE transid = @transid
 
 
@@ -418,8 +418,9 @@ BEGIN
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
-			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
-			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
+			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+		WHERE p.winlostdate > @MoveBetsDay
 		UNION 
 		SELECT
 			p.transid
@@ -437,8 +438,9 @@ BEGIN
 			INNER JOIN dbo.rmBettrans_Old p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
-			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
-			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
+			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+		WHERE p.winlostdate BETWEEN @BalanceUpDay AND  @MoveBetsDay
 		ORDER BY cnt DESC
 	END
 

@@ -22,8 +22,8 @@ SET NOCOUNT ON
 		,mc.username
 		,mc.[level]		
 	FROM rmCustomer mc WITH(NOLOCK)
-		INNER JOIN bodb02.dbo.customer c WITH(NOLOCK) ON mc.custid = c.custid
-		INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+		LEFT JOIN bodb02.dbo.customer c WITH(NOLOCK) ON mc.custid = c.custid
+		LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 	WHERE mc.username like '%' + ISNULL(@username,mc.username) + '%'
 		AND level = ISNULL(@level,mc.level)
 	ORDER BY mc.username ASC

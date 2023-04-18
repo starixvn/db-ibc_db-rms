@@ -358,8 +358,8 @@ BEGIN
 						COUNT(1) AS totalTicket 
 				FROM	#Result r
 					INNER JOIN rmBettrans rm WITH(NOLOCK) ON r.transid = rm.transid
-					INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.custid = r.custid
-					INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+					LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.custid = r.custid
+					LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 				GROUP BY r.custid, c.username,
 						CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END 
 			), u AS
@@ -392,8 +392,8 @@ BEGIN
 			FROM	#Result r
 				INNER JOIN rmBettrans rm WITH(NOLOCK) ON r.transid = rm.transid
 				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON r.custid = mc.custid
-				INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON r.custid = c.custid
-				INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+				LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON r.custid = c.custid
+				LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		END
 	END
 	DROP TABLE #Result
