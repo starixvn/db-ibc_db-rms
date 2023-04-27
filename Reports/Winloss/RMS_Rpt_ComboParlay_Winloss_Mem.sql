@@ -26,6 +26,7 @@ AS
 			- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 			- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 			- 20220519@Danny: add filter by Live Status [RedmineID: #172691]
+			- 20230420@Cherry: Add Site column (#186735)
 
 	Parameter's Explanation:
 		- @sporttype:
@@ -47,9 +48,14 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @CustomerClass SMALLINT 
+	DECLARE @CustomerClass SMALLINT, @SiteGroup VARCHAR(10)
 
 	SELECT @CustomerClass = CustomerClass FROM bodb02.dbo.custInfo WITH(NOLOCK) WHERE custid = @custid
+
+	SELECT @SiteGroup = CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END 
+	FROM bodb02.dbo.Customer c WITH(NOLOCK)
+		INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+	WHERE c.custid = @custid
 
 	-- selections
 	BEGIN
@@ -288,6 +294,7 @@ BEGIN
 		,sum(ourPT_won) as ourPT_won  
 		,sum(ourPT_lose) as ourPT_lose
 		,@CustomerClass as CustomerClass
+		,@SiteGroup as SiteGroup
 	FROM #tmpSum
 	GROUP BY month		
 	ORDER BY month
