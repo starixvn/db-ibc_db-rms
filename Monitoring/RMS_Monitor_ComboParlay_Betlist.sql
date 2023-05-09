@@ -42,6 +42,7 @@ AS
 		- 20220519@Danny: add filter by username [RedmineID: #172691]
 		- 20221121@Danny: enhance perfomance [RedmineID: #180707]
 		- 20230320@Cherry: Change formula of Stake (#185251)
+		- 20230420@Cherry: Add Site column (#186735)
 
 	Parameter's Explanation:
 		- @selection:
@@ -86,7 +87,7 @@ BEGIN
 	DECLARE @today SMALLDATETIME
 	SELECT  @today = CONVERT(DATE, GETDATE())
 
-		CREATE TABLE #userList(custID INT) -- member	
+	CREATE TABLE #userList(custID INT) -- member	
 	DECLARE @custID INT, @RoleID TINYINT
 
 	IF @UserName <> ''
@@ -384,6 +385,7 @@ BEGIN
 			,transdate DATETIME
 			,transid BIGINT
 			,refno BIGINT
+			,SiteGroup VARCHAR(10)
 			,username VARCHAR(30)
 			,sporttype INT
 			,odds MONEY
@@ -407,7 +409,7 @@ BEGIN
 		)
 		INSERT INTO #Result
 		(
-			custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
+			custid, transdate, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
 			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF, potentialWinningAmt, CustomerClass , TrackingUser
 		)
 		SELECT
@@ -415,6 +417,7 @@ BEGIN
 			,rb.transdate
 			,rb.transid
 			,rb.refno
+			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
 			,rb.username
 			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype
 			,rb.odds2 * rb.TotalBet AS odds
@@ -440,6 +443,8 @@ BEGIN
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rb.custid = ci.custid
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
 			LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON rb.transid = l.transid
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.custid = rb.custid
+			LEFT JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
 		WHERE ISNULL(mc.level, 0) IN (SELECT level FROM #level)
 		AND ((rb.odds2 * rb.TotalBet) <= @Odds OR @Odds IS NULL)
 			AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
@@ -468,10 +473,10 @@ BEGIN
 
 		CREATE INDEX IX_Index ON #Result (transid)
 		
-		SELECT custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
+		SELECT custid, transdate, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
 			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt, CustomerClass, TrackingUser
 		FROM (
-				SELECT custid, transdate, transid, refno, username, sporttype, odds, statusId, stake, maxpayout
+				SELECT custid, transdate, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
 					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt, CustomerClass, TrackingUser
 					,ROW_NUMBER() OVER(ORDER BY transid DESC) AS rn
 				FROM #Result

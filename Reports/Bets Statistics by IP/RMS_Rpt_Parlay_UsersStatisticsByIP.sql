@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+
 ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_UsersStatisticsByIP]
 	@fromdate		DATETIME
 	,@pageIndex		INT = 1

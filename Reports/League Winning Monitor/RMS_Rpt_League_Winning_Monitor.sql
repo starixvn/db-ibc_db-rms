@@ -20,6 +20,7 @@ AS
 	Revisions:
 		- 20210628@Danny: Implement League Winning Monitor Report [RedmineID: #156982]
 		- 20211111@Danny: Total Combo Bet data is incorrectly [RedmineID: #164563]
+		- 20230420@Cherry: Add Site column (#186735)
 		
 	Parameter's Explanation:
 		- @selection:
@@ -349,21 +350,24 @@ BEGIN
 			;WITH t AS
 			(
 				SELECT	r.custid , 
+						CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup,
 						c.username, 
 						SUM(rm.stake * rm.actualrate)  AS totalStake, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate) AS totalWinningAmt, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking)) AS companyLoseAmt, 
 						COUNT(1) AS totalTicket 
 				FROM	#Result r
-				INNER JOIN rmBettrans rm ON r.transid = rm.transid
-				INNER JOIN bodb02.dbo.Customer c ON c.custid = r.custid
-				GROUP BY r.custid, c.username
+					INNER JOIN rmBettrans rm WITH(NOLOCK) ON r.transid = rm.transid
+					LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.custid = r.custid
+					LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+				GROUP BY r.custid, c.username,
+						CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END 
 			), u AS
 			(
-				SELECT custid, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
+				SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
 				FROM t
 			)
-			SELECT custid, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket
+			SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket
 			FROM u WHERE rn <= @limitRowCount
 		END
 
@@ -371,6 +375,7 @@ BEGIN
 		BEGIN
 			SELECT	rm.transdate,
 					rm.transid,
+					CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup,
 					rm.Username,
 					mc.level,
 					rm.odds2 * rm.TotalBet AS odds,
@@ -385,8 +390,10 @@ BEGIN
 					rm.refno,
 					rm.bettype
 			FROM	#Result r
-			INNER JOIN rmBettrans rm ON r.transid = rm.transid
-			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON r.custid = mc.custid
+				INNER JOIN rmBettrans rm WITH(NOLOCK) ON r.transid = rm.transid
+				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON r.custid = mc.custid
+				LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON r.custid = c.custid
+				LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		END
 	END
 	DROP TABLE #Result
