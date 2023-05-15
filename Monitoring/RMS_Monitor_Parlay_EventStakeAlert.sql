@@ -17,23 +17,9 @@ AS
 BEGIN
 	SET NOCOUNT ON	
 
-	DECLARE @MBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
-	INSERT INTO @MBU (BalanceUpDay, MoveBetsDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	DECLARE @yesterday DATE = DATEADD(DAY,-1, GETDATE())
 
-	DECLARE @BalanceUpDay SMALLDATETIME, @MoveBetsDay SMALLDATETIME
-	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBU
-
-	DECLARE @min_tstamp BINARY(8), @max_tstamp BINARY(8)
-
-	SELECT  @min_tstamp = CONVERT(BINARY(8), CONVERT(BIGINT, ISNULL(VValue, 0)) + 1)
-	FROM dbo.rmSettings WITH (ROWLOCK)
-	WHERE VName = 'BigWinningAlert_LastTstamp'
-
-	IF @min_tstamp IS NULL
-		SELECT @min_tstamp = MIN(tstamp) FROM bodb02.dbo.bettrans WITH (NOLOCK) WHERE winlostdate > @MoveBetsDay
-
-	SELECT  @max_tstamp = MAX(tstamp) FROM bodb02.dbo.bettrans WITH (NOLOCK)
+	CREATE TABLE #match(matchID INT, homeID INT, awayID INT, leagueID INT)
 
 	CREATE TABLE #tmpBigWinning
 	(
