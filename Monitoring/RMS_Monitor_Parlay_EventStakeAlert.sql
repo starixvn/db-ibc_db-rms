@@ -61,11 +61,11 @@ BEGIN
 	WHERE	eventdate >= @yesterday AND sporttype IN (1, 2, 43) AND eventstatus = 'running'
 
 	UPDATE #tmpMatch
-	SET Maxbet = 100000
+	SET Maxbet = @Stake
 	WHERE Sporttype = 43
 
 	UPDATE a
-	SET a.Maxbet = CASE WHEN t.Maxbet * 10 < 100000 THEN 100000 ELSE t.Maxbet * 10 END
+	SET a.Maxbet = CASE WHEN t.Maxbet * 10 < @Stake THEN @Stake ELSE t.Maxbet * 10 END
 	FROM #tmpMatch a 
 		INNER JOIN (SELECT m.Matchid, MAX(m.Maxbet) Maxbet
 		FROM #tmpmatch m
@@ -97,8 +97,7 @@ BEGIN
 		AND b.statusID = 0
 		 AND ((@IsTest = 1 AND b.currency = 20)
               OR (@IsTest = 0 AND b.currency <> 20)
-			  )
-		--AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 4)	
+			  )	
 
 	INSERT INTO #tmpData(
 		Sport,
