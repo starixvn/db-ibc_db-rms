@@ -19,61 +19,72 @@ BEGIN
 
 	DECLARE @yesterday DATE = DATEADD(DAY,-1, GETDATE())
 
-	CREATE TABLE #tmpbettrans(refno BIGINT, stake MONEY, bettype INT, betteam NVARCHAR(10))
-	CREATE CLUSTERED INDEX cix_#tmpbettrans ON #tmpbettrans(refno)
+	CREATE TABLE #tmpBettrans(Refno BIGINT, Stake MONEY, Bettype INT, Betteam NVARCHAR(10))
+	CREATE CLUSTERED INDEX cix_#tmpBettrans ON #tmpBettrans(Refno)
 
-	CREATE TABLE #tmpmatch(matchID INT, homeID INT, awayID INT, leagueID INT, sporttype INT, maxbet FLOAT)
+	CREATE TABLE #tmpMatch(MatchID INT, HomeID INT, AwayID INT, LeagueID INT, Sporttype INT, Maxbet FLOAT)
 
-	CREATE TABLE #tmpBettype (bettype SMALLINT, bettypeName NVARCHAR(128), GroupID TINYINT)
+	CREATE TABLE #tmpBettype (Bettype SMALLINT, BettypeName NVARCHAR(128), IsMajor BIT)
 
-	CREATE TABLE #tmpbettransm (refno BIGINT, bettype INT, betteam NVARCHAR(10), matchID INT, odds SMALLMONEY)
-	CREATE CLUSTERED INDEX cix_#tmpbettransm ON #tmpbettransm(refno)
+	CREATE TABLE #tmpBettransm (Refno BIGINT, Bettype INT, Betteam NVARCHAR(10), MatchID INT)
+	CREATE CLUSTERED INDEX cix_#tmpBettransm ON #tmpBettransm(Refno)
+
+	CREATE TABLE #tmpData(
+		Sport NVARCHAR(50),
+		LeagueID INT, 
+		MatchID INT,
+		HomeID INT,
+		AwayID INT,
+		Maxbet FLOAT,
+		HomeTotalStake MONEY,
+		AwayTotalStake MONEY,
+		OtherTotalStake MONEY)
 
 	INSERT INTO #tmpBettype 
-	(	bettype,
-		bettypeName,
-		GroupID
+	(	Bettype,
+		BettypeName,
+		IsMajor
 	)
 	SELECT	DISTINCT bettype, 
 			bt.typenamee, 
-			CASE WHEN SportType = 43 THEN CASE WHEN bettype IN (1,2,3,7,8,12,20,21) THEN 1 ELSE 2 END
-					WHEN SportType = 2 THEN CASE WHEN bettype IN (1,2,3,7,8,12,20,21,609,610,611,612) THEN 1 ELSE 2 END
-					WHEN SportType = 1 THEN CASE WHEN bettype IN (1,2,3,7,8,12,5,15) THEN 1 ELSE 2 END
-					ELSE 0 END AS GroupID  -- 1 Major, 2 Minor
+			CASE WHEN SportType = 43 THEN CASE WHEN bettype IN (1,2,3,7,8,12,20,21) THEN 1 ELSE 0 END
+					WHEN SportType = 2 THEN CASE WHEN bettype IN (1,2,3,7,8,12,20,21,609,610,611,612) THEN 1 ELSE 0 END
+					WHEN SportType = 1 THEN CASE WHEN bettype IN (1,2,3,7,8,12,5,15) THEN 1 ELSE 0 END
+					ELSE 0 END AS IsMajor  -- 1 Major, 2 Minor
 	FROM bodb02.dbo.SportBettypeMatrix m WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.bettype bt WITH(NOLOCK) ON m.BetType = bt.typeid
 	WHERE SportType IN (1, 2, 43)
 	
-	INSERT INTO #tmpmatch(matchID, homeID, awayID, leagueID, sporttype)
+	INSERT INTO #tmpMatch(MatchID, HomeID, AwayID, LeagueID, Sporttype)
 	SELECT  matchid, homeid, awayid, leagueID, sporttype
 	FROM	bodb02.dbo.match WITH(NOLOCK)
 	WHERE	eventdate >= @yesterday AND sporttype IN (1, 2, 43) AND eventstatus = 'running'
 
-	UPDATE #tmpmatch
-	SET maxbet = 100000
-	WHERE sporttype = 43
+	UPDATE #tmpMatch
+	SET Maxbet = 100000
+	WHERE Sporttype = 43
 
 	UPDATE a
-	SET a.maxbet = CASE WHEN t.maxbet * 10 < 100000 THEN 100000 ELSE t.maxbet * 10 END
-	FROM #tmpmatch a 
-		INNER JOIN (SELECT m.matchid, MAX(m.maxbet) maxbet
+	SET a.Maxbet = CASE WHEN t.Maxbet * 10 < 100000 THEN 100000 ELSE t.Maxbet * 10 END
+	FROM #tmpMatch a 
+		INNER JOIN (SELECT m.Matchid, MAX(m.Maxbet) Maxbet
 		FROM #tmpmatch m
 			INNER JOIN bodb02.dbo.odds s WITH(NOLOCK) ON m.matchID = s.matchid
 		WHERE s.bettype = 1
 		GROUP BY m.matchid
 		) t ON a.matchID = t.matchID
 
-	INSERT INTO #tmpbettransm(refno, bettype, betteam, matchID, odds)
-	SELECT  refno, bettype, betteam, matchid, odds
+	INSERT INTO #tmpBettransm(Refno, Bettype, Betteam, MatchID)
+	SELECT  refno, bettype, betteam, matchid
 	FROM	bodb02.dbo.bettransm WITH(NOLOCK)
-	WHERE	matchid IN (SELECT matchID FROM #tmpmatch) AND statusID = 0
+	WHERE	matchid IN (SELECT MatchID FROM #tmpMatch) AND statusID = 0
 
-	INSERT INTO #tmpbettrans
+	INSERT INTO #tmpBettrans
 	(
-		refno,
-		stake,
-		bettype,
-		betteam
+		Refno,
+		Stake,
+		Bettype,
+		Betteam
 	)
 	SELECT
 		b.refno,
@@ -89,21 +100,73 @@ BEGIN
 			  )
 		--AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 4)	
 
-	SELECT	m.leagueID, 
+	INSERT INTO #tmpData(
+		Sport,
+		LeagueID, 
+		MatchID,
+		HomeID,
+		AwayID,
+		Maxbet,
+		HomeTotalStake,
+		AwayTotalStake,
+		OtherTotalStake)
+	SELECT	s.SportName,
+			m.leagueID, 
 			m.matchID,
 			m.homeID,
 			m.awayID,
-			SUM (CASE WHEN sub.betteam IN ('h','o','y','1') AND z.bettype IS NOT NULL AND z.GroupID = 1 THEN main.stake ELSE 0 END)		HomeTotalStake,
-			SUM (CASE WHEN sub.betteam IN ('e','a','u','n','2') AND z.bettype IS NOT NULL AND z.GroupID = 1  THEN main.stake ELSE 0 END) AwayTotalStake,
-			SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n','1','2')  OR z.bettype IS NULL OR z.GroupID <> 1 THEN main.stake ELSE 0 END) OtherTotalStake
-	FROM #tmpbettrans main 
-		INNER JOIN	#tmpbettransm sub ON main.refno = sub.refno
-		INNER JOIN	#tmpmatch m ON sub.matchID = m.matchID
+			m.maxbet,
+			SUM (CASE WHEN sub.betteam IN ('h','o','y','1') AND z.bettype IS NOT NULL AND z.IsMajor = 1 THEN main.stake ELSE 0 END)		HomeTotalStake,
+			SUM (CASE WHEN sub.betteam IN ('e','a','u','n','2') AND z.bettype IS NOT NULL AND z.IsMajor = 1  THEN main.stake ELSE 0 END) AwayTotalStake,
+			SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n','1','2')  OR z.bettype IS NULL OR z.IsMajor = 0 THEN main.stake ELSE 0 END) OtherTotalStake
+	FROM #tmpBettrans main 
+		INNER JOIN	#tmpBettransm sub ON main.refno = sub.refno
+		INNER JOIN	#tmpMatch m ON sub.matchID = m.matchID
+		INNER JOIN	bodb02.dbo.Sports s WITH(NOLOCK) ON m.sporttype = s.SportType
 		LEFT JOIN   #tmpBettype z ON sub.bettype = z.bettype
-	GROUP BY m.leagueID,
+	GROUP BY s.SportName,
+			m.leagueID,
 			m.matchID,
 			m.homeID,
 			m.awayID
-	
+
+	SELECT d.Sport Sport,
+		l.leaguename League,
+		h.teamname + 'vs' + a.teamname [Event],
+		HomeTotalStake,
+		AwayTotalStake,
+		OtherTotalStake
+	FROM #tmpData d		
+		LEFT JOIN bodb02.dbo.League l WITH(NOLOCK) ON d.LeagueID = l.leagueid
+		LEFT JOIN bodb02.dbo.Team h  WITH (NOLOCK) ON d.homeID = h.teamid
+		LEFT JOIN bodb02.dbo.Team a  WITH (NOLOCK) ON d.awayID = a.teamid
+	WHERE (d.HomeTotalStake >= d.Maxbet AND d.MatchID*10+1 NOT IN (SELECT TransId FROM dbo.rmLastTicketAlert WITH (NOLOCK) WHERE JobType = 5))
+		OR (d.AwayTotalStake >= d.Maxbet AND d.MatchID*10+2 NOT IN (SELECT TransId FROM dbo.rmLastTicketAlert WITH (NOLOCK) WHERE JobType = 5))
+		OR (d.OtherTotalStake >= d.Maxbet AND d.MatchID*10+3 NOT IN (SELECT TransId FROM dbo.rmLastTicketAlert WITH (NOLOCK) WHERE JobType = 5)) 
+
+	SELECT MatchID*10+1 TransId,
+		HomeTotalStake AlertAmount,
+		'Home' ParlayType
+	FROM #tmpData
+	WHERE HomeTotalStake >= Maxbet AND MatchID*10+1 NOT IN (SELECT TransId FROM dbo.rmLastTicketAlert WITH (NOLOCK) WHERE JobType = 5)
+	UNION
+	SELECT MatchID*10+2 TransId,
+		AwayTotalStake AlertAmount,
+		'Away' ParlayType
+	FROM #tmpData
+	WHERE AwayTotalStake >= Maxbet AND MatchID*10+2 NOT IN (SELECT TransId FROM dbo.rmLastTicketAlert WITH (NOLOCK) WHERE JobType = 5)
+	UNION
+	SELECT MatchID*10+3 TransId,
+		OtherTotalStake AlertAmount,
+		'Others' ParlayType
+	FROM #tmpData
+	WHERE OtherTotalStake >= Maxbet AND MatchID*10+3 NOT IN (SELECT TransId FROM dbo.rmLastTicketAlert WITH (NOLOCK) WHERE JobType = 5)
+	 
+	DROP TABLE #tmpBettrans
+	DROP TABLE #tmpBettransm
+	DROP TABLE #tmpBettype
+	DROP TABLE #tmpData
+	DROP TABLE #tmpMatch
+
 END
 GO
