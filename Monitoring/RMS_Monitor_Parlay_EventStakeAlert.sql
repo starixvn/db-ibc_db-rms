@@ -58,11 +58,7 @@ BEGIN
 	INSERT INTO #tmpMatch(MatchID, HomeID, AwayID, LeagueID, Sporttype)
 	SELECT  matchid, homeid, awayid, leagueID, sporttype
 	FROM	bodb02.dbo.match WITH(NOLOCK)
-	WHERE	eventdate >= @yesterday AND sporttype IN (1, 2, 43) AND eventstatus = 'running'
-
-	UPDATE #tmpMatch
-	SET Maxbet = @Stake
-	WHERE Sporttype = 43
+	WHERE	eventdate >= @yesterday AND sporttype IN (1, 2, 43) AND eventstatus = 'running'	
 
 	UPDATE a
 	SET a.Maxbet = CASE WHEN t.Maxbet * 10 < @Stake THEN @Stake ELSE t.Maxbet * 10 END
@@ -70,9 +66,13 @@ BEGIN
 		INNER JOIN (SELECT m.Matchid, MAX(m.Maxbet) Maxbet
 		FROM #tmpmatch m
 			INNER JOIN bodb02.dbo.odds s WITH(NOLOCK) ON m.matchID = s.matchid
-		WHERE s.bettype = 1
+		WHERE s.bettype = 1 AND m.Sporttype IN (1, 2)
 		GROUP BY m.matchid
 		) t ON a.matchID = t.matchID
+
+	UPDATE #tmpMatch
+	SET Maxbet = @Stake
+	WHERE Sporttype = 43 OR Maxbet IS NULL
 
 	INSERT INTO #tmpBettransm(Refno, Bettype, Betteam, MatchID)
 	SELECT  refno, bettype, betteam, matchid
@@ -88,7 +88,7 @@ BEGIN
 	)
 	SELECT
 		b.refno,
-		b.stake * b.actualrate,
+		b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END,
 		b.bettype,
 		b.betteam	
 	FROM bodb02.dbo.bettrans b WITH (NOLOCK)
@@ -132,7 +132,7 @@ BEGIN
 
 	SELECT d.Sport Sport,
 		l.leaguename League,
-		h.teamname + 'vs' + a.teamname [Event],
+		h.teamname + ' vs ' + a.teamname [Event],
 		HomeTotalStake,
 		AwayTotalStake,
 		OtherTotalStake
