@@ -127,7 +127,8 @@ BEGIN
 			m.leagueID,
 			m.matchID,
 			m.homeID,
-			m.awayID
+			m.awayID,
+			m.maxbet
 
 	SELECT d.Sport Sport,
 		l.leaguename League,
