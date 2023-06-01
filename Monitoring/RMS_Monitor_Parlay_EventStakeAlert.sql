@@ -63,12 +63,12 @@ BEGIN
 	UPDATE a
 	SET a.Maxbet = CASE WHEN t.Maxbet * 10 < @Stake THEN @Stake ELSE t.Maxbet * 10 END
 	FROM #tmpMatch a 
-		INNER JOIN (SELECT m.Matchid, MAX(m.Maxbet) Maxbet
-		FROM #tmpmatch m
-			INNER JOIN bodb02.dbo.odds s WITH(NOLOCK) ON m.matchID = s.matchid
-		WHERE s.bettype = 1 AND m.Sporttype IN (1, 2)
-		GROUP BY m.matchid
-		) t ON a.matchID = t.matchID
+		INNER JOIN (SELECT m.Matchid, MAX(s.maxbet) Maxbet
+			FROM #tmpmatch m
+				INNER JOIN bodb02.dbo.odds s WITH(NOLOCK) ON m.matchID = s.matchid
+			WHERE s.bettype = 1 AND m.Sporttype IN (1, 2)
+			GROUP BY m.matchid
+			) t ON a.matchID = t.matchID
 
 	UPDATE #tmpMatch
 	SET Maxbet = @Stake
