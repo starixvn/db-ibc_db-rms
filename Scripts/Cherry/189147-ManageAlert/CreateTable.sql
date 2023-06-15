@@ -15,16 +15,16 @@ END
 CREATE TABLE [dbo].rmAlertType(
 		[AlertTypeID] [SMALLINT] NOT NULL,
 		[AlertTypeName] [VARCHAR](500) NOT NULL,
-		[Remark] [VARCHAR](500)
+		[Remark] [VARCHAR](500) NOT NULL
 ) ON [rmDATA]
 WITH (DATA_COMPRESSION = PAGE)
 GO
 
-ALTER TABLE dbo.rmAlertType
-	ADD CONSTRAINT PK_rmAlertType PRIMARY KEY
-	(
-		AlertTypeID ASC
-	)
+CREATE UNIQUE CLUSTERED INDEX [CIX_AlertTypeID] ON [dbo].[rmAlertType]
+(
+	AlertTypeID ASC
+)WITH (DATA_COMPRESSION = PAGE)
+ ON [rmDATA]
 GO
 
 IF OBJECT_ID('bodb_RMS.dbo.rmAlertAction') IS NOT NULL
@@ -39,11 +39,11 @@ CREATE TABLE [dbo].rmAlertAction(
 WITH (DATA_COMPRESSION = PAGE)
 GO
 
-ALTER TABLE dbo.rmAlertAction
-	ADD CONSTRAINT PK_rmAlertAction PRIMARY KEY
-	(
-		ActionID ASC
-	)
+CREATE UNIQUE CLUSTERED INDEX [CIX_ActionID] ON [dbo].[rmAlertAction]
+(
+	ActionID ASC
+)WITH (DATA_COMPRESSION = PAGE)
+ ON [rmDATA]
 GO
 
 ALTER DATABASE bodb_RMS
@@ -69,35 +69,28 @@ END
 
 CREATE TABLE [dbo].rmAlertLog(
 		[LogID] [BIGINT] IDENTITY(1,1) NOT NULL,
-		[LogTime] [DATETIME],
-		[AlertID] [BIGINT],
-		[UserID] [INT],
-		[ActionID] [SMALLINT]
+		[LogTime] [DATETIME] NOT NULL,
+		[AlertID] [BIGINT] NOT NULL,
+		[UserID] [INT] NOT NULL,
+		[ActionID] [SMALLINT] NOT NULL
 ) ON [rmAlertLog]
 WITH (DATA_COMPRESSION = PAGE)
 GO
 
-ALTER TABLE dbo.rmAlertLog
-	ADD CONSTRAINT PK_rmAlertLog PRIMARY KEY
-	(
-		LogID ASC
-	)
+CREATE CLUSTERED INDEX [CIX_AlertID] ON [dbo].[rmAlertLog]
+(
+	AlertID ASC
+)WITH (DATA_COMPRESSION = PAGE)
+ ON [rmAlertLog]
 GO
 
-CREATE NONCLUSTERED INDEX [CIX_rmAlertLog] ON [dbo].[rmAlertLog]
+CREATE NONCLUSTERED INDEX [IX_LogTime] ON [dbo].[rmAlertLog]
 (
 	LogTime ASC
 )WITH (DATA_COMPRESSION = PAGE)
  ON [rmAlertLog]
 GO
 
-CREATE NONCLUSTERED INDEX [IX_AlertID] ON [dbo].[rmAlertLog]
-(
-	AlertID ASC
-)WITH (DATA_COMPRESSION = PAGE)
- ON [rmAlertLog]
-GO
---------
 ALTER DATABASE bodb_RMS
 ADD FILEGROUP rmAlert
 GO
@@ -121,28 +114,66 @@ END
 
 CREATE TABLE [dbo].rmAlert(
 		[AlertID] [BIGINT] IDENTITY(1,1) NOT NULL,
-		[AlertTime] [DATETIME],
-		[TransID] [BIGINT],
-		[CustID] [INT],
-		[AlertType] [SMALLINT],
+		[AlertTime] [DATETIME] NOT NULL,
+		[TransID] [BIGINT] NOT NULL,
+		[CustID] [INT] NOT NULL,
+		[AlertType] [SMALLINT] NOT NULL,
 		[CheckBy] [INT],
-		[AlertAction] [SMALLINT],
+		[AlertAction] [SMALLINT] DEFAULT(0),
 		[Content] NVARCHAR(MAX),
-		[IsTest] BIT
+		[IsTest] BIT NOT NULL
 ) ON [rmAlert]
 WITH (DATA_COMPRESSION = PAGE)
 GO
 
-ALTER TABLE dbo.rmAlert
-	ADD CONSTRAINT PK_rmAlert PRIMARY KEY
-	(
-		AlertID ASC
-	)
+CREATE NONCLUSTERED INDEX [IX_AlertID] ON [dbo].[rmAlert]
+(
+	AlertID ASC
+)WITH (DATA_COMPRESSION = PAGE)
+ ON [rmAlert]
 GO
 
-CREATE NONCLUSTERED INDEX [CIX_rmAlert] ON [dbo].[rmAlert]
+CREATE CLUSTERED INDEX [CIX_AlertTime] ON [dbo].[rmAlert]
 (
 	AlertTime ASC
 )WITH (DATA_COMPRESSION = PAGE)
  ON [rmAlert]
+GO
+------------------
+ALTER DATABASE bodb_RMS
+ADD FILEGROUP rmAlertDetail
+GO
+
+ALTER DATABASE bodb_RMS 
+ADD FILE 
+(
+	NAME = rmAlertDetail,
+	FILENAME = 'E:\IBC_DB\bodb_RMS\rmAlertDetail\rmAlertDetail.ndf',
+	SIZE = 5MB,
+	MAXSIZE = UNLIMITED,
+	FILEGROWTH = 32MB
+)
+TO FILEGROUP rmAlertDetail
+GO
+
+IF OBJECT_ID('bodb_RMS.dbo.rmAlertDetail') IS NOT NULL
+BEGIN
+	DROP TABLE dbo.rmAlertDetail
+END
+
+CREATE TABLE [dbo].rmAlertDetail(
+		[AlertID] [BIGINT] NOT NULL,
+		[RefType] [SMALLINT] NOT NULL,
+		[RefValInt] [BIGINT]  NULL,
+		[RefValStr] VARCHAR(1000)  NULL
+) ON [rmAlertDetail]
+WITH (DATA_COMPRESSION = PAGE)
+GO
+
+CREATE CLUSTERED INDEX [CX_AlertID] ON [dbo].[rmAlertDetail]
+(
+	AlertID ASC,
+	RefType ASC
+)WITH (DATA_COMPRESSION = PAGE)
+ ON [rmAlertDetail]
 GO
