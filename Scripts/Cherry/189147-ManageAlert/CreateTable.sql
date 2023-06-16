@@ -120,7 +120,7 @@ CREATE TABLE [dbo].rmAlert(
 		[AlertType] [SMALLINT] NOT NULL,
 		[CheckBy] [INT],
 		[AlertAction] [SMALLINT] DEFAULT(0),
-		[Content] NVARCHAR(MAX),
+		[Content] VARBINARY(MAX),
 		[IsTest] BIT NOT NULL
 ) ON [rmAlert]
 WITH (DATA_COMPRESSION = PAGE)
@@ -139,7 +139,7 @@ CREATE CLUSTERED INDEX [CIX_AlertTime] ON [dbo].[rmAlert]
 )WITH (DATA_COMPRESSION = PAGE)
  ON [rmAlert]
 GO
-------------------
+
 ALTER DATABASE bodb_RMS
 ADD FILEGROUP rmAlertDetail
 GO

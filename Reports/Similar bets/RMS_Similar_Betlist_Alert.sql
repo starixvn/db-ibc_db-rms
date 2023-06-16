@@ -13,6 +13,7 @@ AS
 		- 20211208@Danny: Add Odds Info [RedmineID: #165789]
 		- 20220210@Danny: Change alert threshold of 2 selections parlay ticket [RedmineID: #168366]
 		- 20220829@Danny: Extend data length for support new transid [RedmineID: #177153]
+		- 20230620@Cherry: Manage Alert (#189147)
 
 	EXEC RMS_Similar_Betlist_Alert
 */
@@ -29,15 +30,19 @@ EXEC bodb02.dbo.Age_SelBalanceUpDay
 
 	SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @MBBU
 
-CREATE TABLE #rmRunningTicketMonitor (transid BIGINT, selection VARBINARY(16), PotentialWinningAnt MONEY, NoSelection SMALLINT,  SportType VARCHAR(200) ,TotalMemberStake MONEY, SportTypeID INT, Odds MONEY)
+CREATE TABLE #rmRunningTicketMonitor (transid BIGINT, selection VARBINARY(16), PotentialWinningAnt MONEY, NoSelection SMALLINT,  
+									SportType VARCHAR(200) ,TotalMemberStake MONEY, SportTypeID INT, Odds MONEY, CompanyLoseAmt MONEY)
 
-CREATE TABLE #main (transid BIGINT, PotentialWinningAnt MONEY ,combo INT , refno BIGINT, transid2 BIGINT, TotalMemberStake MONEY, Odds MONEY)
+CREATE TABLE #main (transid BIGINT, PotentialWinningAnt MONEY ,combo INT , refno BIGINT, 
+					transid2 BIGINT, TotalMemberStake MONEY, Odds MONEY, CompanyLoseAmt MONEY)
 CREATE CLUSTERED INDEX cix_#main ON #main(transid) 
 
-INSERT INTO #main (transid, PotentialWinningAnt, combo, refno, transid2, TotalMemberStake, Odds)
-SELECT  t1.transid , t1.stake * (t1.odds2 - 1)* t1.actualrate  AS PotentialWinningAnt,  t1.combo, t1.refno ,transid2, (t1.stake * t1.actualrate) AS TotalMemberStake, (t1.odds2 * t1.TotalBet) AS  Odds
-from rmBettrans t1 WITH(NOLOCK) 
-where   t1.winlostdate > @yesterday
+INSERT INTO #main (transid, PotentialWinningAnt, combo, refno, transid2, TotalMemberStake, Odds, CompanyLoseAmt)
+SELECT  t1.transid , t1.stake * (t1.odds2 - 1)* t1.actualrate  AS PotentialWinningAnt,  t1.combo, t1.refno ,transid2, 
+	(t1.stake * t1.actualrate) AS TotalMemberStake, (t1.odds2 * t1.TotalBet) AS  Odds,
+	t1.stake * (t1.odds2 - 1) * t1.actualrate * (1 - t1.tpositiontaking) AS CompanyLoseAmt
+FROM rmBettrans t1 WITH(NOLOCK) 
+WHERE   t1.winlostdate > @yesterday
 		AND t1.bettype = 29  
 		and t1.statusid = 0 
 		AND t1.currency <> 20 
@@ -68,7 +73,7 @@ CROSS APPLY(
 		) x 
 
 
-INSERT INTO #rmRunningTicketMonitor(transid , selection , PotentialWinningAnt , NoSelection , SportType ,TotalMemberStake, SportTypeID, Odds)
+INSERT INTO #rmRunningTicketMonitor(transid , selection , PotentialWinningAnt , NoSelection , SportType ,TotalMemberStake, SportTypeID, Odds, CompanyLoseAmt)
 select  t1.transid,
 		hashbytes('MD5',(SELECT  ',' + t.extra 
 			from #temp t
@@ -88,7 +93,8 @@ select  t1.transid,
 			END  AS SportType,
 		t1.TotalMemberStake,
 		transid2 AS SportTypeID,
-		t1.Odds
+		t1.Odds, 
+		t1.CompanyLoseAmt
 	from #main t1 WITH(NOLOCK) 
 	LEFT JOIN bodb02.dbo.Sports s WITH(NOLOCK) ON t1.transid2 = s.SportType
 
@@ -106,6 +112,18 @@ CREATE TABLE #OddsInfo (selection VARBINARY(16), Odds MONEY)
 SELECT t.selection, m.Odds
 FROM t INNER JOIN #main m ON t.transid = m.transid
 
+CREATE TABLE #result (selection VARBINARY(16), 
+					NoSelection SMALLINT, 
+					SportType VARCHAR(100), 
+					PotentialWinningAmt MONEY, 
+					transList NVARCHAR(MAX), 
+					TotalMemberStake MONEY, 
+					GroupName VARCHAR(100), 
+					Odds MONEY, 
+					CompanyLoseAmt MONEY)
+
+;WITH d AS
+(
 SELECT	t.selection, t.NoSelection,
 		t.SportType,
 		SUM(ISNULL(t.PotentialWinningAnt,0)) PotentialWinningAmt,
@@ -119,9 +137,10 @@ SELECT	t.selection, t.NoSelection,
 		CASE WHEN t.SportTypeID IN (1, -4) THEN 'Soccer'
 			 WHEN t.SportTypeID IN (2, -5) THEN 'Basketball'
 			 ELSE 'Other' END AS GroupName,
-		o.Odds
+		o.Odds,
+		SUM(ISNULL(t.CompanyLoseAmt,0)) CompanyLoseAmt
 FROM	#rmRunningTicketMonitor t
-INNER JOIN #OddsInfo o ON t.selection = o.selection
+	INNER JOIN #OddsInfo o ON t.selection = o.selection
 GROUP BY t.selection, t.NoSelection, t.SportType, t.SportTypeID,
 		CASE WHEN t.SportTypeID IN (1, -4) THEN 'Soccer'
 			WHEN t.SportTypeID IN (2, -5) THEN 'Basketball'
@@ -134,11 +153,31 @@ HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE  WHEN SportTypeID = 1 AND No
 													 WHEN SportTypeID = -4 AND NoSelection = 2 THEN 30000
 													 WHEN SportTypeID = -5 AND NoSelection = 2 THEN 10000
 													 ELSE 30000 END
+)
+INSERT INTO #result (selection, NoSelection, SportType, PotentialWinningAmt, transList, TotalMemberStake, GroupName, Odds, CompanyLoseAmt)
+SELECT d.selection, d.NoSelection, d.SportType, d.PotentialWinningAmt, d.transList, d.TotalMemberStake, d.GroupName, d.Odds, d.CompanyLoseAmt
+FROM d
+
+SELECT d.selection, d.NoSelection, d.SportType, d.PotentialWinningAmt, d.transList, d.TotalMemberStake, d.GroupName, d.Odds,
+	COMPRESS((SELECT transList AS 'tl',
+					SportType AS 'sp',
+					NoSelection	AS 'sl',
+					Odds AS 'od',
+					TotalMemberStake AS 'ms',
+					PotentialWinningAmt AS 'pw',
+					CompanyLoseAmt AS 'pl'
+				FROM #result t
+				WHERE t.selection = d.selection AND t.NoSelection = d.NoSelection AND t.SportType = d.SportType AND t.Odds = d.Odds
+					FOR JSON PATH
+					,INCLUDE_NULL_VALUES
+				)) Content
+FROM #result d
+
 DROP TABLE  #OddsInfo
 DROP TABLE  #main
 DROP TABLE  #rmRunningTicketMonitor
 DROP TABLE  #temp
+DROP TABLE  #result
 
---------------------------------------------------------------
 END
 

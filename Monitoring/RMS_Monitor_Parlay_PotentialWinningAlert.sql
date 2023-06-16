@@ -15,6 +15,7 @@ AS
 Revisions:
 
 - 20200207@Jacob: Notify/Alert by Winning Amount #128093
+- 20230620@Cherry: Manage Alert (#189147)
 */
 
      SET NOCOUNT ON;
@@ -31,6 +32,8 @@ Revisions:
      (custid             INT, 
       username           NVARCHAR(50), 
       currencyname       VARCHAR(50), 
+	  TransList NVARCHAR(MAX), 
+	  TotalMemberStake MONEY,
       winningamount      MONEY, 
       companyloseamount  MONEY, 
       totalbets          INT, 
@@ -43,6 +46,8 @@ Revisions:
      (custid, 
       username, 
       currencyname, 
+	  TransList,
+	  TotalMemberStake,
       winningamount, 
       companyloseamount, 
       totalbets, 
@@ -54,6 +59,14 @@ Revisions:
             SELECT b.custid, 
                    b.username, 
                    b.CurrencyName AS currency, 
+				   STUFF((SELECT  ',' + CAST(t.transid  AS VARCHAR(30))
+					FROM rmBettrans t WITH(NOLOCK)
+					WHERE t.custid = b.custid
+					FOR XML PATH(''), TYPE
+					).value('.', 'NVARCHAR(MAX)')  
+					,1,1,'') TransList,
+				   SUM(b.stake * CASE WHEN @IsTest = 1 THEN 1
+                                      ELSE b.actualrate END) AS TotalMemberStake,
                    SUM((b.odds2 - 1) * b.stake * CASE
                                                      WHEN @IsTest = 1
                                                      THEN 1
@@ -69,8 +82,7 @@ Revisions:
                    MAX(b.hdp2) AS TotalSelectionsMax, 
                    AVG(b.odds2 * b.TotalBet) AS Odds, 
                    AVG(1 - b.tpositiontaking) AS HousePT
-            FROM rmBettrans b WITH(NOLOCK)
-                 
+            FROM rmBettrans b WITH(NOLOCK)                 
             WHERE b.bettype = @BetType
                   AND b.statusid = 0
                   AND ((@IsTest = 1
@@ -152,7 +164,19 @@ Revisions:
             odds, 
             housept, 
             ISNULL(p.AlertAmount, 0) LastAlertAmount, 
-            ISNULL(r.WinningAmount, 0) AS AmountFromLastAlert
+            ISNULL(r.WinningAmount, 0) AS AmountFromLastAlert,
+			COMPRESS((SELECT TransList AS 'tl',
+					SportType AS 'sp',
+					NoSelection	AS 'sl',
+					Odds AS 'od',
+					TotalMemberStake AS 'ms',
+					PotentialWinningAmt AS 'pw',
+					CompanyLoseAmt AS 'pl'
+				FROM #sumtotal t
+				WHERE t.custid = s.custid
+					FOR JSON PATH
+					,INCLUDE_NULL_VALUES
+				)) Content
      FROM #sumtotal s
           LEFT JOIN #sumtotalfromlastalert r ON s.custid = r.custid
           LEFT JOIN #lastalert p WITH(NOLOCK) ON s.custid = p.custid;
