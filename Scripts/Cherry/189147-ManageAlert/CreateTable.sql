@@ -120,7 +120,7 @@ CREATE TABLE [dbo].rmAlert(
 		[AlertType] [SMALLINT] NOT NULL,
 		[CheckBy] [INT],
 		[AlertAction] [SMALLINT] DEFAULT(0),
-		[Content] VARBINARY(MAX),
+		[TransInfo] VARBINARY(MAX),
 		[IsTest] BIT NOT NULL
 ) ON [rmAlert]
 WITH (DATA_COMPRESSION = PAGE)
