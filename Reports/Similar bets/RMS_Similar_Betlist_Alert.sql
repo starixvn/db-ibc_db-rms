@@ -116,7 +116,8 @@ CREATE TABLE #result (selection VARBINARY(16),
 					NoSelection SMALLINT, 
 					SportType VARCHAR(100), 
 					PotentialWinningAmt MONEY, 
-					transList NVARCHAR(MAX), 
+					TransList NVARCHAR(MAX), 
+					TotalSimilar INT,
 					TotalMemberStake MONEY, 
 					GroupName VARCHAR(100), 
 					Odds MONEY, 
@@ -133,6 +134,10 @@ SELECT	t.selection, t.NoSelection,
 			FOR XML PATH(''), TYPE
 			).value('.', 'NVARCHAR(MAX)')  
 		,1,1,'') transList,
+		(SELECT COUNT(t2.transid)
+			FROM #rmRunningTicketMonitor t2
+			WHERE t.selection = t2.selection AND t.NoSelection = t2.NoSelection AND t.SportType = t2.SportType)
+		TotalSimilar,
 		SUM(ISNULL(t.TotalMemberStake,0)) TotalMemberStake,
 		CASE WHEN t.SportTypeID IN (1, -4) THEN 'Soccer'
 			 WHEN t.SportTypeID IN (2, -5) THEN 'Basketball'
@@ -154,14 +159,15 @@ HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE  WHEN SportTypeID = 1 AND No
 													 WHEN SportTypeID = -5 AND NoSelection = 2 THEN 10000
 													 ELSE 30000 END
 )
-INSERT INTO #result (selection, NoSelection, SportType, PotentialWinningAmt, transList, TotalMemberStake, GroupName, Odds, CompanyLoseAmt)
-SELECT d.selection, d.NoSelection, d.SportType, d.PotentialWinningAmt, d.transList, d.TotalMemberStake, d.GroupName, d.Odds, d.CompanyLoseAmt
+INSERT INTO #result (selection, NoSelection, SportType, PotentialWinningAmt, TransList, TotalSimilar, TotalMemberStake, GroupName, Odds, CompanyLoseAmt)
+SELECT d.selection, d.NoSelection, d.SportType, d.PotentialWinningAmt, d.transList, d.TotalSimilar, d.TotalMemberStake, d.GroupName, d.Odds, d.CompanyLoseAmt
 FROM d
 
 SELECT d.selection, d.NoSelection, d.SportType, d.PotentialWinningAmt, d.transList, d.TotalMemberStake, d.GroupName, d.Odds,
 	COMPRESS((SELECT transList AS 'tl',
 					SportType AS 'sp',
-					NoSelection	AS 'sl',
+					TotalSimilar AS 'si',
+					CAST(NoSelection AS VARCHAR) AS 'sl',
 					Odds AS 'od',
 					TotalMemberStake AS 'ms',
 					PotentialWinningAmt AS 'pw',
@@ -170,7 +176,7 @@ SELECT d.selection, d.NoSelection, d.SportType, d.PotentialWinningAmt, d.transLi
 				WHERE t.selection = d.selection AND t.NoSelection = d.NoSelection AND t.SportType = d.SportType AND t.Odds = d.Odds
 					FOR JSON PATH
 					,INCLUDE_NULL_VALUES
-				)) Content
+				)) TransInfo
 FROM #result d
 
 DROP TABLE  #OddsInfo
