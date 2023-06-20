@@ -14,6 +14,7 @@ AS
 		- 20200226@Franklin: Notify/Alert by Winning Amount #129275
 		- 20200703@Percy: Add jobtype to support many jobs [RedmineID: #137010]
 		- 20210414@Danny: Notify/Alert for ticket have half-lose selection [RedmineID: #137010]
+		- 20230620@Cherry: Manage Alert (#189147)
 */
 
 BEGIN
@@ -34,6 +35,8 @@ BEGIN
       companyloseamount MONEY, 
       totalselection    INT, 
       odds              MONEY, 
+	  stake				MONEY,
+	  totalbets			INT,
       housept           MONEY, 
       betteam           NVARCHAR(10), 
       numberlose        INT DEFAULT(0), 
@@ -49,6 +52,8 @@ BEGIN
       companyloseamount, 
       totalselection, 
       odds, 
+	  stake,
+	  totalbets,
       housept, 
       betteam
      )
@@ -69,6 +74,8 @@ BEGIN
                                                  END * (1 - b.tpositiontaking)) AS CompanyLoseAmount, 
                    b.hdp2 AS TotalSelections, 
                    AVG(b.odds2 * b.TotalBet) AS Odds, 
+				   SUM(b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END) AS stake,
+				   SUM(b.totalbet) AS totalbets,
                    AVG(1 - b.tpositiontaking) AS HousePT, 
                    b.betteam AS BetTeam
             FROM rmBettrans AS b WITH(NOLOCK)
@@ -158,7 +165,24 @@ BEGIN
             s.totalselection AS TotalSelection, 
             s.odds AS Odds, 
             s.housept AS HousePt, 
-            ISNULL(p.AlertAmount, 0) AS AlertAmount
+            ISNULL(p.AlertAmount, 0) AS AlertAmount,
+			COMPRESS((SELECT CAST(t.TransId AS VARCHAR) AS 'tl',
+					CASE WHEN t.betteam = '1'
+						THEN 'Mix Parlay'
+						ELSE 'Combo Parlay'
+					END AS 'sp',
+					--0 AS 'si',
+					CAST(t.totalselection AS VARCHAR) AS 'sl',
+					t.Odds AS 'od',
+					t.totalbets AS 'tb',
+					t.stake AS 'ms',
+					t.winningamount AS 'pw',
+					t.companyloseamount AS 'pl'
+				FROM #sumtotal t
+				WHERE t.TransId = s.TransId 
+					FOR JSON PATH
+					,INCLUDE_NULL_VALUES
+				)) TransInfo
      FROM #sumtotal s
           LEFT JOIN #lastalert p ON s.transid = p.transid
      WHERE s.numberlose = 0
