@@ -4,8 +4,8 @@ ALTER PROCEDURE [dbo].[RMS_ManageAlert_Alert]
 	@FromDate DATE,
 	@ToDate DATE,
 	@AlertType VARCHAR(50) = '-1',
-	@Member NVARCHAR(50),
-	@CheckBy NVARCHAR(50),
+	@Member NVARCHAR(50) = '',
+	@CheckBy NVARCHAR(50) = '',
 	@IsNoChecked BIT,
 	@ActionType VARCHAR(50) = '-1',
 	@TicketStatus VARCHAR(50) = '-1'
@@ -117,33 +117,49 @@ BEGIN
 		AND ((@IsNoChecked = 1 AND CheckBy IS NULL)
 			OR (@IsNoChecked = 0 AND CheckBy IS NOT NULL))
 
-	IF @TicketStatus <> '-1'
+	IF @Member <> ''
 	BEGIN
-		INSERT INTO #tmpDetail
-		(	
-			AlertID,
-			TransID
-		)
-		SELECT
-			AlertID,
-			RefValInt
-		FROM dbo.rmAlertDetail WITH(NOLOCK)
-		WHERE AlertID IN (SELECT AlertID FROM #tmpAlert)
-			AND RefType = 1
+		DELETE a
+		FROM #tmpAlert a
+			LEFT JOIN bodb02.dbo.customer c WITH(NOLOCK) ON a.CustID = c.custid AND c.username = @Member
+		WHERE c.CustID IS NULL
+	END
 
-		UPDATE d
-		SET d.StatusID = t.statusID
-		FROM #tmpDetail d
-			INNER JOIN (
-				SELECT transid, statusID
-				FROM dbo.rmBettrans b WITH(NOLOCK) 
-				WHERE b.transid IN (SELECT TransID FROM #tmpDetail)
-				UNION 
-				SELECT transid, statusID
-				FROM dbo.rmBettrans_Old b WITH(NOLOCK) 
-				WHERE b.transid IN (SELECT TransID FROM #tmpDetail)
-			) t ON d.TransID = t.transid
+	IF @CheckBy <> ''
+	BEGIN
+		DELETE a
+		FROM #tmpAlert a
+			LEFT JOIN bodb02.dbo.customer c WITH(NOLOCK) ON a.CheckBy = c.custid AND c.username = @CheckBy
+		WHERE c.CustID IS NULL
+	END
 
+	INSERT INTO #tmpDetail
+	(	
+		AlertID,
+		TransID
+	)
+	SELECT
+		AlertID,
+		RefValInt
+	FROM dbo.rmAlertDetail WITH(NOLOCK)
+	WHERE AlertID IN (SELECT AlertID FROM #tmpAlert)
+		AND RefType = 1
+
+	UPDATE d
+	SET d.StatusID = t.statusID
+	FROM #tmpDetail d
+		INNER JOIN (
+			SELECT transid, statusID
+			FROM dbo.rmBettrans b WITH(NOLOCK) 
+			WHERE b.transid IN (SELECT TransID FROM #tmpDetail)
+			UNION 
+			SELECT transid, statusID
+			FROM dbo.rmBettrans_Old b WITH(NOLOCK) 
+			WHERE b.transid IN (SELECT TransID FROM #tmpDetail)
+		) t ON d.TransID = t.transid
+
+	IF @TicketStatus <> '-1'
+	BEGIN		
 		DELETE a
 		FROM #tmpAlert a			
 		WHERE NOT EXISTS(SELECT TOP 1 1
