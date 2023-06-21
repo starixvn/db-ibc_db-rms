@@ -171,7 +171,6 @@ BEGIN
 						THEN 'Mix Parlay'
 						ELSE 'Combo Parlay'
 					END AS 'sp',
-					--0 AS 'si',
 					CAST(t.totalselection AS VARCHAR) AS 'sl',
 					t.Odds AS 'od',
 					t.totalbets AS 'tb',

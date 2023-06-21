@@ -92,7 +92,6 @@ BEGIN
 		d.HousePT,
 		COMPRESS((SELECT CAST(TransId AS VARCHAR) AS 'tl',
 					ParlayType AS 'sp',
-					--0 AS 'si',
 					CAST(Selection AS VARCHAR) AS 'sl',
 					Odds AS 'od',
 					TotalBets AS 'tb',

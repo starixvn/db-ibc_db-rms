@@ -55,7 +55,8 @@ BEGIN
 		AlertType SMALLINT,
 		CheckBy INT,
 		AlertAction SMALLINT,
-		TransInfo VARBINARY(MAX)
+		TransInfo VARBINARY(MAX),
+		IsSettled BIT DEFAULT(0)
 	)
 
 	CREATE TABLE #tmpDetail
@@ -150,51 +151,55 @@ BEGIN
 						WHERE d.AlertID = a.AlertID
 							AND d.StatusID IN (SELECT StatusID FROM #tmpStatusID))
 	END
+
+	UPDATE a
+	SET a.IsSettled = 1
+	FROM #tmpAlert a			
+	WHERE NOT EXISTS(SELECT TOP 1 1
+					FROM #tmpDetail d
+					WHERE d.AlertID = a.AlertID
+						AND d.StatusID = 0)
 	
-	DECLARE @TransList VARCHAR(MAX), @TransID BIGINT, @CustID INT, @AlertID BIGINT
-	CREATE TABLE #tmpTransID (TransID BIGINT)
-	
-	BEGIN TRY
-		BEGIN TRANSACTION
-			SELECT @TransList = tl
-			FROM  OPENJSON (CAST( DECOMPRESS(@TransInfo) AS NVARCHAR(MAX)))
-			WITH (
-				tl VARCHAR(MAX)
-				)
+	SELECT 
+		d.AlertID AlertId,
+		d.AlertTime,
+		d.TransID BetId,
+		t.AlertTypeName AlertType,
+		i.sp SportType,
+		c.username UserName,
+		i.si SimilarTickets,
+		i.sl Selection,
+		i.od Odds,
+		i.tb TotalBets,
+		i.ms MemberStake,
+		i.pw PotentialWinning,
+		i.pl CompanyLose,
+		u.username CheckedBy,
+		CASE WHEN a.ActionID = 0 AND d.IsSettled = 1 THEN 'No Action' 
+			WHEN a.ActionID = 0 AND d.IsSettled = 0 THEN 'Choose Action' 
+			ELSE a.ActionName END 'Action'
+	FROM #tmpAlert d
+		INNER JOIN dbo.rmAlertType t WITH(NOLOCK) ON d.AlertType = t.AlertTypeID
+		INNER JOIN dbo.rmAlertAction a WITH(NOLOCK) ON d.AlertAction = a.ActionID
+		INNER JOIN bodb02.dbo.customer c WITH(NOLOCK) ON d.CustID = c.custid
+		LEFT JOIN bodb02.dbo.customer u WITH(NOLOCK) ON d.CustID = u.custid AND d.CheckBy IS NOT NULL
+		CROSS APPLY OPENJSON(CAST(DECOMPRESS(d.TransInfo) AS NVARCHAR(MAX)))
+			WITH(
+				sp VARCHAR(50),
+				si INT,
+				sl VARCHAR(50),
+				od MONEY,
+				tb INT,
+				ms MONEY,
+				pw MONEY,
+				pl MONEY
+				) AS i
 
-			INSERT INTO #tmpTransID (TransID)
-			SELECT val
-			FROM bodb02.dbo.strSplit(@TransList, ',')
-
-			SELECT @TransID = MAX(TransID)
-			FROM #tmpTransID
-
-			SELECT @CustID = t.CustID
-			FROM (
-				SELECT custid 
-				FROM dbo.rmBettrans WITH(NOLOCK)
-				WHERE transid = @TransID
-				UNION
-				SELECT custid 
-				FROM dbo.rmBettrans_Old WITH(NOLOCK)
-				WHERE transid = @TransID
-			) t		
-
-			INSERT INTO dbo.rmAlert (AlertTime, TransID, CustID, AlertType, TransInfo, IsTest)
-			SELECT @AlertTime, @TransID, @CustID, @AlertType, @TransInfo, @IsTest
-
-			SELECT @AlertID = IDENT_CURRENT('rmAlert')
-
-			INSERT INTO dbo.rmAlertDetail (AlertID, RefType, RefValInt)
-			SELECT @AlertID, 1, TransID
-			FROM #tmpTransID
-
-		COMMIT TRANSACTION
-	END TRY
-	BEGIN CATCH
-		SELECT @ErrorMsg = error_message()
-		ROLLBACK TRANSACTION
-	END CATCH
+	DROP TABLE #tmpAlert
+	DROP TABLE #tmpAlertAction
+	DROP TABLE #tmpAlertType
+	DROP TABLE #tmpDetail
+	DROP TABLE #tmpStatusID
 
 END 
  
