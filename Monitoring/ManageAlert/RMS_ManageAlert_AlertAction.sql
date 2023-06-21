@@ -16,7 +16,7 @@ BEGIN
 	SET NOCOUNT ON
 	SELECT ActionID, ActionName
 	FROM bodb_RMS.dbo.rmAlertAction WITH(NOLOCK)
-	WHERE ActionID NOT IN (0,4)
+	WHERE ActionID <> 4
 END 
  
 
