@@ -26,18 +26,6 @@ AS
 
 BEGIN
 	SET NOCOUNT ON
-
-	CREATE TABLE #tmpAlert
-	(
-		[AlertTime] [DATETIME],
-		[TransID] [BIGINT],
-		[CustID] [INT],
-		[AlertType] [SMALLINT],
-		[CheckBy] [INT],
-		[AlertAction] [SMALLINT] DEFAULT(0),
-		[TransInfo] VARBINARY(MAX),
-		[IsTest] BIT 
-	)
 	
 	DECLARE @TransList VARCHAR(MAX), @TransID BIGINT, @CustID INT, @AlertID BIGINT
 	CREATE TABLE #tmpTransID (TransID BIGINT)
@@ -84,6 +72,7 @@ BEGIN
 		ROLLBACK TRANSACTION
 	END CATCH
 
+	DROP TABLE #tmpTransID
 END 
  
 
