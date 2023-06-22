@@ -13,183 +13,234 @@ AS
 		20230620@Cherry: Initial (#189147)
 
 	Param:
-		@AlertType = 1: Similar Bet
-				   = 2: Small Odds
-				   = 3: Potential Winning
-				   = 4: Last Pending Tickets
-				   = 5: Small League & Odds
-				   = -1: All
-
-		@ActionType = 0: No Action
-					= 1: Send S&V
-					= 2: Send OS
-					= 3: Take Note
-					= -1: All
-
-		@TicketStatus = 112: Won
-					  = 113: Lose
-					  = 0: Running
-					  = -1: All
+		
 */
 
 BEGIN
 	SET NOCOUNT ON
 
-	CREATE TABLE #tmpAlert
+	DECLARE @AlertType SMALLINT
+	CREATE TABLE #tmpTransID (TransID BIGINT)	
+
+	CREATE TABLE #tmpSimilar
 	(
-		AlertID BIGINT,
-		AlertTime DATETIME,
 		TransID BIGINT,
-		CustID INT,
-		AlertType SMALLINT,
-		CheckBy INT,
-		AlertAction SMALLINT,
-		TransInfo VARBINARY(MAX),
-		IsSettled BIT DEFAULT(0)
+		SiteGroup VARCHAR(10),
+		UserName NVARCHAR(50),
+		CustomerClass SMALLINT,
+		Stake MONEY,
+		WinningAmt MONEY,
+		HouseAmt MONEY,
+		Status NVARCHAR(10)
 	)
 
-	CREATE TABLE #tmpDetail
+	CREATE TABLE #tmpPotential
 	(
-		AlertID BIGINT,
+		TransDate DATETIME,
 		TransID BIGINT,
-		StatusID TINYINT
+		Odds SMALLMONEY,
+		Stake MONEY,
+		WinningAmt MONEY,
+		HouseAmt MONEY,
+		Ip VARCHAR(50),
+		HousePT SMALLMONEY,
+		TotalBet INT,
+		TotalSelection SMALLMONEY,
+		Sporttype BIGINT,
+		Status NVARCHAR(10)
 	)
+	
+	SELECT @AlertType = AlertType
+	FROM dbo.rmAlert WITH(NOLOCK)
+	WHERE AlertID = @AlertID
 
-	IF @AlertType <> '-1' 
+	INSERT INTO #tmpTransID(TransID)
+	SELECT RefValInt 
+	FROM dbo.rmAlertDetail WITH(NOLOCK)
+	WHERE AlertID = @AlertID
+		AND RefType = 1
+
+	IF @AlertType = 1 --Similar Bet
 	BEGIN
-		INSERT INTO #tmpAlertType (AlertTypeID)
-		SELECT val
-        FROM bodb02.dbo.strSplit(@AlertType, ',')
-	END
-
-	IF @ActionType <> '-1' 
-	BEGIN
-		INSERT INTO #tmpAlertAction (AlertActionID)
-		SELECT val
-        FROM bodb02.dbo.strSplit(@ActionType, ',')
-	END
-
-	IF @TicketStatus <> '-1' 
-	BEGIN
-		INSERT INTO #tmpStatusID (StatusID)
-		SELECT val
-        FROM bodb02.dbo.strSplit(@TicketStatus, ',')
-	END
-
-	DECLARE @IsTest BIT = 0
-	SELECT @IsTest = bodb02.dbo.f_CheckSPVersion(@@PROCID)
-
-	INSERT INTO #tmpAlert
-	(
-		AlertID,
-		AlertTime,
-		TransID,
-		CustID,
-		AlertType,
-		CheckBy,
-		AlertAction,
-		TransInfo
-	)
-	SELECT AlertID,
-		AlertTime,
-		TransID,
-		CustID,
-		AlertType,
-		CheckBy,
-		AlertAction,
-		TransInfo
-	FROM dbo.rmAlert a WITH(NOLOCK)
-	WHERE CAST(AlertTime AS DATE) BETWEEN @FromDate AND @ToDate
-		AND IsTest = @IsTest
-		AND (@AlertType = '-1' OR EXISTS(SELECT TOP 1 1 FROM #tmpAlertType t WHERE t.AlertTypeID = a.AlertType))
-		AND (@ActionType = '-1' OR EXISTS(SELECT TOP 1 1 FROM #tmpAlertAction l WHERE l.AlertActionID = a.AlertAction))
-		AND ((@IsNoChecked = 1 AND CheckBy IS NULL)
-			OR (@IsNoChecked = 0 AND CheckBy IS NOT NULL))
-
-	IF @TicketStatus <> '-1'
-	BEGIN
-		INSERT INTO #tmpDetail
-		(	
-			AlertID,
-			TransID
+		INSERT INTO #tmpSimilar
+		(
+			TransID,
+			SiteGroup,
+			UserName,
+			CustomerClass,
+			Stake,
+			WinningAmt,
+			HouseAmt,
+			Status
 		)
 		SELECT
-			AlertID,
-			RefValInt
-		FROM dbo.rmAlertDetail WITH(NOLOCK)
-		WHERE AlertID IN (SELECT AlertID FROM #tmpAlert)
-			AND RefType = 1
+			p.transid,
+			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup,
+			p.username,
+			ci.CustomerClass,
+			(p.stake * p.actualrate) AS stake,
+			CASE WHEN p.statusID = 0 THEN p.stake * (p.odds2 - 1) * p.actualrate * (1 - p.tpositiontaking)
+				 WHEN p.statusID = 112 THEN (p.winlost - p.actual_stake) * p.actualrate
+				 ELSE 0
+			END AS WinningAmt,
+			CASE WHEN p.statusID = 0 THEN (p.odds2 - 1) * p.stake * p.actualrate 
+				 WHEN p.statusID IN (112, 113) THEN ((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate
+				 ELSE 0
+			END AS HouseAmt,
+			p.status
+		FROM dbo.rmBettrans p WITH (NOLOCK) 
+			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
+			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+		WHERE transid IN (SELECT TransID FROM #tmpTransID)
 
-		UPDATE d
-		SET d.StatusID = t.statusID
-		FROM #tmpDetail d
-			INNER JOIN (
-				SELECT transid, statusID
-				FROM dbo.rmBettrans b WITH(NOLOCK) 
-				WHERE b.transid IN (SELECT TransID FROM #tmpDetail)
-				UNION 
-				SELECT transid, statusID
-				FROM dbo.rmBettrans_Old b WITH(NOLOCK) 
-				WHERE b.transid IN (SELECT TransID FROM #tmpDetail)
-			) t ON d.TransID = t.transid
+		INSERT INTO #tmpSimilar
+		(
+			TransID,
+			SiteGroup,
+			UserName,
+			CustomerClass,
+			Stake,
+			WinningAmt,
+			HouseAmt,
+			Status
+		)
+		SELECT
+			p.transid,
+			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup,
+			p.username,
+			ci.CustomerClass,
+			(p.stake * p.actualrate) AS stake,
+			CASE WHEN p.statusID = 0 THEN p.stake * (p.odds2 - 1) * p.actualrate * (1 - p.tpositiontaking)
+				 WHEN p.statusID = 112 THEN (p.winlost - p.actual_stake) * p.actualrate
+				 ELSE 0
+			END AS WinningAmt,
+			CASE WHEN p.statusID = 0 THEN (p.odds2 - 1) * p.stake * p.actualrate 
+				 WHEN p.statusID IN (112, 113) THEN ((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate
+				 ELSE 0
+			END AS HouseAmt,
+			p.status
+		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
+			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
+			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+		WHERE transid IN (SELECT TransID FROM #tmpTransID)
+			AND transid NOT IN (SELECT TransID FROM #tmpSimilar)
 
-		DELETE a
-		FROM #tmpAlert a			
-		WHERE NOT EXISTS(SELECT TOP 1 1
-						FROM #tmpDetail d
-						WHERE d.AlertID = a.AlertID
-							AND d.StatusID IN (SELECT StatusID FROM #tmpStatusID))
+		SELECT
+			TransID,
+			SiteGroup,
+			UserName,
+			CustomerClass,
+			Stake,
+			WinningAmt,
+			HouseAmt,
+			Status
+		FROM #tmpSimilar
 	END
 
-	UPDATE a
-	SET a.IsSettled = 1
-	FROM #tmpAlert a			
-	WHERE NOT EXISTS(SELECT TOP 1 1
-					FROM #tmpDetail d
-					WHERE d.AlertID = a.AlertID
-						AND d.StatusID = 0)
+	IF @AlertType = 3 --Potential Winning
+	BEGIN
+		INSERT INTO #tmpPotential
+		(
+			TransDate,
+			TransID,
+			Odds,
+			Stake,
+			WinningAmt,
+			HouseAmt,
+			Ip,
+			HousePT,
+			TotalBet,
+			TotalSelection,
+			Sporttype,
+			Status
+		)
+		SELECT
+			transdate,
+			transid,
+			odds2 * TotalBet,
+			stake * actualrate AS stake,
+			CASE WHEN statusID = 0 THEN stake * (odds2 - 1) * actualrate * (1 - tpositiontaking)
+				 WHEN statusID = 112 THEN (winlost - actual_stake) * actualrate
+				 ELSE 0
+			END AS WinningAmt,
+			CASE WHEN statusID = 0 THEN (odds2 - 1) * stake * actualrate 
+				 WHEN statusID IN (112, 113) THEN ((winlost - actual_stake) * (1 - tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate
+				 ELSE 0
+			END AS HouseAmt,
+			ip,
+			1 - tpositiontaking AS HousePT,
+			TotalBet,
+			hdp2 AS TotalSelection,
+			CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype,
+			status
+		FROM dbo.rmBettrans WITH (NOLOCK) 
+		WHERE transid IN (SELECT TransID FROM #tmpTransID)
+
+		INSERT INTO #tmpPotential
+		(
+			TransDate,
+			TransID,
+			Odds,
+			Stake,
+			WinningAmt,
+			HouseAmt,
+			Ip,
+			HousePT,
+			TotalBet,
+			TotalSelection,
+			Sporttype,
+			Status
+		)
+		SELECT
+			transdate,
+			transid,
+			odds2 * TotalBet,
+			stake * actualrate AS stake,
+			CASE WHEN statusID = 0 THEN stake * (odds2 - 1) * actualrate * (1 - tpositiontaking)
+				 WHEN statusID = 112 THEN (winlost - actual_stake) * actualrate
+				 ELSE 0
+			END AS WinningAmt,
+			CASE WHEN statusID = 0 THEN (odds2 - 1) * stake * actualrate 
+				 WHEN statusID IN (112, 113) THEN ((winlost - actual_stake) * (1 - tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate
+				 ELSE 0
+			END AS HouseAmt,
+			ip,
+			1 - tpositiontaking AS HousePT,
+			TotalBet,
+			hdp2 AS TotalSelection,
+			CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype,
+			status
+		FROM dbo.rmBettrans_Old WITH (NOLOCK) 
+		WHERE transid IN (SELECT TransID FROM #tmpTransID)
+			AND transid NOT IN (SELECT TransID FROM #tmpPotential)
+
+		SELECT
+			TransDate,
+			TransID,
+			Odds,
+			Stake,
+			WinningAmt,
+			HouseAmt,
+			Ip,
+			HousePT,
+			TotalBet,
+			TotalSelection,
+			CASE WHEN Sporttype = 1 THEN 'Soccer Only'
+				 WHEN Sporttype = -1 THEN 'Combined Other Sports'
+				 WHEN Sporttype = -2 THEN 'Other Sports'
+				 WHEN Sporttype = -3 THEN 'Combined Sports'
+				 WHEN Sporttype = -4 THEN 'Saba Soccer'
+				 WHEN Sporttype = -5 THEN 'Saba Basketball'
+			END AS SportType,
+			Status
+		FROM #tmpPotential
+	END	
 	
-	SELECT 
-		d.AlertID AlertId,
-		d.AlertTime,
-		d.TransID BetId,
-		t.AlertTypeName AlertType,
-		i.sp SportType,
-		c.username UserName,
-		i.si SimilarTickets,
-		i.sl Selection,
-		i.od Odds,
-		i.tb TotalBets,
-		i.ms MemberStake,
-		i.pw PotentialWinning,
-		i.pl CompanyLose,
-		u.username CheckedBy,
-		CASE WHEN a.ActionID = 0 AND d.IsSettled = 1 THEN 'No Action' 
-			WHEN a.ActionID = 0 AND d.IsSettled = 0 THEN 'Choose Action' 
-			ELSE a.ActionName END 'Action'
-	FROM #tmpAlert d
-		INNER JOIN dbo.rmAlertType t WITH(NOLOCK) ON d.AlertType = t.AlertTypeID
-		INNER JOIN dbo.rmAlertAction a WITH(NOLOCK) ON d.AlertAction = a.ActionID
-		INNER JOIN bodb02.dbo.customer c WITH(NOLOCK) ON d.CustID = c.custid
-		LEFT JOIN bodb02.dbo.customer u WITH(NOLOCK) ON d.CustID = u.custid AND d.CheckBy IS NOT NULL
-		CROSS APPLY OPENJSON(CAST(DECOMPRESS(d.TransInfo) AS NVARCHAR(MAX)))
-			WITH(
-				sp VARCHAR(50),
-				si INT,
-				sl VARCHAR(50),
-				od MONEY,
-				tb INT,
-				ms MONEY,
-				pw MONEY,
-				pl MONEY
-				) AS i
-
-	DROP TABLE #tmpAlert
-	DROP TABLE #tmpAlertAction
-	DROP TABLE #tmpAlertType
-	DROP TABLE #tmpDetail
-	DROP TABLE #tmpStatusID
-
+	DROP TABLE #tmpSimilar
+	DROP TABLE #tmpTransID
+	DROP TABLE #tmpPotential
 END 
  
 

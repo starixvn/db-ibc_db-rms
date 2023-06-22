@@ -6,7 +6,7 @@ ALTER PROCEDURE [dbo].[RMS_ManageAlert_Alert]
 	@AlertType VARCHAR(50) = '-1',
 	@Member NVARCHAR(50) = '',
 	@CheckBy NVARCHAR(50) = '',
-	@IsNoChecked BIT,
+	@IsNoChecked BIT = 1,
 	@ActionType VARCHAR(50) = '-1',
 	@TicketStatus VARCHAR(50) = '-1'
 
@@ -136,28 +136,34 @@ BEGIN
 	INSERT INTO #tmpDetail
 	(	
 		AlertID,
-		TransID
+		TransID,
+		StatusID
 	)
-	SELECT
+	SELECT DISTINCT
+		d.AlertID,
+		d.RefValInt,
+		b.statusID
+	FROM dbo.rmAlertDetail d WITH(NOLOCK)
+		INNER JOIN dbo.rmBettrans b WITH(NOLOCK) ON d.RefValInt = b.transid
+	WHERE d.AlertID IN (SELECT AlertID FROM #tmpAlert)
+		AND d.RefType = 1
+
+	INSERT INTO #tmpDetail
+	(	
 		AlertID,
-		RefValInt
-	FROM dbo.rmAlertDetail WITH(NOLOCK)
-	WHERE AlertID IN (SELECT AlertID FROM #tmpAlert)
-		AND RefType = 1
-
-	UPDATE d
-	SET d.StatusID = t.statusID
-	FROM #tmpDetail d
-		INNER JOIN (
-			SELECT transid, statusID
-			FROM dbo.rmBettrans b WITH(NOLOCK) 
-			WHERE b.transid IN (SELECT TransID FROM #tmpDetail)
-			UNION 
-			SELECT transid, statusID
-			FROM dbo.rmBettrans_Old b WITH(NOLOCK) 
-			WHERE b.transid IN (SELECT TransID FROM #tmpDetail)
-		) t ON d.TransID = t.transid
-
+		TransID,
+		StatusID
+	)
+	SELECT DISTINCT
+		d.AlertID,
+		d.RefValInt,
+		b.statusID
+	FROM dbo.rmAlertDetail d WITH(NOLOCK)
+		INNER JOIN dbo.rmBettrans_Old b WITH(NOLOCK) ON d.RefValInt = b.transid
+	WHERE d.AlertID IN (SELECT AlertID FROM #tmpAlert)
+		AND d.RefType = 1
+		AND NOT EXISTS(SELECT TOP 1 1 FROM #tmpDetail a WHERE a.AlertID = d.AlertID AND a.TransID = d.RefValInt)
+	
 	IF @TicketStatus <> '-1'
 	BEGIN		
 		DELETE a
