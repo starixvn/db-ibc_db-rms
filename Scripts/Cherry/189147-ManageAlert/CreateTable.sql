@@ -177,3 +177,18 @@ CREATE CLUSTERED INDEX [CX_AlertID] ON [dbo].[rmAlertDetail]
 )WITH (DATA_COMPRESSION = PAGE)
  ON [rmAlertDetail]
 GO
+
+GRANT SELECT,INSERT, UPDATE ON dbo.rmAlertLog TO bodbRMSNet
+GO
+
+GRANT SELECT,INSERT, UPDATE ON dbo.rmAlert TO bodbRMSNet
+GO
+
+GRANT SELECT,INSERT, UPDATE ON dbo.rmAlertDetail TO bodbRMSNet
+GO
+
+GRANT SELECT ON dbo.rmAlertType TO bodbRMSNet
+GO
+
+GRANT SELECT ON dbo.rmAlertAction TO bodbRMSNet
+GO
