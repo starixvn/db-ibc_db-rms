@@ -178,17 +178,26 @@ CREATE CLUSTERED INDEX [CX_AlertID] ON [dbo].[rmAlertDetail]
  ON [rmAlertDetail]
 GO
 
-GRANT SELECT,INSERT, UPDATE ON dbo.rmAlertLog TO bodbRMSNet
+USE bodb02
 GO
 
-GRANT SELECT,INSERT, UPDATE ON dbo.rmAlert TO bodbRMSNet
+GRANT SELECT ON bodb02.dbo.strSplit TO bodbRMSNet
 GO
 
-GRANT SELECT,INSERT, UPDATE ON dbo.rmAlertDetail TO bodbRMSNet
+GRANT EXECUTE ON bodb02.dbo.f_CheckSPVersion TO bodbRMSNet
 GO
 
-GRANT SELECT ON dbo.rmAlertType TO bodbRMSNet
-GO
+--GRANT SELECT,INSERT, UPDATE ON dbo.rmAlertLog TO bodbRMSNet
+--GO
 
-GRANT SELECT ON dbo.rmAlertAction TO bodbRMSNet
-GO
+--GRANT SELECT,INSERT, UPDATE ON dbo.rmAlert TO bodbRMSNet
+--GO
+
+--GRANT SELECT,INSERT, UPDATE ON dbo.rmAlertDetail TO bodbRMSNet
+--GO
+
+--GRANT SELECT ON dbo.rmAlertType TO bodbRMSNet
+--GO
+
+--GRANT SELECT ON dbo.rmAlertAction TO bodbRMSNet
+--GO
