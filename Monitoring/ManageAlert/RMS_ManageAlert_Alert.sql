@@ -63,6 +63,8 @@ BEGIN
 	(
 		AlertID BIGINT,
 		TransID BIGINT,
+		RefNo BIGINT,
+		BetType SMALLINT,
 		StatusID TINYINT
 	)
 
@@ -137,11 +139,15 @@ BEGIN
 	(	
 		AlertID,
 		TransID,
+		RefNo,
+		BetType,
 		StatusID
 	)
 	SELECT DISTINCT
 		d.AlertID,
 		d.RefValInt,
+		b.refno,
+		b.bettype,
 		b.statusID
 	FROM dbo.rmAlertDetail d WITH(NOLOCK)
 		INNER JOIN dbo.rmBettrans b WITH(NOLOCK) ON d.RefValInt = b.transid
@@ -152,11 +158,15 @@ BEGIN
 	(	
 		AlertID,
 		TransID,
+		RefNo,
+		BetType,
 		StatusID
 	)
 	SELECT DISTINCT
 		d.AlertID,
 		d.RefValInt,
+		b.refno,
+		b.bettype,
 		b.statusID
 	FROM dbo.rmAlertDetail d WITH(NOLOCK)
 		INNER JOIN dbo.rmBettrans_Old b WITH(NOLOCK) ON d.RefValInt = b.transid
@@ -186,6 +196,9 @@ BEGIN
 		d.AlertID AlertId,
 		d.AlertTime,
 		d.TransID BetId,
+		b.RefNo,
+		d.CustID CustId,
+		b.BetType,
 		t.AlertTypeName AlertType,
 		i.sp SportType,
 		c.username UserName,
@@ -201,6 +214,7 @@ BEGIN
 			WHEN a.ActionID = 0 AND d.IsSettled = 0 THEN 'Choose Action' 
 			ELSE a.ActionName END 'Action'
 	FROM #tmpAlert d
+		INNER JOIN #tmpDetail b ON d.AlertID = b.AlertID
 		INNER JOIN dbo.rmAlertType t WITH(NOLOCK) ON d.AlertType = t.AlertTypeID
 		INNER JOIN dbo.rmAlertAction a WITH(NOLOCK) ON d.AlertAction = a.ActionID
 		INNER JOIN bodb02.dbo.customer c WITH(NOLOCK) ON d.CustID = c.custid
