@@ -42,7 +42,8 @@ BEGIN
 			IF @IsChecked = 1 AND @ActionID = 4
 			BEGIN				
 				UPDATE dbo.rmAlert WITH(ROWLOCK, UPDLOCK)
-				SET CheckBy = @UserID
+				SET CheckBy = @UserID,
+					AlertAction = @ActionID
 				WHERE AlertID = @AlertID
 			END
 
