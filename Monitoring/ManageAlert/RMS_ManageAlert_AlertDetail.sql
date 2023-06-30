@@ -44,7 +44,8 @@ BEGIN
 		RefNo BIGINT,
 		CustID INT,
 		BetType SMALLINT,
-		Odds SMALLMONEY,
+		UserName NVARCHAR(50),
+		Odds SMALLMONEY,		
 		Stake MONEY,
 		WinningAmt MONEY,
 		HouseAmt MONEY,
@@ -169,7 +170,8 @@ BEGIN
 			RefNo,
 			CustID,
 			BetType,
-			Odds,
+			UserName,
+			Odds,			
 			Stake,
 			WinningAmt,
 			HouseAmt,
@@ -184,9 +186,10 @@ BEGIN
 			transdate,
 			transid,
 			RefNo,
-			CustID,
+			p.CustID,
 			BetType,
-			odds2 * TotalBet,
+			c.username,
+			odds2 * TotalBet,			
 			stake * actualrate AS stake,
 			CASE WHEN statusID = 0 THEN stake * (odds2 - 1) * actualrate * (1 - tpositiontaking)
 				 WHEN statusID = 112 THEN (winlost - actual_stake) * actualrate
@@ -202,7 +205,8 @@ BEGIN
 			hdp2 AS TotalSelection,
 			CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype,
 			status
-		FROM dbo.rmBettrans WITH (NOLOCK) 
+		FROM dbo.rmBettrans p WITH (NOLOCK) 
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
 
 		INSERT INTO #tmpPotential
@@ -212,7 +216,8 @@ BEGIN
 			RefNo,
 			CustID,
 			BetType,
-			Odds,
+			UserName,
+			Odds,			
 			Stake,
 			WinningAmt,
 			HouseAmt,
@@ -227,9 +232,10 @@ BEGIN
 			transdate,
 			transid,
 			RefNo,
-			CustID,
+			p.CustID,
 			BetType,
-			odds2 * TotalBet,
+			c.username,
+			odds2 * TotalBet,			
 			stake * actualrate AS stake,
 			CASE WHEN statusID = 0 THEN stake * (odds2 - 1) * actualrate * (1 - tpositiontaking)
 				 WHEN statusID = 112 THEN (winlost - actual_stake) * actualrate
@@ -245,7 +251,8 @@ BEGIN
 			hdp2 AS TotalSelection,
 			CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype,
 			status
-		FROM dbo.rmBettrans_Old WITH (NOLOCK) 
+		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
 			AND transid NOT IN (SELECT TransID FROM #tmpPotential)
 
@@ -255,6 +262,7 @@ BEGIN
 			RefNo,
 			CustID,
 			BetType,
+			UserName,
 			Odds,
 			Stake,
 			WinningAmt,
