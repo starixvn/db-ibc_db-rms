@@ -25,6 +25,9 @@ BEGIN
 	CREATE TABLE #tmpSimilar
 	(
 		TransID BIGINT,
+		RefNo BIGINT,
+		CustID INT,
+		BetType SMALLINT,
 		SiteGroup VARCHAR(10),
 		UserName NVARCHAR(50),
 		CustomerClass SMALLINT,
@@ -38,6 +41,9 @@ BEGIN
 	(
 		TransDate DATETIME,
 		TransID BIGINT,
+		RefNo BIGINT,
+		CustID INT,
+		BetType SMALLINT,
 		Odds SMALLMONEY,
 		Stake MONEY,
 		WinningAmt MONEY,
@@ -65,6 +71,9 @@ BEGIN
 		INSERT INTO #tmpSimilar
 		(
 			TransID,
+			RefNo,
+			CustID,
+			BetType,
 			SiteGroup,
 			UserName,
 			CustomerClass,
@@ -75,6 +84,9 @@ BEGIN
 		)
 		SELECT
 			p.transid,
+			p.RefNo,
+			p.CustID,
+			p.BetType,
 			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup,
 			p.username,
 			ci.CustomerClass,
@@ -97,6 +109,9 @@ BEGIN
 		INSERT INTO #tmpSimilar
 		(
 			TransID,
+			RefNo,
+			CustID,
+			BetType,
 			SiteGroup,
 			UserName,
 			CustomerClass,
@@ -107,6 +122,9 @@ BEGIN
 		)
 		SELECT
 			p.transid,
+			p.RefNo,
+			p.CustID,
+			p.BetType,
 			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup,
 			p.username,
 			ci.CustomerClass,
@@ -129,6 +147,9 @@ BEGIN
 
 		SELECT
 			TransID,
+			RefNo,
+			CustID,
+			BetType,
 			SiteGroup,
 			UserName,
 			CustomerClass,
@@ -145,6 +166,9 @@ BEGIN
 		(
 			TransDate,
 			TransID,
+			RefNo,
+			CustID,
+			BetType,
 			Odds,
 			Stake,
 			WinningAmt,
@@ -159,6 +183,9 @@ BEGIN
 		SELECT
 			transdate,
 			transid,
+			RefNo,
+			CustID,
+			BetType,
 			odds2 * TotalBet,
 			stake * actualrate AS stake,
 			CASE WHEN statusID = 0 THEN stake * (odds2 - 1) * actualrate * (1 - tpositiontaking)
@@ -182,6 +209,9 @@ BEGIN
 		(
 			TransDate,
 			TransID,
+			RefNo,
+			CustID,
+			BetType,
 			Odds,
 			Stake,
 			WinningAmt,
@@ -196,6 +226,9 @@ BEGIN
 		SELECT
 			transdate,
 			transid,
+			RefNo,
+			CustID,
+			BetType,
 			odds2 * TotalBet,
 			stake * actualrate AS stake,
 			CASE WHEN statusID = 0 THEN stake * (odds2 - 1) * actualrate * (1 - tpositiontaking)
@@ -219,6 +252,9 @@ BEGIN
 		SELECT
 			TransDate,
 			TransID,
+			RefNo,
+			CustID,
+			BetType,
 			Odds,
 			Stake,
 			WinningAmt,
