@@ -59,7 +59,13 @@ BEGIN
 			INSERT INTO dbo.rmAlert (AlertTime, TransID, CustID, AlertType, TransInfo, IsTest)
 			SELECT @AlertTime, @TransID, @CustID, @AlertType, @TransInfo, @IsTest
 
-			SELECT @AlertID = IDENT_CURRENT('rmAlert')
+			SELECT @AlertID = AlertID
+			FROM dbo.rmAlert WITH(NOLOCK)
+			WHERE TransID = @TransID
+				AND CustID = @CustID
+				AND AlertType = @AlertType
+				AND AlertTime = @AlertTime
+				AND IsTest = @IsTest
 
 			INSERT INTO dbo.rmAlertDetail (AlertID, RefType, RefValInt)
 			SELECT @AlertID, 1, TransID
