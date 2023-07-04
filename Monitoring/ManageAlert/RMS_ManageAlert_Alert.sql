@@ -90,7 +90,11 @@ BEGIN
 	END
 
 	DECLARE @IsTest BIT = 0
-	SELECT @IsTest = dbo.f_CheckSPVersion(@@PROCID)
+
+	IF	OBJECT_NAME(@@PROCID) LIKE '%_xtest%'
+		OR OBJECT_NAME(@@PROCID) LIKE '%_xpre%'
+		OR OBJECT_NAME(@@PROCID) LIKE '%_UAT%'
+		SELECT @IsTest = 1
 
 	INSERT INTO #tmpAlert
 	(
