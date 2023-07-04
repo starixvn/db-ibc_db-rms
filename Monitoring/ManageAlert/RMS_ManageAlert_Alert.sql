@@ -90,7 +90,7 @@ BEGIN
 	END
 
 	DECLARE @IsTest BIT = 0
-	SELECT @IsTest = bodb02.dbo.f_CheckSPVersion(@@PROCID)
+	SELECT @IsTest = dbo.f_CheckSPVersion(@@PROCID)
 
 	INSERT INTO #tmpAlert
 	(
@@ -212,13 +212,14 @@ BEGIN
 		u.username CheckedBy,
 		CASE WHEN a.ActionID = 0 AND d.IsSettled = 1 THEN 'No Action' 
 			WHEN a.ActionID = 0 AND d.IsSettled = 0 THEN 'Choose Action' 
+			WHEN a.ActionID = 4 THEN 'Choose Action' 
 			ELSE a.ActionName END 'Action'
 	FROM #tmpAlert d
 		INNER JOIN #tmpDetail b ON d.AlertID = b.AlertID
 		INNER JOIN dbo.rmAlertType t WITH(NOLOCK) ON d.AlertType = t.AlertTypeID
 		INNER JOIN dbo.rmAlertAction a WITH(NOLOCK) ON d.AlertAction = a.ActionID
 		INNER JOIN bodb02.dbo.customer c WITH(NOLOCK) ON d.CustID = c.custid
-		LEFT JOIN bodb02.dbo.customer u WITH(NOLOCK) ON d.CheckBy = u.custid AND d.CheckBy IS NOT NULL
+		LEFT JOIN bodb02.dbo.customer u WITH(NOLOCK) ON d.CheckBy = u.custid
 		CROSS APPLY OPENJSON(CAST(DECOMPRESS(d.TransInfo) AS NVARCHAR(MAX)))
 			WITH(
 				sp VARCHAR(50),
