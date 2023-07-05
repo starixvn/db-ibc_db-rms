@@ -229,7 +229,7 @@ BEGIN
 			WHEN a.ActionID = 0 AND d.IsSettled = 0 THEN 'Choose Action' 
 			WHEN a.ActionID = 4 THEN 'Choose Action' 
 			ELSE a.ActionName END 'Action',
-		ROW_NUMBER() OVER (ORDER BY d.AlertTime, c.username, i.od, i.ms, i.pw, i.pl DESC) RN
+		ROW_NUMBER() OVER (ORDER BY d.AlertTime DESC) RN
 	FROM #tmpAlert d
 		INNER JOIN dbo.rmAlertType t WITH(NOLOCK) ON d.AlertType = t.AlertTypeID
 		INNER JOIN dbo.rmAlertAction a WITH(NOLOCK) ON d.AlertAction = a.ActionID
