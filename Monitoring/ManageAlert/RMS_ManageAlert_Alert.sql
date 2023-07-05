@@ -8,7 +8,9 @@ ALTER PROCEDURE [dbo].[RMS_ManageAlert_Alert]
 	@CheckBy NVARCHAR(50) = '',
 	@IsNoChecked BIT = 1,
 	@ActionType VARCHAR(50) = '-1',
-	@TicketStatus VARCHAR(50) = '-1'
+	@TicketStatus VARCHAR(50) = '-1',
+	@PageSize 	 INT = 0,
+	@PageIndex   INT = 0
 
 AS
 /*
@@ -204,6 +206,7 @@ BEGIN
 	FROM #tmpAlert a
 		INNER JOIN #tmpDetail d ON a.AlertID = d.AlertID AND a.TransID = d.TransID
 	
+	;WITH CTE_Result AS(
 	SELECT 
 		d.AlertID AlertId,
 		d.AlertTime,
@@ -225,7 +228,8 @@ BEGIN
 		CASE WHEN a.ActionID = 0 AND d.IsSettled = 1 THEN 'No Action' 
 			WHEN a.ActionID = 0 AND d.IsSettled = 0 THEN 'Choose Action' 
 			WHEN a.ActionID = 4 THEN 'Choose Action' 
-			ELSE a.ActionName END 'Action'
+			ELSE a.ActionName END 'Action',
+		ROW_NUMBER() OVER (ORDER BY d.AlertTime, c.username, i.od, i.ms, i.pw, i.pl DESC) RN
 	FROM #tmpAlert d
 		INNER JOIN dbo.rmAlertType t WITH(NOLOCK) ON d.AlertType = t.AlertTypeID
 		INNER JOIN dbo.rmAlertAction a WITH(NOLOCK) ON d.AlertAction = a.ActionID
@@ -242,6 +246,28 @@ BEGIN
 				pw MONEY,
 				pl MONEY
 				) AS i
+	)
+	SELECT AlertId,
+		AlertTime,
+		BetId,
+		RefNo,
+		CustId,
+		BetType,
+		AlertType,
+		SportType,
+		UserName,
+		SimilarTickets,
+		Selection,
+		Odds,
+		TotalBets,
+		MemberStake,
+		PotentialWinning,
+		CompanyLose,
+		CheckedBy,
+		Action
+	FROM CTE_Result
+	WHERE (RN >= (@PageIndex - 1) * @PageSize + 1 AND RN < @PageIndex * @PageSize + 1) 
+		OR (@PageIndex = 0)
 
 	DROP TABLE #tmpAlert
 	DROP TABLE #tmpAlertAction
