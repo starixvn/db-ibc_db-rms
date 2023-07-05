@@ -102,7 +102,7 @@ BEGIN
 			END AS HouseAmt,
 			p.status
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
-			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
+			LEFT JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
@@ -140,7 +140,7 @@ BEGIN
 			END AS HouseAmt,
 			p.status
 		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
-			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
+			LEFT JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)

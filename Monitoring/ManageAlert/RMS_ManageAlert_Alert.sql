@@ -52,6 +52,8 @@ BEGIN
 		AlertTime DATETIME,
 		TransID BIGINT,
 		CustID INT,
+		RefNo BIGINT,
+		BetType SMALLINT,
 		AlertType SMALLINT,
 		CheckBy INT,
 		AlertAction SMALLINT,
@@ -195,14 +197,20 @@ BEGIN
 					FROM #tmpDetail d
 					WHERE d.AlertID = a.AlertID
 						AND d.StatusID = 0)
+
+	UPDATE a
+	SET a.RefNo = d.RefNo,
+		a.BetType = d.BetType
+	FROM #tmpAlert a
+		INNER JOIN #tmpDetail d ON a.AlertID = d.AlertID AND a.TransID = d.TransID
 	
 	SELECT 
 		d.AlertID AlertId,
 		d.AlertTime,
 		d.TransID BetId,
-		b.RefNo,
+		d.RefNo,
 		d.CustID CustId,
-		b.BetType,
+		d.BetType,
 		t.AlertTypeName AlertType,
 		i.sp SportType,
 		c.username UserName,
@@ -219,7 +227,6 @@ BEGIN
 			WHEN a.ActionID = 4 THEN 'Choose Action' 
 			ELSE a.ActionName END 'Action'
 	FROM #tmpAlert d
-		INNER JOIN #tmpDetail b ON d.AlertID = b.AlertID
 		INNER JOIN dbo.rmAlertType t WITH(NOLOCK) ON d.AlertType = t.AlertTypeID
 		INNER JOIN dbo.rmAlertAction a WITH(NOLOCK) ON d.AlertAction = a.ActionID
 		LEFT JOIN bodb02.dbo.customer c WITH(NOLOCK) ON d.CustID = c.custid
