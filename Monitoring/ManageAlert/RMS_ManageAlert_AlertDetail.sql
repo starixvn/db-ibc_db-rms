@@ -45,7 +45,7 @@ BEGIN
 		CustID INT,
 		BetType SMALLINT,
 		UserName NVARCHAR(50),
-		Odds SMALLMONEY,		
+		Odds MONEY,		
 		Stake MONEY,
 		WinningAmt MONEY,
 		HouseAmt MONEY,
