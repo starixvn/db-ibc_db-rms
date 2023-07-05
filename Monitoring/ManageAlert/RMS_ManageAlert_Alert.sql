@@ -222,7 +222,7 @@ BEGIN
 		INNER JOIN #tmpDetail b ON d.AlertID = b.AlertID
 		INNER JOIN dbo.rmAlertType t WITH(NOLOCK) ON d.AlertType = t.AlertTypeID
 		INNER JOIN dbo.rmAlertAction a WITH(NOLOCK) ON d.AlertAction = a.ActionID
-		INNER JOIN bodb02.dbo.customer c WITH(NOLOCK) ON d.CustID = c.custid
+		LEFT JOIN bodb02.dbo.customer c WITH(NOLOCK) ON d.CustID = c.custid
 		LEFT JOIN bodb02.dbo.customer u WITH(NOLOCK) ON d.CheckBy = u.custid
 		CROSS APPLY OPENJSON(CAST(DECOMPRESS(d.TransInfo) AS NVARCHAR(MAX)))
 			WITH(
