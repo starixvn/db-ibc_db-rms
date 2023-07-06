@@ -264,16 +264,42 @@ BEGIN
 		PotentialWinning,
 		CompanyLose,
 		CheckedBy,
-		Action
+		Action,
+		RN
+	INTO #Result
 	FROM CTE_Result
+
+	SELECT AlertId,
+		AlertTime,
+		BetId,
+		RefNo,
+		CustId,
+		BetType,
+		AlertType,
+		SportType,
+		UserName,
+		SimilarTickets,
+		Selection,
+		Odds,
+		TotalBets,
+		MemberStake,
+		PotentialWinning,
+		CompanyLose,
+		CheckedBy,
+		Action 
+	FROM #Result
 	WHERE (RN >= (@PageIndex - 1) * @PageSize + 1 AND RN < @PageIndex * @PageSize + 1) 
 		OR (@PageIndex = 0)
+
+	SELECT COUNT(*) TotalRows
+	FROM #Result
 
 	DROP TABLE #tmpAlert
 	DROP TABLE #tmpAlertAction
 	DROP TABLE #tmpAlertType
 	DROP TABLE #tmpDetail
 	DROP TABLE #tmpStatusID
+	DROP TABLE #Result
 
 END 
  
