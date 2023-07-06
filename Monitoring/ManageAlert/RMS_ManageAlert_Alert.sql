@@ -127,6 +127,8 @@ BEGIN
 		AND ((@IsNoChecked = 1 AND CheckBy IS NULL)
 			OR (@IsNoChecked = 0 AND CheckBy IS NOT NULL))
 
+	OPTION(RECOMPILE)
+
 	IF @Member <> ''
 	BEGIN
 		DELETE a
@@ -162,6 +164,8 @@ BEGIN
 	WHERE d.AlertID IN (SELECT AlertID FROM #tmpAlert)
 		AND d.RefType = 1
 
+	OPTION(RECOMPILE)
+
 	INSERT INTO #tmpDetail
 	(	
 		AlertID,
@@ -181,6 +185,8 @@ BEGIN
 	WHERE d.AlertID IN (SELECT AlertID FROM #tmpAlert)
 		AND d.RefType = 1
 		AND NOT EXISTS(SELECT TOP 1 1 FROM #tmpDetail a WHERE a.AlertID = d.AlertID AND a.TransID = d.RefValInt)
+
+	OPTION(RECOMPILE)
 	
 	IF @TicketStatus <> '-1'
 	BEGIN		
@@ -290,6 +296,7 @@ BEGIN
 	FROM #Result
 	WHERE (RN >= (@PageIndex - 1) * @PageSize + 1 AND RN < @PageIndex * @PageSize + 1) 
 		OR (@PageIndex = 0)
+	ORDER BY AlertTime DESC
 
 	SELECT COUNT(*) TotalRows
 	FROM #Result
