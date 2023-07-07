@@ -62,6 +62,10 @@ Revisions:
 				   STUFF((SELECT  ',' + CAST(t.transid  AS VARCHAR(30))
 					FROM rmBettrans t WITH(NOLOCK)
 					WHERE t.custid = b.custid
+						  AND t.bettype = @BetType
+						  AND t.statusid = 0
+						  AND ((@IsTest = 1	AND t.currency = 20)
+								OR (@IsTest = 0	AND t.currency <> 20))
 					FOR XML PATH(''), TYPE
 					).value('.', 'NVARCHAR(MAX)')  
 					,1,1,'') TransList,
