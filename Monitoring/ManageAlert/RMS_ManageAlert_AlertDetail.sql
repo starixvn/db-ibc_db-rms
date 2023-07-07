@@ -107,6 +107,8 @@ BEGIN
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
 
+		OPTION(RECOMPILE)
+
 		INSERT INTO #tmpSimilar
 		(
 			TransID,
@@ -145,6 +147,8 @@ BEGIN
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
 			AND transid NOT IN (SELECT TransID FROM #tmpSimilar)
+
+		OPTION(RECOMPILE)
 
 		SELECT
 			TransID,
@@ -209,6 +213,8 @@ BEGIN
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
 
+		OPTION(RECOMPILE)
+
 		INSERT INTO #tmpPotential
 		(
 			TransDate,
@@ -255,6 +261,8 @@ BEGIN
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
 			AND transid NOT IN (SELECT TransID FROM #tmpPotential)
+
+		OPTION(RECOMPILE)
 
 		SELECT
 			TransDate,
