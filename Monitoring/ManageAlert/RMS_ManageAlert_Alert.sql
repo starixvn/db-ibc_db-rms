@@ -215,7 +215,7 @@ BEGIN
 	SELECT 
 		d.AlertID AlertId,
 		d.AlertTime,
-		d.TransID BetId,
+		CASE WHEN d.AlertType = 3 THEN NULL ELSE d.TransID END BetId,
 		d.RefNo,
 		d.CustID CustId,
 		d.BetType,
