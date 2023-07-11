@@ -125,7 +125,8 @@ BEGIN
 		AND (@AlertType = '-1' OR EXISTS(SELECT TOP 1 1 FROM #tmpAlertType t WHERE t.AlertTypeID = a.AlertType))
 		AND (@ActionType = '-1' OR EXISTS(SELECT TOP 1 1 FROM #tmpAlertAction l WHERE l.AlertActionID = a.AlertAction))
 		AND ((@IsNoChecked = 1 AND CheckBy IS NULL)
-			OR (@IsNoChecked = 0 AND CheckBy IS NOT NULL))
+			OR @IsNoChecked = 0
+			)
 
 	OPTION(RECOMPILE)
 
@@ -200,11 +201,9 @@ BEGIN
 
 	UPDATE a
 	SET a.IsSettled = 1
-	FROM #tmpAlert a			
-	WHERE NOT EXISTS(SELECT TOP 1 1
-					FROM #tmpDetail d
-					WHERE d.AlertID = a.AlertID
-						AND d.StatusID = 0)
+	FROM #tmpAlert a		
+		LEFT JOIN #tmpDetail d ON a.AlertID = d.AlertID AND d.StatusID = 0
+	WHERE d.AlertID IS NULL
 
 	UPDATE a
 	SET a.RefNo = d.RefNo,
