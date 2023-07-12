@@ -1,5 +1,6 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Similar_Betlist_Alert]
+	@IsTest BIT = 0
 AS
 /*
 	Created: 20160426@Winnie
@@ -38,14 +39,18 @@ CREATE TABLE #main (transid BIGINT, PotentialWinningAnt MONEY ,combo INT , refno
 CREATE CLUSTERED INDEX cix_#main ON #main(transid) 
 
 INSERT INTO #main (transid, PotentialWinningAnt, combo, refno, transid2, TotalMemberStake, Odds, CompanyLoseAmt)
-SELECT  t1.transid , t1.stake * (t1.odds2 - 1)* t1.actualrate  AS PotentialWinningAnt,  t1.combo, t1.refno ,transid2, 
-	(t1.stake * t1.actualrate) AS TotalMemberStake, (t1.odds2 * t1.TotalBet) AS  Odds,
-	t1.stake * (t1.odds2 - 1) * t1.actualrate * (1 - t1.tpositiontaking) AS CompanyLoseAmt
+SELECT  t1.transid , t1.stake * (t1.odds2 - 1) * CASE WHEN @IsTest = 1 THEN 1 ELSE t1.actualrate END AS PotentialWinningAnt,  
+	t1.combo, t1.refno ,transid2, 
+	(t1.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE t1.actualrate END) AS TotalMemberStake, 
+	(t1.odds2 * t1.TotalBet) AS  Odds,
+	t1.stake * (t1.odds2 - 1) * CASE WHEN @IsTest = 1 THEN 1 ELSE t1.actualrate END * (1 - t1.tpositiontaking) AS CompanyLoseAmt
 FROM rmBettrans t1 WITH(NOLOCK) 
 WHERE   t1.winlostdate > @yesterday
 		AND t1.bettype = 29  
-		and t1.statusid = 0 
-		AND t1.currency <> 20 
+		AND t1.statusid = 0 
+		AND ((@IsTest = 0 AND t1.currency <> 20) 
+			OR (@IsTest = 1 AND t1.currency = 20)
+			)
 
 CREATE TABLE #temp (transid BIGINT, Extra VARCHAR(500))
 CREATE CLUSTERED INDEX idx_transid_#temp ON #temp(transid) 

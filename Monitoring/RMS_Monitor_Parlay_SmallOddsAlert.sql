@@ -77,6 +77,9 @@ BEGIN
 	WHERE b.TransDate > @LastTransDate
 		AND b.matchid = 29
 		AND b.statusID = 0
+		AND ((@IsTest = 0 AND b.currency <> 20) 
+			OR (@IsTest = 1 AND b.currency = 20)
+			)
 		AND b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= 10000
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 2)
 

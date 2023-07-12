@@ -51,6 +51,9 @@ BEGIN
 		AND b.betteam = N'1'
 		AND b.hdp2 = 2
 		AND b.statusID = 0
+		AND ((@IsTest = 0 AND b.currency <> 20) 
+			OR (@IsTest = 1 AND b.currency = 20)
+			)
 		AND (b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= 10000
 		AND b.odds2 BETWEEN 1.01 AND 1.20
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 3)
