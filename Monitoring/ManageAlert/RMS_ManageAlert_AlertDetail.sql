@@ -97,9 +97,8 @@ BEGIN
 				 ELSE 0
 			END AS WinningAmt,
 			CASE WHEN p.statusID = 0 THEN (p.odds2 - 1) * p.stake * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END
-				 WHEN p.statusID = 112 THEN -(((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END)
-				 WHEN p.statusID = 113 THEN ((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END
-				 ELSE 0
+				 WHEN p.statusID IN (112,113) THEN -(((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END)
+					 ELSE 0
 			END AS HouseAmt,
 			p.status
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
@@ -138,8 +137,7 @@ BEGIN
 				 ELSE 0
 			END AS WinningAmt,
 			CASE WHEN p.statusID = 0 THEN (p.odds2 - 1) * p.stake * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END
-				 WHEN p.statusID = 112 THEN -(((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END)
-				 WHEN p.statusID = 113 THEN ((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END
+				 WHEN p.statusID IN (112,113) THEN -(((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END)				
 				 ELSE 0
 			END AS HouseAmt,
 			p.status
@@ -202,8 +200,7 @@ BEGIN
 				 ELSE 0
 			END AS WinningAmt,
 			CASE WHEN statusID = 0 THEN (odds2 - 1) * stake * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END 
-				 WHEN statusID = 112 THEN -(((winlost - actual_stake) * (1 - tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0)) / (1 - tpositiontaking) END) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END)
-				 WHEN statusID = 113 THEN ((winlost - actual_stake) * (1 - tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0)) / (1 - tpositiontaking) END) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END
+				 WHEN statusID IN (112,113) THEN -(((winlost - actual_stake) * (1 - tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0)) / (1 - tpositiontaking) END) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END)				 
 				 ELSE 0
 			END AS HouseAmt,
 			ip,
@@ -251,8 +248,7 @@ BEGIN
 				 ELSE 0
 			END AS WinningAmt,
 			CASE WHEN statusID = 0 THEN (odds2 - 1) * stake * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END 
-				 WHEN statusID = 112 THEN -(((winlost - actual_stake) * (1 - tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0)) / (1 - tpositiontaking) END) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END)
-				 WHEN statusID = 113 THEN ((winlost - actual_stake) * (1 - tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0)) / (1 - tpositiontaking) END) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END
+				 WHEN statusID IN (112,113) THEN -(((winlost - actual_stake) * (1 - tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0)) / (1 - tpositiontaking) END) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END)				 
 				 ELSE 0
 			END AS HouseAmt,
 			ip,
