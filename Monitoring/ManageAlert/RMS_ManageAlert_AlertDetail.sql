@@ -207,7 +207,7 @@ BEGIN
 			1 - tpositiontaking AS HousePT,
 			TotalBet,
 			hdp2 AS TotalSelection,
-			CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype,
+			transid2 AS Sporttype,
 			status
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
@@ -255,7 +255,7 @@ BEGIN
 			1 - tpositiontaking AS HousePT,
 			TotalBet,
 			hdp2 AS TotalSelection,
-			CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype,
+			transid2 AS Sporttype,
 			status
 		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
@@ -279,15 +279,16 @@ BEGIN
 			HousePT,
 			TotalBet,
 			TotalSelection,
-			CASE WHEN Sporttype = 1 THEN 'Soccer Only'
-				 WHEN Sporttype = -1 THEN 'Combined Other Sports'
-				 WHEN Sporttype = -2 THEN 'Other Sports'
-				 WHEN Sporttype = -3 THEN 'Combined Sports'
-				 WHEN Sporttype = -4 THEN 'Saba Soccer'
-				 WHEN Sporttype = -5 THEN 'Saba Basketball'
-			END AS SportType,
+			CASE WHEN t.Sporttype = 1  THEN 'Soccer Only'
+			 WHEN t.Sporttype = -4 THEN 'Virtual Soccer Only'
+			 WHEN t.Sporttype = -5 THEN 'Virtual Basketball Only'
+			 WHEN t.Sporttype = -3 THEN 'Combined Sports'
+			 WHEN t.Sporttype = -1 THEN 'Combined Other Sports'
+			 WHEN t.Sporttype NOT IN (1, -4, -5, -3, -1) THEN s.SportName
+			END  AS SportType,
 			Status
-		FROM #tmpPotential
+		FROM #tmpPotential t
+			LEFT JOIN bodb02.dbo.Sports s WITH(NOLOCK) ON t.Sporttype = s.SportType
 	END	
 	
 	DROP TABLE #tmpSimilar
