@@ -280,11 +280,11 @@ BEGIN
 			TotalBet,
 			TotalSelection,
 			CASE WHEN t.Sporttype = 1  THEN 'Soccer Only'
-			 WHEN t.Sporttype = -4 THEN 'Virtual Soccer Only'
-			 WHEN t.Sporttype = -5 THEN 'Virtual Basketball Only'
-			 WHEN t.Sporttype = -3 THEN 'Combined Sports'
-			 WHEN t.Sporttype = -1 THEN 'Combined Other Sports'
-			 WHEN t.Sporttype NOT IN (1, -4, -5, -3, -1) THEN s.SportName
+				 WHEN t.Sporttype = -4 THEN 'Virtual Soccer Only'
+				 WHEN t.Sporttype = -5 THEN 'Virtual Basketball Only'
+				 WHEN t.Sporttype = -3 THEN 'Combined Sports'
+				 WHEN t.Sporttype = -1 THEN 'Combined Other Sports'
+				 WHEN t.Sporttype NOT IN (1, -4, -5, -3, -1) THEN s.SportName
 			END  AS SportType,
 			Status
 		FROM #tmpPotential t
