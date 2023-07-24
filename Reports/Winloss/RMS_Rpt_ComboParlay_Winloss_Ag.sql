@@ -248,7 +248,7 @@ BEGIN
 				AND a.currency <> 20
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), a.username, ci.CustomerClass
+			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), a.custid ,a.username, ci.CustomerClass
 		END
 
 		-- rmSumWinloss_Old
@@ -296,7 +296,7 @@ BEGIN
 				AND a.currency <> 20
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), a.username, ci.CustomerClass
+			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), a.custid, a.username, ci.CustomerClass
 		END
 	END
 	
