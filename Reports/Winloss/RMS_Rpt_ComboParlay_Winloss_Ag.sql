@@ -28,7 +28,7 @@ AS
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20220519@Danny: add filter by Live Status [RedmineID: #172691]
 		- 20230420@Cherry: Add Site column (#186735)
-		- 20230724@Kean: Include custid column to GroupBy condition (#191660)
+		- 20230724@Kean: Report - MA/Member Win loss - Show error when input Agent or Master account. (#191663)
 	
 	Parameter's Explanation:
 		- @sporttype:
