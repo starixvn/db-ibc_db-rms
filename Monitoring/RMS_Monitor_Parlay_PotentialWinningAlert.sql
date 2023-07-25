@@ -170,11 +170,13 @@ Revisions:
             ISNULL(p.AlertAmount, 0) LastAlertAmount, 
             ISNULL(r.WinningAmount, 0) AS AmountFromLastAlert,
 			COMPRESS((SELECT TransList AS 'tl',
-					CASE WHEN WinningAmount >= 1000000 AND WinningAmount < 2000000 THEN 'Orange Level' 
-						 WHEN WinningAmount >= 2000000 AND WinningAmount < 3000000 THEN 'Yellow Level'
-						 WHEN WinningAmount >= 3000000 AND WinningAmount < 4000000 THEN 'Red 1 Level'
-						 WHEN WinningAmount >= 4000000 AND WinningAmount < 5000000 THEN 'Red 2 Level'
-						 WHEN WinningAmount >= 5000000 THEN 'Red 3 Level'
+					CASE WHEN @IsSMP = 1 THEN 'Single Match Parlay' ELSE
+						CASE WHEN WinningAmount >= 1000000 AND WinningAmount < 2000000 THEN 'Orange Level' 
+							 WHEN WinningAmount >= 2000000 AND WinningAmount < 3000000 THEN 'Yellow Level'
+							 WHEN WinningAmount >= 3000000 AND WinningAmount < 4000000 THEN 'Red 1 Level'
+							 WHEN WinningAmount >= 4000000 AND WinningAmount < 5000000 THEN 'Red 2 Level'
+							 WHEN WinningAmount >= 5000000 THEN 'Red 3 Level'
+						END 
 					END AS 'sp',
 					CAST(totalselectionsmin AS VARCHAR) + '-' + CAST(totalselectionsmax AS VARCHAR) AS 'sl',
 					Odds AS 'od',
