@@ -28,6 +28,7 @@ AS
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20220519@Danny: add filter by Live Status [RedmineID: #172691]
 		- 20230420@Cherry: Add Site column (#186735)
+		- 20230724@Kean: Report - MA/Member Win loss - Show error when input Agent or Master account. (#191663)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -200,7 +201,7 @@ BEGIN
 									ELSE 0 END
 							ELSE 1 END
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), b.username, ci.CustomerClass
+			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), b.custid, b.username, ci.CustomerClass
 		END
 
 		-- rmSumWinloss
@@ -247,7 +248,7 @@ BEGIN
 				AND a.currency <> 20
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), a.username, ci.CustomerClass
+			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), a.custid ,a.username, ci.CustomerClass
 		END
 
 		-- rmSumWinloss_Old
@@ -295,7 +296,7 @@ BEGIN
 				AND a.currency <> 20
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), a.username, ci.CustomerClass
+			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), a.custid, a.username, ci.CustomerClass
 		END
 	END
 	
