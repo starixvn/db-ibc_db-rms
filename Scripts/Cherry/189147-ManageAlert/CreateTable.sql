@@ -47,51 +47,6 @@ CREATE UNIQUE CLUSTERED INDEX [CIX_ActionID] ON [dbo].[rmAlertAction]
 GO
 
 ALTER DATABASE bodb_RMS
-ADD FILEGROUP rmAlertLog
-GO
-
-ALTER DATABASE bodb_RMS 
-ADD FILE 
-(
-	NAME = rmAlertLog,
-	FILENAME = 'E:\IBC_DB\bodb_RMS\rmAlertLog\rmAlertLog.ndf',
-	SIZE = 5MB,
-	MAXSIZE = UNLIMITED,
-	FILEGROWTH = 32MB
-)
-TO FILEGROUP rmAlertLog
-GO
-
-IF OBJECT_ID('bodb_RMS.dbo.rmAlertLog') IS NOT NULL
-BEGIN
-	DROP TABLE dbo.rmAlertLog
-END
-
-CREATE TABLE [dbo].rmAlertLog(
-		[LogID] [BIGINT] IDENTITY(1,1) NOT NULL,
-		[LogTime] [DATETIME] NOT NULL,
-		[AlertID] [BIGINT] NOT NULL,
-		[UserID] [INT] NOT NULL,
-		[ActionID] [SMALLINT] NOT NULL
-) ON [rmAlertLog]
-WITH (DATA_COMPRESSION = PAGE)
-GO
-
-CREATE CLUSTERED INDEX [CIX_AlertID] ON [dbo].[rmAlertLog]
-(
-	AlertID ASC
-)WITH (DATA_COMPRESSION = PAGE)
- ON [rmAlertLog]
-GO
-
-CREATE NONCLUSTERED INDEX [IX_LogTime] ON [dbo].[rmAlertLog]
-(
-	LogTime ASC
-)WITH (DATA_COMPRESSION = PAGE)
- ON [rmAlertLog]
-GO
-
-ALTER DATABASE bodb_RMS
 ADD FILEGROUP rmAlert
 GO
 
@@ -140,22 +95,6 @@ CREATE CLUSTERED INDEX [CIX_AlertTime] ON [dbo].[rmAlert]
  ON [rmAlert]
 GO
 
-ALTER DATABASE bodb_RMS
-ADD FILEGROUP rmAlertDetail
-GO
-
-ALTER DATABASE bodb_RMS 
-ADD FILE 
-(
-	NAME = rmAlertDetail,
-	FILENAME = 'E:\IBC_DB\bodb_RMS\rmAlertDetail\rmAlertDetail.ndf',
-	SIZE = 5MB,
-	MAXSIZE = UNLIMITED,
-	FILEGROWTH = 32MB
-)
-TO FILEGROUP rmAlertDetail
-GO
-
 IF OBJECT_ID('bodb_RMS.dbo.rmAlertDetail') IS NOT NULL
 BEGIN
 	DROP TABLE dbo.rmAlertDetail
@@ -166,7 +105,7 @@ CREATE TABLE [dbo].rmAlertDetail(
 		[RefType] [SMALLINT] NOT NULL,
 		[RefValInt] [BIGINT]  NULL,
 		[RefValStr] VARCHAR(1000)  NULL
-) ON [rmAlertDetail]
+) ON [rmAlert]
 WITH (DATA_COMPRESSION = PAGE)
 GO
 
@@ -175,7 +114,36 @@ CREATE CLUSTERED INDEX [CX_AlertID] ON [dbo].[rmAlertDetail]
 	AlertID ASC,
 	RefType ASC
 )WITH (DATA_COMPRESSION = PAGE)
- ON [rmAlertDetail]
+ ON [rmAlert]
+GO
+
+IF OBJECT_ID('bodb_RMS.dbo.rmAlertLog') IS NOT NULL
+BEGIN
+	DROP TABLE dbo.rmAlertLog
+END
+
+CREATE TABLE [dbo].rmAlertLog(
+		[LogID] [BIGINT] IDENTITY(1,1) NOT NULL,
+		[LogTime] [DATETIME] NOT NULL,
+		[AlertID] [BIGINT] NOT NULL,
+		[UserID] [INT] NOT NULL,
+		[ActionID] [SMALLINT] NOT NULL
+) ON [rmAlert]
+WITH (DATA_COMPRESSION = PAGE)
+GO
+
+CREATE CLUSTERED INDEX [CIX_AlertID] ON [dbo].[rmAlertLog]
+(
+	AlertID ASC
+)WITH (DATA_COMPRESSION = PAGE)
+ ON [rmAlert]
+GO
+
+CREATE NONCLUSTERED INDEX [IX_LogTime] ON [dbo].[rmAlertLog]
+(
+	LogTime ASC
+)WITH (DATA_COMPRESSION = PAGE)
+ ON [rmAlert]
 GO
 
 USE bodb02
@@ -187,17 +155,3 @@ GO
 GRANT EXECUTE ON bodb02.dbo.f_CheckSPVersion TO bodbRMSNet
 GO
 
---GRANT SELECT,INSERT, UPDATE ON dbo.rmAlertLog TO bodbRMSNet
---GO
-
---GRANT SELECT,INSERT, UPDATE ON dbo.rmAlert TO bodbRMSNet
---GO
-
---GRANT SELECT,INSERT, UPDATE ON dbo.rmAlertDetail TO bodbRMSNet
---GO
-
---GRANT SELECT ON dbo.rmAlertType TO bodbRMSNet
---GO
-
---GRANT SELECT ON dbo.rmAlertAction TO bodbRMSNet
---GO
