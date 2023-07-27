@@ -67,9 +67,12 @@ BEGIN
 				AND AlertTime = @AlertTime
 				AND IsTest = @IsTest
 
-			INSERT INTO dbo.rmAlertDetail (AlertID, RefType, RefValInt)
-			SELECT @AlertID, 1, TransID
-			FROM #tmpTransID
+			IF @AlertID IS NOT NULL
+			BEGIN
+				INSERT INTO dbo.rmAlertDetail (AlertID, RefType, RefValInt)
+				SELECT @AlertID, 1, TransID
+				FROM #tmpTransID
+			END
 
 		COMMIT TRANSACTION
 	END TRY
