@@ -54,7 +54,7 @@ ALTER DATABASE bodb_RMS
 ADD FILE 
 (
 	NAME = rmAlert,
-	FILENAME = 'E:\IBC_DB\bodb_RMS\rmAlert\rmAlert.ndf',
+	FILENAME = 'I:\user_db\bodb_RMS\rmAlert\rmAlert.ndf',
 	SIZE = 5MB,
 	MAXSIZE = UNLIMITED,
 	FILEGROWTH = 32MB
