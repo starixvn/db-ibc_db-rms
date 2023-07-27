@@ -128,8 +128,6 @@ BEGIN
 			OR @IsNoChecked = 0
 			)
 
-	OPTION(RECOMPILE)
-
 	IF @Member <> ''
 	BEGIN
 		DELETE a
@@ -165,8 +163,6 @@ BEGIN
 	WHERE d.AlertID IN (SELECT AlertID FROM #tmpAlert)
 		AND d.RefType = 1
 
-	OPTION(RECOMPILE)
-
 	INSERT INTO #tmpDetail
 	(	
 		AlertID,
@@ -186,8 +182,6 @@ BEGIN
 	WHERE d.AlertID IN (SELECT AlertID FROM #tmpAlert)
 		AND d.RefType = 1
 		AND NOT EXISTS(SELECT TOP 1 1 FROM #tmpDetail a WHERE a.AlertID = d.AlertID AND a.TransID = d.RefValInt)
-
-	OPTION(RECOMPILE)
 	
 	IF @TicketStatus <> '-1'
 	BEGIN		
