@@ -15,6 +15,7 @@ AS
 Revisions:
 
 - 20200207@Jacob: Notify/Alert by Winning Amount #128093
+- 20230620@Cherry: Manage Alert (#189147)
 */
 
      SET NOCOUNT ON;
@@ -31,8 +32,10 @@ Revisions:
      (custid             INT, 
       username           NVARCHAR(50), 
       currencyname       VARCHAR(50), 
-      winningamount      MONEY, 
-      companyloseamount  MONEY, 
+	  TransList NVARCHAR(MAX), 
+	  TotalMemberStake MONEY,
+      WinningAmount      MONEY, 
+      CompanyLoseAmount  MONEY, 
       totalbets          INT, 
       totalselectionsmin INT, 
       totalselectionsmax INT, 
@@ -43,6 +46,8 @@ Revisions:
      (custid, 
       username, 
       currencyname, 
+	  TransList,
+	  TotalMemberStake,
       winningamount, 
       companyloseamount, 
       totalbets, 
@@ -54,6 +59,18 @@ Revisions:
             SELECT b.custid, 
                    b.username, 
                    b.CurrencyName AS currency, 
+				   STUFF((SELECT  ',' + CAST(t.transid  AS VARCHAR(30))
+					FROM rmBettrans t WITH(NOLOCK)
+					WHERE t.custid = b.custid
+						  AND t.bettype = @BetType
+						  AND t.statusid = 0
+						  AND ((@IsTest = 1	AND t.currency = 20)
+								OR (@IsTest = 0	AND t.currency <> 20))
+					FOR XML PATH(''), TYPE
+					).value('.', 'NVARCHAR(MAX)')  
+					,1,1,'') TransList,
+				   SUM(b.stake * CASE WHEN @IsTest = 1 THEN 1
+                                      ELSE b.actualrate END) AS TotalMemberStake,
                    SUM((b.odds2 - 1) * b.stake * CASE
                                                      WHEN @IsTest = 1
                                                      THEN 1
@@ -69,8 +86,7 @@ Revisions:
                    MAX(b.hdp2) AS TotalSelectionsMax, 
                    AVG(b.odds2 * b.TotalBet) AS Odds, 
                    AVG(1 - b.tpositiontaking) AS HousePT
-            FROM rmBettrans b WITH(NOLOCK)
-                 
+            FROM rmBettrans b WITH(NOLOCK)                 
             WHERE b.bettype = @BetType
                   AND b.statusid = 0
                   AND ((@IsTest = 1
@@ -152,7 +168,27 @@ Revisions:
             odds, 
             housept, 
             ISNULL(p.AlertAmount, 0) LastAlertAmount, 
-            ISNULL(r.WinningAmount, 0) AS AmountFromLastAlert
+            ISNULL(r.WinningAmount, 0) AS AmountFromLastAlert,
+			COMPRESS((SELECT TransList AS 'tl',
+					CASE WHEN @IsSMP = 1 THEN 'Single Match Parlay' ELSE
+						CASE WHEN WinningAmount >= 1000000 AND WinningAmount < 2000000 THEN 'Orange Level' 
+							 WHEN WinningAmount >= 2000000 AND WinningAmount < 3000000 THEN 'Yellow Level'
+							 WHEN WinningAmount >= 3000000 AND WinningAmount < 4000000 THEN 'Red 1 Level'
+							 WHEN WinningAmount >= 4000000 AND WinningAmount < 5000000 THEN 'Red 2 Level'
+							 WHEN WinningAmount >= 5000000 THEN 'Red 3 Level'
+						END 
+					END AS 'sp',
+					CAST(totalselectionsmin AS VARCHAR) + '-' + CAST(totalselectionsmax AS VARCHAR) AS 'sl',
+					Odds AS 'od',
+					totalbets AS 'tb',
+					TotalMemberStake AS 'ms',
+					WinningAmount AS 'pw',
+					CompanyLoseAmount AS 'pl'
+				FROM #sumtotal t
+				WHERE t.custid = s.custid
+					FOR JSON PATH
+					,INCLUDE_NULL_VALUES
+				)) TransInfo
      FROM #sumtotal s
           LEFT JOIN #sumtotalfromlastalert r ON s.custid = r.custid
           LEFT JOIN #lastalert p WITH(NOLOCK) ON s.custid = p.custid;

@@ -10,6 +10,7 @@ AS
 
 	Revisions:
 		- 20200703@Percy: Initialize SP [RedmineID: #137010]
+		- 20230620@Cherry: Manage Alert (#189147)
 */
 
 BEGIN
@@ -24,17 +25,47 @@ BEGIN
 	ELSE
 		SET @LastTransDate = DATEADD(HOUR, -1, @LastTransDate)
 
+	CREATE TABLE #Result
+	(
+		TransId BIGINT,
+		ParlayType VARCHAR(50),
+		Username NVARCHAR(50),
+		currency NVARCHAR(50),
+		stake MONEY,
+		WinningAmount MONEY,
+		CompanyLoseAmount MONEY,
+		Selection SMALLMONEY,
+		odds SMALLMONEY,
+		HousePT SMALLMONEY,
+		TotalBets INT
+	)
+
+	INSERT INTO #Result
+	(
+		TransId,
+		ParlayType,
+		Username,
+		currency,
+		stake,
+		WinningAmount,
+		CompanyLoseAmount,
+		Selection,
+		odds,
+		HousePT,
+		TotalBets 
+	)
 	SELECT
-		b.TransId
-		,CASE WHEN b.betteam = N'1' THEN 'Mix Parlay' ELSE 'Combo Parlay' END AS ParlayType
-		,b.Username
-		,e.currency
-		,b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END AS stake
-		,(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END AS WinningAmount
-		,(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END * (1 - b.tpositiontaking) AS CompanyLoseAmount
-		,b.hdp2 AS Selection
-		,b.odds2 AS odds
-		,1 - b.tpositiontaking AS HousePT
+		b.TransId,
+		CASE WHEN b.betteam = N'1' THEN 'Mix Parlay' ELSE 'Combo Parlay' END AS ParlayType,
+		b.Username,
+		e.currency,
+		b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END AS stake,
+		(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END AS WinningAmount,
+		(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END * (1 - b.tpositiontaking) AS CompanyLoseAmount,
+		b.hdp2 AS Selection,
+		b.odds2 AS odds,
+		1 - b.tpositiontaking AS HousePT,
+		b.TotalBet
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		CROSS APPLY (
 			SELECT TOP 1 bm.transid
@@ -46,9 +77,39 @@ BEGIN
 	WHERE b.TransDate > @LastTransDate
 		AND b.matchid = 29
 		AND b.statusID = 0
+		AND ((@IsTest = 0 AND b.currency <> 20) 
+			OR (@IsTest = 1 AND b.currency = 20)
+			)
 		AND b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= 10000
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 2)
 
-	SELECT CONVERT(VARCHAR(200), @TransDate, 121) AS TransDate -- new TransDate
+	SELECT d.TransId,
+		d.ParlayType,
+		d.Username,
+		d.currency,
+		d.stake,
+		d.WinningAmount,
+		d.CompanyLoseAmount,
+		d.Selection,
+		d.odds,
+		d.HousePT,
+		COMPRESS((SELECT CAST(TransId AS VARCHAR) AS 'tl',
+					ParlayType AS 'sp',
+					CAST(Selection AS VARCHAR) AS 'sl',
+					Odds AS 'od',
+					TotalBets AS 'tb',
+					stake AS 'ms',
+					WinningAmount AS 'pw',
+					CompanyLoseAmount AS 'pl'
+				FROM #result t
+				WHERE t.TransId = d.TransId 
+					FOR JSON PATH
+					,INCLUDE_NULL_VALUES
+				)) TransInfo
+	FROM #Result d
+
+	SELECT CONVERT(VARCHAR(200), @TransDate, 121) AS TransDate
+
+	DROP TABLE #Result
 END
 GO

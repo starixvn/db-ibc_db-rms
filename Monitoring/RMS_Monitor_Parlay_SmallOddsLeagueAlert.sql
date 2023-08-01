@@ -10,6 +10,7 @@ AS
 
 	Revisions:
 		- 20200703@Percy: Initialize SP [RedmineID: #137010]
+		- 20230620@Cherry: Manage Alert (#189147)
 */
 
 BEGIN
@@ -50,6 +51,9 @@ BEGIN
 		AND b.betteam = N'1'
 		AND b.hdp2 = 2
 		AND b.statusID = 0
+		AND ((@IsTest = 0 AND b.currency <> 20) 
+			OR (@IsTest = 1 AND b.currency = 20)
+			)
 		AND (b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= 10000
 		AND b.odds2 BETWEEN 1.01 AND 1.20
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 3)
@@ -65,18 +69,77 @@ BEGIN
 				AND bm.transid <> b.m_transid
 		)
 
+	CREATE TABLE #Result
+	(
+		TransId BIGINT,
+		Username NVARCHAR(50),
+		currency NVARCHAR(50),
+		WinningAmount MONEY,
+		CompanyLoseAmount MONEY,
+		odds SMALLMONEY,
+		HousePT SMALLMONEY,
+		ParlayType VARCHAR(50),
+		TotalSelection SMALLMONEY,
+		TotalBets INT,
+		Stake MONEY
+	)
+
+	INSERT INTO #Result
+	(
+		TransId,
+		Username,
+		currency,
+		WinningAmount,
+		CompanyLoseAmount,
+		odds,
+		HousePT,
+		ParlayType,
+		TotalSelection,
+		TotalBets,
+		Stake 
+	)
 	SELECT
-		b.TransId
-		,b.Username
-		,e.currency
-		,(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END AS WinningAmount
-		,(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END * (1 - b.tpositiontaking) AS CompanyLoseAmount
-		,b.odds2 AS odds
-		,(1 - b.tpositiontaking) AS HousePT
+		b.TransId,
+		b.Username,
+		e.currency,
+		(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END AS WinningAmount,
+		(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END * (1 - b.tpositiontaking) AS CompanyLoseAmount,
+		b.odds2 AS odds,
+		(1 - b.tpositiontaking) AS HousePT,
+		CASE WHEN b.betteam = N'1' THEN 'Mix Parlay' ELSE 'Combo Parlay' END AS ParlayType,
+		b.hdp2 AS TotalSelection,
+		b.TotalBet,
+		b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END AS stake
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON b.currency = e.exchangeid
 	WHERE EXISTS (SELECT 1 FROM @bettrans bt WHERE b.transid = bt.transid)
 
+	SELECT
+		TransId,
+		Username,
+		currency,
+		WinningAmount,
+		CompanyLoseAmount,
+		odds,
+		HousePT,
+		COMPRESS((SELECT CAST(t.TransId AS VARCHAR) AS 'tl',
+					t.ParlayType AS 'sp',
+					CAST(t.TotalSelection AS VARCHAR) AS 'sl',
+					t.Odds AS 'od',
+					t.TotalBets AS 'tb',
+					t.Stake AS 'ms',
+					t.WinningAmount AS 'pw',
+					t.CompanyLoseAmount AS 'pl'
+				FROM #result t
+				WHERE t.TransId = d.TransId 
+					FOR JSON PATH
+					,INCLUDE_NULL_VALUES
+				)) TransInfo
+	FROM #Result d
+
 	SELECT CONVERT(VARCHAR(200), @TransDate, 121) AS TransDate -- new TransDate
+
+	DROP TABLE #Result
+
 END
 GO
