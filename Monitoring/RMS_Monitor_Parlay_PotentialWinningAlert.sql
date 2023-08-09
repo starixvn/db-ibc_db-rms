@@ -16,17 +16,21 @@ Revisions:
 
 - 20200207@Jacob: Notify/Alert by Winning Amount #128093
 - 20230620@Cherry: Manage Alert (#189147)
+- 20230809@Cherry: Duplicate data
 */
 
      SET NOCOUNT ON;
-     DECLARE @MinTransID BIGINT;
+
      DECLARE @BetType INT;
      SELECT @BetType = CASE
                            WHEN @IsSMP = 1
                            THEN 38
                            ELSE 29
                        END;
-     
+
+     DECLARE @TransTime DATETIME = GETDATE()
+	 WAITFOR DELAY '00:00:05'
+
      -- #sumtotal
      CREATE TABLE #sumtotal
      (custid             INT, 
@@ -93,6 +97,7 @@ Revisions:
                         AND currency = 20)
                        OR (@IsTest = 0
                            AND currency <> 20))
+				  AND b.transdate < @TransTime
             GROUP BY b.custid, 
                      b.username, 
                      b.CurrencyName
@@ -153,6 +158,7 @@ Revisions:
                        OR (@IsTest = 0
                            AND currency <> 20))
                   AND b.transdate > l.alerttime
+				  AND b.transdate < @TransTime
             GROUP BY b.custid
             ORDER BY WinningAmount DESC;
 
