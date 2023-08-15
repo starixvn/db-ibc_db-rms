@@ -24,6 +24,7 @@ AS
 		- 20220408@Danny: Enhance filter by bettype [RedmineID: #171303]
 		- 20220425@Danny: Monitor detail Performance for Event/Bettype/BetChoice [RedmineID: #170032]
 		- 20230130@Danny: Monitor detail Performance for Event/Bettype/BetChoice Soccer [RedmineID: #182724]
+		- 20230815@Cherry: Add Total Stake column (#192680)
 	
 	Parameter's Explanation:
 		- @selection:
