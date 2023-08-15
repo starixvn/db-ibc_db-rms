@@ -306,7 +306,7 @@ BEGIN
 			FROM		#Details d
 				INNER JOIN	#match m ON d.matchID = m.matchID
 				INNER JOIN bodb02.dbo.League l WITH(NOLOCK) ON m.leagueID = l.leagueid
-				LEFT JOIN   #bettype_selection z ON d.bettype = z.bettype
+				LEFT JOIN #bettype_selection z ON d.bettype = z.bettype
 			GROUP BY	l.leaguename,
 						d.matchID,
 						d.bettype,
@@ -324,15 +324,14 @@ BEGIN
 				GROUP BY matchID
 			) x
 		)
-		SELECT	d.leaguename,
-				SUM(CASE WHEN d.isOther = 1  THEN d.other_stake + d.home_total_stake ELSE  d.home_total_stake END + d.away_total_stake) TotalStake,
+		SELECT	d.leaguename,				
 				d.matchID,
 				h.teamname AS homeName, 
 				ISNULL(b.typenamee,'Others') market,
 				ISNULL(b.typeid,0) bettype,
-				SUM(CASE WHEN d.isOther = 1 THEN d.other_avg_odds + d.home_avg_odds ELSE  d.home_avg_odds END) AS HomeAvgOdds,
-				SUM(CASE WHEN d.isOther = 1  THEN d.other_stake + d.home_total_stake ELSE  d.home_total_stake END) AS HomeTotalStake,
-				SUM(CASE WHEN d.isOther = 1  THEN d.other_ticket + home_total_ticket ELSE d.home_total_ticket END)  AS HomeTotalTicket,
+				SUM(CASE WHEN d.isOther = 1 THEN d.other_avg_odds + d.home_avg_odds ELSE d.home_avg_odds END) AS HomeAvgOdds,
+				SUM(CASE WHEN d.isOther = 1 THEN d.other_stake + d.home_total_stake ELSE d.home_total_stake END) AS HomeTotalStake,
+				SUM(CASE WHEN d.isOther = 1 THEN d.other_ticket + home_total_ticket ELSE d.home_total_ticket END)  AS HomeTotalTicket,
 				a.teamname AS awayName,
 				SUM(d.away_avg_odds) AS AwayAvgOdds,
 				SUM(d.away_total_stake) AS AwayTotalStake,
