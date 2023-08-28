@@ -9,6 +9,9 @@ ALTER PROCEDURE [dbo].[RMS_ManageAlert_Alert]
 	@IsNoChecked BIT = 1,
 	@ActionType VARCHAR(50) = '-1',
 	@TicketStatus VARCHAR(50) = '-1',
+	@SportType VARCHAR(100) = '',
+	@Selection VARCHAR(MAX) = '0',
+	@Odds SMALLMONEY = NULL,
 	@PageSize 	 INT = 0,
 	@PageIndex   INT = 0
 
@@ -20,6 +23,7 @@ AS
 	
 	Revisions:		
 		20230620@Cherry: Initial (#189147)
+		20230830@Cherry: Enhance (#192682)
 
 	Param:
 		@AlertType = 1: Similar Bet
@@ -39,10 +43,55 @@ AS
 					  = 113: Lose
 					  = 0: Running
 					  = -1: All
+
+		@SportType:
+					= '1': soccer only
+					= '-1': Combined other sports
+					= '-2': Other sports
+					= '-3': Combined sports
+					= '-4': Saba soccer
+					= '-5': Saba basketball
+
+		@Selection:
+					= '2,3': 2,3 selections
+					= '10': 10 UP
+					= '0' : All
 */
 
 BEGIN
 	SET NOCOUNT ON
+
+	CREATE TABLE #tmpSport (SportType BIGINT)
+	INSERT INTO #tmpSport (SportType)
+	SELECT value FROM STRING_SPLIT(@SportType, ',')
+
+	IF ',' + @SportType + ',' LIKE '%,-2,%'
+		INSERT INTO #tmpSport (SportType)
+		SELECT SportType FROM bodb02.dbo.Sports WITH (NOLOCK)
+		WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
+			AND SportType <= 99
+
+	CREATE TABLE #tmpSelection (Selection INT)
+
+	IF ',' + @Selection + ',' LIKE '%,0,%'
+	BEGIN
+		SELECT @Selection = '2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
+		
+		INSERT INTO #tmpSelection (selection)
+		SELECT value FROM STRING_SPLIT(@Selection, ',')
+	END
+	ELSE IF ',' + @Selection + ',' LIKE '%,10,%'
+	BEGIN
+		SELECT @Selection = @Selection + ',11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100'
+		
+		INSERT INTO #tmpSelection (Selection)
+		SELECT value FROM STRING_SPLIT(@Selection, ',')
+	END
+	ELSE
+	BEGIN
+		INSERT INTO #tmpSelection (Selection)
+		SELECT value FROM STRING_SPLIT(@Selection, ',')
+	END
 
 	CREATE TABLE #tmpAlertType (AlertTypeID SMALLINT)
 	CREATE TABLE #tmpAlertAction (AlertActionID SMALLINT)
@@ -159,9 +208,17 @@ BEGIN
 		b.bettype,
 		b.statusID
 	FROM dbo.rmAlertDetail d WITH(NOLOCK)
+		INNER JOIN #tmpAlert a ON d.AlertID = a.AlertID
 		INNER JOIN dbo.rmBettrans b WITH(NOLOCK) ON d.RefValInt = b.transid
-	WHERE d.AlertID IN (SELECT AlertID FROM #tmpAlert)
-		AND d.RefType = 1
+	WHERE d.RefType = 1
+		AND (a.AlertType <> 1
+			OR @SportType = ''
+			OR EXISTS(SELECT TOP 1 1 FROM #tmpSport sp WHERE b.transid2 = sp.sporttype)
+			)
+		AND b.StatusID IN (SELECT StatusID FROM #tmpStatusID)
+		AND (@Selection = '0' 
+			OR EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection))
+		AND ((b.odds2 * b.TotalBet) <= @Odds OR @Odds IS NULL)
 
 	INSERT INTO #tmpDetail
 	(	
@@ -178,20 +235,22 @@ BEGIN
 		b.bettype,
 		b.statusID
 	FROM dbo.rmAlertDetail d WITH(NOLOCK)
+		INNER JOIN #tmpAlert a ON d.AlertID = a.AlertID
 		INNER JOIN dbo.rmBettrans_Old b WITH(NOLOCK) ON d.RefValInt = b.transid
-	WHERE d.AlertID IN (SELECT AlertID FROM #tmpAlert)
-		AND d.RefType = 1
+	WHERE d.RefType = 1
+		AND (a.AlertType <> 1
+			OR @SportType = ''
+			OR EXISTS(SELECT TOP 1 1 FROM #tmpSport sp WHERE b.transid2 = sp.sporttype)
+			)
+		AND b.StatusID IN (SELECT StatusID FROM #tmpStatusID)
 		AND NOT EXISTS(SELECT TOP 1 1 FROM #tmpDetail a WHERE a.AlertID = d.AlertID AND a.TransID = d.RefValInt)
+		AND (@Selection = '0' 
+			OR EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection))
+		AND ((b.odds2 * b.TotalBet) <= @Odds OR @Odds IS NULL)
 	
-	IF @TicketStatus <> '-1'
-	BEGIN		
-		DELETE a
-		FROM #tmpAlert a			
-		WHERE NOT EXISTS(SELECT TOP 1 1
-						FROM #tmpDetail d
-						WHERE d.AlertID = a.AlertID
-							AND d.StatusID IN (SELECT StatusID FROM #tmpStatusID))
-	END
+	DELETE a
+	FROM #tmpAlert a			
+	WHERE a.AlertID NOT IN (SELECT AlertID FROM #tmpDetail)
 
 	UPDATE a
 	SET a.IsSettled = 1
@@ -300,6 +359,8 @@ BEGIN
 	DROP TABLE #tmpDetail
 	DROP TABLE #tmpStatusID
 	DROP TABLE #Result
+	DROP TABLE #tmpSelection
+	DROP TABLE #tmpSport
 
 END 
  
