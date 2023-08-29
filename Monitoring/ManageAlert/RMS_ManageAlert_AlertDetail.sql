@@ -232,8 +232,7 @@ BEGIN
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
-			AND (@Selection = '0' 
-				OR EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE p.hdp2 = s.selection))
+			AND p.hdp2 IN (SELECT selection FROM #tmpSelection)
 
 		INSERT INTO #tmpPotential
 		(
@@ -281,8 +280,7 @@ BEGIN
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
 			AND transid NOT IN (SELECT TransID FROM #tmpPotential)
-			AND (@Selection = '0' 
-				OR EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE p.hdp2 = s.selection))
+			AND p.hdp2 IN (SELECT selection FROM #tmpSelection)
 
 		SELECT
 			TransDate,
