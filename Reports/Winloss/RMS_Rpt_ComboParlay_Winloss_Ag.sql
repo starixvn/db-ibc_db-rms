@@ -29,6 +29,7 @@ AS
 		- 20220519@Danny: add filter by Live Status [RedmineID: #172691]
 		- 20230420@Cherry: Add Site column (#186735)
 		- 20230724@Kean: Report - MA/Member Win loss - Show error when input Agent or Master account. (#191663)
+		- 20230830@Cherry: Add TotalBets (#192682)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -145,6 +146,7 @@ BEGIN
 			,ourPT_won		MONEY
 			,ourPT_lose		MONEY
 			,CustomerClass  SMALLINT
+			,betcount		INT
 		)
 
 		-- rmBettrans
@@ -167,6 +169,7 @@ BEGIN
 				,ourPT_won 
 				,ourPT_lose
 				,CustomerClass
+				,betcount
 			)
 			SELECT
 				CONVERT(VARCHAR(7), winlostdate, 120)
@@ -181,6 +184,7 @@ BEGIN
 				,SUM(CASE WHEN 1 - tpositiontaking = 0 THEN 0 ELSE CASE WHEN statusID = 112 THEN (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate ELSE 0 END END) AS ourPT_won
 				,SUM(CASE WHEN 1 - tpositiontaking = 0 THEN 0 ELSE CASE WHEN statusID = 113 THEN (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate ELSE 0 END END) AS ourPT_lose
 				,ci.CustomerClass
+				,COUNT(1)
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
@@ -224,6 +228,7 @@ BEGIN
 				,ourPT_won 
 				,ourPT_lose
 				,CustomerClass
+				,betcount
 			)
 			SELECT 
 				CONVERT(VARCHAR(7), winlostdate, 120)
@@ -238,6 +243,7 @@ BEGIN
 				,SUM(CASE WHEN statusID = 112 THEN (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) * actualrate ELSE 0 END) AS ourPT_won
 				,SUM(CASE WHEN statusID = 113 THEN (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) * actualrate ELSE 0 END) AS ourPT_lose		
 				,ci.CustomerClass
+				,SUM(betcount)
 			FROM dbo.rmSumWinloss a WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
@@ -271,6 +277,7 @@ BEGIN
 				,ourPT_won 
 				,ourPT_lose
 				,CustomerClass
+				,betcount
 			)
 			SELECT 
 				CONVERT(VARCHAR(7), winlostdate, 120)
@@ -285,6 +292,7 @@ BEGIN
 				,SUM(CASE WHEN statusID = 112 THEN (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) * actualrate ELSE 0 END) AS ourPT_won
 				,SUM(CASE WHEN statusID = 113 THEN (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) * actualrate ELSE 0 END) AS ourPT_lose		
 				,ci.CustomerClass
+				,SUM(betcount)
 			FROM dbo.rmSumWinloss_Old a WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
@@ -313,6 +321,7 @@ BEGIN
 		,SUM(b.ourPT_won) AS ourPT_won
 		,SUM(b.ourPT_lose)	AS ourPT_lose
 		,b.CustomerClass
+		,SUM(b.betcount) TotalBets
 	FROM #tmpSum b
 		LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
 		LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site

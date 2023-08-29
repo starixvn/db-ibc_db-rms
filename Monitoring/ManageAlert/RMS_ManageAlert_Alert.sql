@@ -215,7 +215,8 @@ BEGIN
 			OR @SportType = ''
 			OR EXISTS(SELECT TOP 1 1 FROM #tmpSport sp WHERE b.transid2 = sp.sporttype)
 			)
-		AND b.StatusID IN (SELECT StatusID FROM #tmpStatusID)
+		AND (@TicketStatus = '-1'
+			OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE b.StatusID = t.StatusID))
 		AND (@Selection = '0' 
 			OR EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection))
 		AND ((b.odds2 * b.TotalBet) <= @Odds OR @Odds IS NULL)
@@ -242,7 +243,8 @@ BEGIN
 			OR @SportType = ''
 			OR EXISTS(SELECT TOP 1 1 FROM #tmpSport sp WHERE b.transid2 = sp.sporttype)
 			)
-		AND b.StatusID IN (SELECT StatusID FROM #tmpStatusID)
+		AND (@TicketStatus = '-1'
+			OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE b.StatusID = t.StatusID))
 		AND NOT EXISTS(SELECT TOP 1 1 FROM #tmpDetail a WHERE a.AlertID = d.AlertID AND a.TransID = d.RefValInt)
 		AND (@Selection = '0' 
 			OR EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection))
