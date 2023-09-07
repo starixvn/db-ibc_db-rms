@@ -1,5 +1,5 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details]
+ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss_Details]
 	@custid			INT,
 	@fromdate		DATETIME,
 	@todate			DATETIME,
