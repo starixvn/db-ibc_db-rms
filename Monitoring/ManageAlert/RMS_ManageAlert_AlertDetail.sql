@@ -312,6 +312,8 @@ BEGIN
 	DROP TABLE #tmpSimilar
 	DROP TABLE #tmpTransID
 	DROP TABLE #tmpPotential
+	DROP TABLE #tmpSelection
+
 END 
  
 
