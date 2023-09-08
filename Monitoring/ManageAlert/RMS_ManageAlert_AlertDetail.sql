@@ -2,7 +2,8 @@
 
 ALTER PROCEDURE [dbo].[RMS_ManageAlert_AlertDetail]
 	@AlertID BIGINT,
-	@Selection VARCHAR(MAX) = '0'
+	@Selection VARCHAR(MAX) = '0',
+	@Odds SMALLMONEY = NULL
 
 AS
 /*
@@ -233,6 +234,7 @@ BEGIN
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
 			AND p.hdp2 IN (SELECT selection FROM #tmpSelection)
+			AND (@Odds IS NULL OR p.odds2 * p.TotalBet <= @Odds)
 
 		INSERT INTO #tmpPotential
 		(
@@ -281,6 +283,7 @@ BEGIN
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
 			AND transid NOT IN (SELECT TransID FROM #tmpPotential)
 			AND p.hdp2 IN (SELECT selection FROM #tmpSelection)
+			AND (@Odds IS NULL OR p.odds2 * p.TotalBet <= @Odds)
 
 		SELECT
 			TransDate,

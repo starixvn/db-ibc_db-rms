@@ -218,7 +218,6 @@ BEGIN
 		AND (@TicketStatus = '-1'
 			OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE b.StatusID = t.StatusID))
 		AND EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection)
-		AND ((b.odds2 * b.TotalBet) <= @Odds OR @Odds IS NULL)
 
 	INSERT INTO #tmpDetail
 	(	
@@ -246,7 +245,6 @@ BEGIN
 			OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE b.StatusID = t.StatusID))
 		AND NOT EXISTS(SELECT TOP 1 1 FROM #tmpDetail a WHERE a.AlertID = d.AlertID AND a.TransID = d.RefValInt)
 		AND EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection)
-		AND ((b.odds2 * b.TotalBet) <= @Odds OR @Odds IS NULL)
 	
 	DELETE a
 	FROM #tmpAlert a			
@@ -304,6 +302,7 @@ BEGIN
 				pw MONEY,
 				pl MONEY
 				) AS i
+	WHERE (i.od <= @Odds OR @Odds IS NULL)
 	)
 	SELECT AlertId,
 		AlertTime,
