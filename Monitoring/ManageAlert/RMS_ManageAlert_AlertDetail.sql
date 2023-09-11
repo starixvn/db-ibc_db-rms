@@ -131,7 +131,6 @@ BEGIN
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
-			AND (@Odds IS NULL OR p.odds2 * p.TotalBet <= @Odds)
 
 		INSERT INTO #tmpSimilar
 		(
@@ -171,7 +170,6 @@ BEGIN
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
 			AND transid NOT IN (SELECT TransID FROM #tmpSimilar)
-			AND (@Odds IS NULL OR p.odds2 * p.TotalBet <= @Odds)
 
 		SELECT
 			TransID,
