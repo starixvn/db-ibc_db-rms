@@ -3,7 +3,8 @@
 ALTER PROCEDURE [dbo].[RMS_ManageAlert_AlertDetail]
 	@AlertID BIGINT,
 	@Selection VARCHAR(MAX) = '0',
-	@Odds SMALLMONEY = NULL
+	@Odds SMALLMONEY = NULL,
+	@TicketStatus VARCHAR(50) = '-1'
 
 AS
 /*
@@ -16,6 +17,10 @@ AS
 		20230830@Cherry: Enhance (#192682)
 
 	Param:
+		@TicketStatus = 112: Won
+					  = 113: Lose
+					  = 0: Running
+					  = -1: All
 		
 */
 
@@ -23,6 +28,7 @@ BEGIN
 	SET NOCOUNT ON
 
 	CREATE TABLE #tmpSelection (Selection INT)
+	CREATE TABLE #tmpStatusID(StatusID TINYINT)
 
 	IF ',' + @Selection + ',' LIKE '%,0,%'
 	BEGIN
@@ -42,6 +48,13 @@ BEGIN
 	BEGIN
 		INSERT INTO #tmpSelection (Selection)
 		SELECT value FROM STRING_SPLIT(@Selection, ',')
+	END
+
+	IF @TicketStatus <> '-1' 
+	BEGIN
+		INSERT INTO #tmpStatusID (StatusID)
+		SELECT val
+        FROM bodb02.dbo.strSplit(@TicketStatus, ',')
 	END
 
 	DECLARE @AlertType SMALLINT
@@ -101,8 +114,8 @@ BEGIN
 			CustID,
 			BetType,
 			SiteGroup,
-			UserName,
 			CustomerClass,
+			UserName,
 			Stake,
 			WinningAmt,
 			HouseAmt,
@@ -131,6 +144,8 @@ BEGIN
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
+			AND (@TicketStatus = '-1'
+				OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE p.StatusID = t.StatusID))
 
 		INSERT INTO #tmpSimilar
 		(
@@ -170,6 +185,8 @@ BEGIN
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
 			AND transid NOT IN (SELECT TransID FROM #tmpSimilar)
+			AND (@TicketStatus = '-1'
+				OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE p.StatusID = t.StatusID))
 
 		SELECT
 			TransID,
@@ -235,6 +252,8 @@ BEGIN
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
 			AND p.hdp2 IN (SELECT selection FROM #tmpSelection)
 			AND (@Odds IS NULL OR p.odds2 * p.TotalBet <= @Odds)
+			AND (@TicketStatus = '-1'
+				OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE p.StatusID = t.StatusID))
 
 		INSERT INTO #tmpPotential
 		(
@@ -284,6 +303,8 @@ BEGIN
 			AND transid NOT IN (SELECT TransID FROM #tmpPotential)
 			AND p.hdp2 IN (SELECT selection FROM #tmpSelection)
 			AND (@Odds IS NULL OR p.odds2 * p.TotalBet <= @Odds)
+			AND (@TicketStatus = '-1'
+				OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE p.StatusID = t.StatusID))
 
 		SELECT
 			TransDate,
@@ -316,6 +337,7 @@ BEGIN
 	DROP TABLE #tmpTransID
 	DROP TABLE #tmpPotential
 	DROP TABLE #tmpSelection
+	DROP TABLE #tmpStatusID
 
 END 
  
