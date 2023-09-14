@@ -176,6 +176,7 @@ BEGIN
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND custid = @custid
 				AND statusID IN (112, 113)
+				AND b.currency <> 20
 				AND 1 = CASE
 								WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
 									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
@@ -220,6 +221,7 @@ BEGIN
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND custid = @custid
 				AND statusID IN (112, 113)
+				AND b.currency <> 20
 				AND 1 = CASE
 							WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
 									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
