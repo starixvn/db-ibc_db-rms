@@ -14,9 +14,10 @@ AS
 
 Revisions:
 
-- 20200207@Jacob: Notify/Alert by Winning Amount #128093
-- 20230620@Cherry: Manage Alert (#189147)
-- 20230809@Cherry: Duplicate data
+	- 20200207@Jacob: Notify/Alert by Winning Amount #128093
+	- 20230620@Cherry: Manage Alert (#189147)
+	- 20230809@Cherry: Duplicate data
+	- 20230830@Cherry: Enhance (#192682)
 */
 
      SET NOCOUNT ON;
@@ -177,11 +178,17 @@ Revisions:
             ISNULL(r.WinningAmount, 0) AS AmountFromLastAlert,
 			COMPRESS((SELECT TransList AS 'tl',
 					CASE WHEN @IsSMP = 1 THEN 'Single Match Parlay' ELSE
-						CASE WHEN WinningAmount >= 1000000 AND WinningAmount < 2000000 THEN 'Orange Level' 
-							 WHEN WinningAmount >= 2000000 AND WinningAmount < 3000000 THEN 'Yellow Level'
-							 WHEN WinningAmount >= 3000000 AND WinningAmount < 4000000 THEN 'Red 1 Level'
-							 WHEN WinningAmount >= 4000000 AND WinningAmount < 5000000 THEN 'Red 2 Level'
-							 WHEN WinningAmount >= 5000000 THEN 'Red 3 Level'
+						CASE WHEN WinningAmount >= 1000000 AND WinningAmount < 2000000 AND @IsTest = 0 THEN 'Orange Level' 
+							 WHEN WinningAmount >= 2000000 AND WinningAmount < 3000000 AND @IsTest = 0 THEN 'Yellow Level'
+							 WHEN WinningAmount >= 3000000 AND WinningAmount < 4000000 AND @IsTest = 0 THEN 'Red 1 Level'
+							 WHEN WinningAmount >= 4000000 AND WinningAmount < 5000000 AND @IsTest = 0 THEN 'Red 2 Level'
+							 WHEN WinningAmount >= 5000000 AND @IsTest = 0 THEN 'Red 3 Level'
+
+							 WHEN WinningAmount >= 5 AND WinningAmount < 10 AND @IsTest = 1 THEN 'Orange Level' 
+							 WHEN WinningAmount >= 10 AND WinningAmount < 15 AND @IsTest = 1 THEN 'Yellow Level'
+							 WHEN WinningAmount >= 15 AND WinningAmount < 20 AND @IsTest = 1 THEN 'Red 1 Level'
+							 WHEN WinningAmount >= 20 AND WinningAmount < 25 AND @IsTest = 1 THEN 'Red 2 Level'
+							 WHEN WinningAmount >= 25 AND @IsTest = 1 THEN 'Red 3 Level'
 						END 
 					END AS 'sp',
 					CAST(totalselectionsmin AS VARCHAR) + '-' + CAST(totalselectionsmax AS VARCHAR) AS 'sl',
