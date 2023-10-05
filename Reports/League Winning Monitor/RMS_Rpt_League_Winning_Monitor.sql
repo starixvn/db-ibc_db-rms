@@ -21,6 +21,7 @@ AS
 		- 20210628@Danny: Implement League Winning Monitor Report [RedmineID: #156982]
 		- 20211111@Danny: Total Combo Bet data is incorrectly [RedmineID: #164563]
 		- 20230420@Cherry: Add Site column (#186735)
+		- 20231005@Cherry: Enhance code (#195077)
 		
 	Parameter's Explanation:
 		- @selection:
@@ -249,6 +250,34 @@ BEGIN
 
 		END
 
+		CREATE TABLE #tmpbettransm(refno BIGINT, LeagueID INT)
+		CREATE TABLE #finalbettransm(refno BIGINT, LeagueID INT)
+
+		INSERT INTO #tmpbettransm(refno, leagueID)
+		SELECT m.refno, ma.leagueid 
+		FROM bodb02.dbo.bettransm m WITH(NOLOCK)
+			INNER JOIN bodb02.dbo.match ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+		WHERE m.refno IN (SELECT refno FROM #bettrans WHERE bettype = 29 )AND (m.winlostdate > @MoveBetsDay OR m.winlostdate IS NULL)
+			AND ma.leagueid IN  (SELECT x.LeagueId FROM #tmpLeague x)
+						
+		INSERT INTO #tmpbettransm(refno, leagueID)				
+		SELECT m.refno, ma.leagueid 
+		FROM bodb02.dbo.bettransm14 m WITH(NOLOCK)
+			INNER JOIN bodb02.dbo.match14 ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+		WHERE m.refno IN (SELECT refno FROM #bettrans WHERE bettype = 29 ) AND m.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+			AND ma.leagueid IN  (SELECT x.LeagueId FROM #tmpLeague x)
+			
+		INSERT INTO #tmpbettransm(refno, leagueID)
+		SELECT m.refno, ma.leagueid 
+		FROM dbo.rmBettransm_bk m WITH(NOLOCK)
+			INNER JOIN dbo.rmMatch_bk ma WITH(NOLOCK) ON m.matchid = ma.matchid 
+		WHERE m.refno IN (SELECT refno FROM #bettrans WHERE bettype = 29 ) AND m.winlostdate < @BalanceUpDay 
+			AND ma.leagueid IN  (SELECT x.LeagueId FROM #tmpLeague x)
+
+		INSERT INTO #finalbettransm(refno, leagueID)
+		SELECT DISTINCT refno, leagueID
+		FROM #tmpbettransm
+
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype IN (29))
 		BEGIN
 
@@ -257,28 +286,7 @@ BEGIN
 				INSERT INTO #Result(leagueid, transid, bettype, custid)
 				SELECT u.leagueid, t.transid, t.bettype, t.custid
 				FROM #bettrans t
-				CROSS APPLY 
-				(
-					SELECT ma.leagueid 
-					FROM bodb02.dbo.bettransm m WITH(NOLOCK)
-					INNER JOIN bodb02.dbo.match ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-					WHERE m.refno = t.refno AND (m.winlostdate > @MoveBetsDay OR m.winlostdate IS NULL)
-						
-					UNION 
-						
-					SELECT ma.leagueid 
-					FROM bodb02.dbo.bettransm14 m WITH(NOLOCK)
-					INNER JOIN bodb02.dbo.match14 ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-					WHERE m.refno = t.refno AND m.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
-					
-					UNION  
-
-					SELECT ma.leagueid
-					FROM dbo.rmBettransm_bk m WITH(NOLOCK)
-					INNER JOIN dbo.rmMatch_bk ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-					WHERE m.refno = t.refno AND m.winlostdate < @BalanceUpDay 
-				
-				) u
+					INNER JOIN #finalbettransm u ON t.refno = u.refno
 				WHERE t.bettype = 29 AND u.leagueid IN  (SELECT x.LeagueId FROM #tmpLeague x)
 			END
 
@@ -287,28 +295,7 @@ BEGIN
 				INSERT INTO #Result( transid, bettype, custid)
 				SELECT DISTINCT t.transid, t.bettype, t.custid
 				FROM #bettrans t
-				CROSS APPLY 
-				(
-					SELECT ma.leagueid 
-					FROM bodb02.dbo.bettransm m WITH(NOLOCK)
-					INNER JOIN bodb02.dbo.match ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-					WHERE m.refno = t.refno AND (m.winlostdate > @MoveBetsDay OR m.winlostdate IS NULL)
-						
-					UNION 
-						
-					SELECT ma.leagueid 
-					FROM bodb02.dbo.bettransm14 m WITH(NOLOCK)
-					INNER JOIN bodb02.dbo.match14 ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-					WHERE m.refno = t.refno AND m.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
-					
-					UNION  
-
-					SELECT ma.leagueid
-					FROM dbo.rmBettransm_bk m WITH(NOLOCK)
-					INNER JOIN dbo.rmMatch_bk ma WITH(NOLOCK) ON m.matchid = ma.matchid 
-					WHERE m.refno = t.refno AND m.winlostdate < @BalanceUpDay 
-				
-				) u
+					INNER JOIN #finalbettransm u ON t.refno = u.refno
 				WHERE t.bettype = 29 AND u.leagueid IN  (SELECT x.LeagueId FROM #tmpLeague x)
 			END
 
@@ -317,6 +304,8 @@ BEGIN
 
 		DROP TABLE #tmpLeague
 		DROP TABLE #bettrans
+		DROP TABLE #tmpbettransm
+		DROP TABLE #finalbettransm
 	END
 
 	-- Return data
