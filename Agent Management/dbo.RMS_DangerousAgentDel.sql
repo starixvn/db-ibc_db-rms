@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[RMS_DangerousAgentDel]
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[RMS_DangerousAgentDel]
 	@agentid INT,
 	@username NVARCHAR(50),
 	@userid INT,
@@ -13,6 +14,7 @@ AS
 		DB: DBRMS/bodb_RMS
 		
 		Revisions:
+		20231019@Jacob: Hot fix (#195750) - remove permission checking in stored procedure
 		
 		Parameter's Explanation:
 	*/
@@ -23,11 +25,6 @@ BEGIN
 			,@duration int		
 	
 	SET @startRun=GETDATE()
-	
-	EXEC RMS_UserCheckPermission @UserID = @UserID ,@FuncKey = 'ManageAgent', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	
-	IF @ErrCode > 0
-		RETURN
 		
 	DELETE rmAgent WITH(ROWLOCK,UPDLOCK)
 	WHERE agentid = @agentid
@@ -55,4 +52,3 @@ BEGIN
 		@duration	= @duration
 END
 GO
-GRANT EXECUTE ON  [dbo].[RMS_DangerousAgentDel] TO [bodbRMSNet]
