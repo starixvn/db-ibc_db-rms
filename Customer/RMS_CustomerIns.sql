@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[RMS_CustomerIns]
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[RMS_CustomerIns]
 	@adminid	INT,
 	@username	VARCHAR(30),
 	@level		INT,
@@ -14,6 +15,7 @@ AS
 		
 		Revisions:
 			- 20130313@Johnson: Fix format log by xml format
+			- 20231019@Jacob: Hot fix (#195750) - remove permission checking in stored procedure
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -23,12 +25,7 @@ SET NOCOUNT ON
 			,@duration int		
 	
 	SET @startRun=GETDATE()
-	
-	EXEC RMS_UserCheckPermission @UserID = @AdminID ,@FuncKey = 'ManageCustomer', @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
-	
-	IF @ErrCode > 0
-		RETURN
-	
+		
 	DECLARE @custid INT, @roleid TINYINT
 	
 	SELECT @custid = custid , @roleid = roleid
@@ -75,4 +72,3 @@ SET NOCOUNT ON
 		@duration	= @duration
 	
 GO 
-GRANT EXECUTE ON [dbo].[RMS_CustomerIns] TO [bodbRMSNet]
