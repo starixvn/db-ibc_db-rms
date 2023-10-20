@@ -43,6 +43,8 @@ AS
 		- 20221121@Danny: enhance perfomance [RedmineID: #180707]
 		- 20230320@Cherry: Change formula of Stake (#185251)
 		- 20230420@Cherry: Add Site column (#186735)
+		- 20230824@Cherry: Parlay Boost Bonus (#192681)
+		- 20231020@Cherry: Parlay Generator (#195498)
 
 	Parameter's Explanation:
 		- @selection:
@@ -72,6 +74,7 @@ AS
 					. 3: Single Match Parlay
 					. 4: Panalty shootout combo
 					. 5: GOF
+					. 6: Parlay Generator
 */
 
 BEGIN
@@ -214,31 +217,17 @@ BEGIN
 		)
 		
 		CREATE TABLE #bettype (bettype SMALLINT)
-
-		-- Combo parlay
-		DECLARE @ComboType TINYINT = 0	
-				--1: mix parlay only, 
-				--2: combo parlay only, 
-				--3: GOF only, 
-				--4: combined between mix parlay and GOF, 
-				--5: combined between combo parlay and GOF,
-				--6: combined between mix parlay and combo parlay, 
-				--7: combined all
-		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%'
+		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+	
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
 
-			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT value) = 3 AND SUM(DISTINCT CAST(value as SMALLINT)) = 8 THEN 7 
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 3 THEN 6
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 6 THEN 4
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 7 THEN 5
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 1 THEN 1
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 2 THEN 2
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 5 THEN 3
-								END
-			FROM STRING_SPLIT(@ParlayType, ',') WHERE value IN (1,2,5)
+			INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+			WHERE value IN (1,2,5,6)
 		END
 
 		-- Single match parlay
@@ -383,6 +372,7 @@ BEGIN
 		(
 			custid INT
 			,transdate DATETIME
+			,IsBoostBonus BIT
 			,transid BIGINT
 			,refno BIGINT
 			,SiteGroup VARCHAR(10)
@@ -403,18 +393,20 @@ BEGIN
 			,betteam NVARCHAR(10)
 			,oddsspread SMALLMONEY
 			,IsGOF BIT
+			,IsParlayGenerator BIT
 			,potentialWinningAmt MONEY
 			,CustomerClass SMALLINT
 			,TrackingUser NVARCHAR(50)
 		)
 		INSERT INTO #Result
 		(
-			custid, transdate, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
-			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF, potentialWinningAmt, CustomerClass , TrackingUser
+			custid, transdate, IsBoostBonus, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
+			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF, IsParlayGenerator, potentialWinningAmt, CustomerClass , TrackingUser
 		)
 		SELECT
 			rb.custid
 			,rb.transdate
+			,CASE WHEN rb.bettype = 29 AND rb.betteam = '1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
 			,rb.transid
 			,rb.refno
 			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
@@ -435,6 +427,7 @@ BEGIN
 			,rb.betteam
 			,rb.oddsspread
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END
+			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = -100 THEN 1 ELSE 0 END
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate
 			,ci.CustomerClass
 			,l.username AS TrackingUser
@@ -446,38 +439,30 @@ BEGIN
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.custid = rb.custid
 			LEFT JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
 		WHERE ISNULL(mc.level, 0) IN (SELECT level FROM #level)
-		AND ((rb.odds2 * rb.TotalBet) <= @Odds OR @Odds IS NULL)
+			AND ((rb.odds2 * rb.TotalBet) <= @Odds OR @Odds IS NULL)
 			AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 			AND  (rb.stake * rb.actualrate) >= CASE WHEN @reportType = 1 THEN @stake ELSE 0 END
 			AND  ((rb.odds2 - 1) * rb.stake * rb.actualrate * (1 - rb.tpositiontaking)) >= CASE WHEN @reportType = 2 THEN @maxpayout ELSE 0 END
 			AND  b.market IN (SELECT DISTINCT value FROM STRING_SPLIT(@Market, ','))
 			AND b.IsCornerParlay = CASE WHEN @IsCornerParlay = 1 THEN 1 ELSE b.IsCornerParlay END
-
-		IF @ComboType IN (1,2,3,4,5,6)
-		BEGIN
-			CREATE CLUSTERED INDEX CIX_#Result ON #Result (bettype, betteam, oddsspread)
-
-			IF @ComboType = 1 -- Mix parlay only
-				DELETE #Result WHERE bettype = 29 AND  betteam <> N'1' OR (bettype = 29 AND betteam = N'1' AND oddsspread = 1)
-				ELSE IF @ComboType = 2 -- Combo parlay only
-					DELETE #Result WHERE bettype = 29 AND betteam = N'1'
-					ELSE IF @ComboType = 3 -- GOF only
-						DELETE #Result WHERE (bettype = 29 AND betteam <> N'1') OR (bettype = 29 AND betteam = N'1' AND (oddsspread <> 1 OR oddsspread IS NULL))
-						ELSE IF @ComboType = 4  -- combined between mix parlay and GOF
-							DELETE #Result WHERE bettype = 29 AND betteam <> N'1'
-							ELSE IF @ComboType = 5  -- combined between combo parlay and GOF
-								DELETE #Result WHERE bettype = 29 AND  betteam = N'1' AND (oddsspread <> 1 OR oddsspread IS NULL)
-								ELSE IF @ComboType = 6  -- combined between mix parlay and combo parlay
-									DELETE #Result WHERE bettype = 29 AND  betteam = N'1' AND oddsspread = 1
-		END
+			AND (
+				(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+					AND rb.bettype = 29 AND rb.betteam = N'1' AND (rb.oddsspread NOT IN (1, -100) OR rb.oddsspread IS NULL))
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+					AND rb.bettype = 29 AND rb.betteam <> N'1')
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+					AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1)
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+				AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = -100)
+			)		
 
 		CREATE INDEX IX_Index ON #Result (transid)
 		
-		SELECT custid, transdate, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
-			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt, CustomerClass, TrackingUser
+		SELECT custid, transdate, IsBoostBonus, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
+			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, IsParlayGenerator, potentialWinningAmt, CustomerClass, TrackingUser
 		FROM (
-				SELECT custid, transdate, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
-					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt, CustomerClass, TrackingUser
+				SELECT custid, transdate, IsBoostBonus, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
+					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, IsParlayGenerator, potentialWinningAmt, CustomerClass, TrackingUser
 					,ROW_NUMBER() OVER(ORDER BY transid DESC) AS rn
 				FROM #Result
 			) r
@@ -489,6 +474,8 @@ BEGIN
 	DROP TABLE #level
 	DROP TABLE #Result
 	DROP TABLE #League
+	DROP TABLE #ParlayType
+	DROP TABLE #userList
 
 END
 GO
