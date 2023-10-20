@@ -406,7 +406,7 @@ BEGIN
 		SELECT
 			rb.custid
 			,rb.transdate
-			,CASE WHEN rb.bettype = 29 AND rb.betteam = '1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
+			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
 			,rb.transid
 			,rb.refno
 			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
