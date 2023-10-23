@@ -23,6 +23,7 @@ AS
 		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
 		- 20210701@Danny: Track User Monitoring [RedmineID: #153875]
 		- 20230320@Cherry: Change formula of Stake (#185251)
+		- 20231020@Cherry: Parlay Generator (#195498)
 
 	Parameter's Explanation:
 		- @selection:
@@ -107,30 +108,17 @@ BEGIN
 			,oddsspread SMALLMONEY
 		)
 
-		-- Combo parlay
-		DECLARE @ComboType TINYINT = 0	
-				--1: mix parlay only, 
-				--2: combo parlay only, 
-				--3: GOF only, 
-				--4: combined between mix parlay and GOF, 
-				--5: combined between combo parlay and GOF,
-				--6: combined between mix parlay and combo parlay, 
-				--7: combined all
-		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%'
+		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+	
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
 
-			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT val) = 3 AND SUM(DISTINCT CAST(val as SMALLINT)) = 8 THEN 7 
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 3 THEN 6
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 6 THEN 4
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 7 THEN 5
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 1 THEN 1
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 2 THEN 2
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 5 THEN 3
-								END
-			FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2,5)
+			INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+			WHERE value IN (1,2,5,6)
 		END
 
 		-- Single match parlay
@@ -154,6 +142,16 @@ BEGIN
 	WHERE custid = @CustID
 		AND b.statusID = 0
 		AND b.currency <> 20
+		AND (
+			(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+				AND b.bettype = 29 AND b.betteam = N'1' AND (b.oddsspread NOT IN (1, -100) OR b.oddsspread IS NULL))
+			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+				AND b.bettype = 29 AND b.betteam <> N'1')
+			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+				AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+			AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = -100)
+			)		
 
 	CREATE CLUSTERED INDEX CIX_bettype ON #bettrans (bettype)
 
@@ -194,24 +192,6 @@ BEGIN
 		WHERE b.CornerParlay = 0
 	END
 
-	-- Filter by ComboType
-		IF @ComboType IN (1,2,3,4,5,6)
-		BEGIN
-			IF @ComboType = 1 -- Mix parlay only
-				DELETE #bettrans WHERE bettype = 29 AND  betteam <> N'1' OR (bettype = 29 AND betteam = N'1' AND oddsspread = 1)
-				ELSE IF @ComboType = 2 -- Combo parlay only
-					DELETE #bettrans WHERE bettype = 29 AND betteam = N'1'
-					ELSE IF @ComboType = 3 -- GOF only
-						DELETE #bettrans WHERE (bettype = 29 AND betteam <> N'1') OR (bettype = 29 AND betteam = N'1' AND (oddsspread <> 1 OR oddsspread IS NULL))
-						ELSE IF @ComboType = 4  -- combined between mix parlay and GOF
-							DELETE #bettrans WHERE bettype = 29 AND betteam <> N'1'
-							ELSE IF @ComboType = 5  -- combined between combo parlay and GOF
-								DELETE #bettrans WHERE bettype = 29 AND  betteam = N'1' AND (oddsspread <> 1 OR oddsspread IS NULL)
-								ELSE IF @ComboType = 6  -- combined between mix parlay and combo parlay
-									DELETE #bettrans WHERE bettype = 29 AND  betteam = N'1' AND oddsspread = 1
-		END
-
-
 	SELECT
 		b.transdate
 		,b.transid
@@ -228,6 +208,7 @@ BEGIN
 		,b.hdp2 AS TotalSelection
 		,b.TotalBet AS TotalBet
 		,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
+		,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = -100 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 		,l.username AS TrackingUser
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN #bettrans rb ON rb.transid = b.transid
@@ -240,5 +221,6 @@ BEGIN
 	DROP TABLE #NumberWon
 	DROP TABLE #tmpSelection
 	DROP TABLE #tmpSport
+	DROP TABLE #ParlayType
 END
 GO

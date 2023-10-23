@@ -28,6 +28,7 @@ AS
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210303@Danny: Change on Report Top Winners [RedmineID: #146554]
 		- 20220519@Danny: add filter by Live Status [RedmineID: #172691]
+		- 20231020@Cherry: Parlay Generator (#195498)
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -36,6 +37,7 @@ AS
 					. 3: Single Match Parlay
 					. 4: Panalty shootout combo
 					. 5: GOF
+					. 6: Parlay Generator
 		
 		- @sporttype:
 					. -1: Combine Others sport
@@ -107,30 +109,17 @@ BEGIN
 	BEGIN
 		CREATE TABLE #bettype (bettype SMALLINT)
 
-		-- Combo parlay
-		DECLARE @ComboType TINYINT = 0	
-				--1: mix parlay only, 
-				--2: combo parlay only, 
-				--3: GOF only, 
-				--4: combined between mix parlay and GOF, 
-				--5: combined between combo parlay and GOF,
-				--6: combined between mix parlay and combo parlay, 
-				--7: combined all
-		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%'
+		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+	
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
 
-			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT value) = 3 AND SUM(DISTINCT CAST(value as SMALLINT)) = 8 THEN 7 
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 3 THEN 6
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 6 THEN 4
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 7 THEN 5
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 1 THEN 1
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 2 THEN 2
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 5 THEN 3
-								END
-			FROM STRING_SPLIT(@ParlayType, ',') WHERE value IN (1,2,5)
+			INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+			WHERE value IN (1,2,5,6)
 		END
 
 		-- Single match parlay
@@ -162,6 +151,7 @@ BEGIN
 			,winlost_baseRM			MONEY
 			,company_winlost_baseRM	MONEY
 			,IsGOF					BIT
+			,IsParlayGenerator		BIT
 		)
 
 		-- rmBettrans
@@ -172,7 +162,7 @@ BEGIN
 
 			INSERT INTO #tmpBettrans
 			(
-				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, IsGOF
+				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, IsGOF, IsParlayGenerator
 			)
 			SELECT transid, refno, transid2, b.bettype, hdp2 AS combo, TotalBet AS TotalCombo
 				,CASE
@@ -188,6 +178,7 @@ BEGIN
 				,(winlost - actual_stake) * actualrate
 				,CASE WHEN 1 - tpositiontaking = 0 THEN 0 ELSE (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate END
 				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
+				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = -100 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
@@ -196,16 +187,16 @@ BEGIN
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND custid = @custid
 				AND statusID IN (112, 113)
-				AND 1 = CASE
-								WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
-									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
-									WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
-									WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
-									WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
-									WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
-									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
-									ELSE 0 END
-							ELSE 1 END
+				AND (
+					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+						AND b.bettype = 29 AND b.betteam = N'1' AND (b.oddsspread NOT IN (1, -100) OR b.oddsspread IS NULL))
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+						AND b.bettype = 29 AND b.betteam <> N'1')
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = -100)
+					)		
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 		END
 
@@ -217,7 +208,7 @@ BEGIN
 			
 			INSERT INTO #tmpBettrans
 			(
-				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, IsGOF
+				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, IsGOF, IsParlayGenerator
 			)
 			SELECT transid, refno, transid2, b.bettype, hdp2 AS combo, TotalBet AS TotalCombo
 				,CASE
@@ -233,6 +224,7 @@ BEGIN
 				,(winlost - actual_stake) * actualrate
 				,(-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate
 				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
+				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = -100 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 			FROM dbo.rmBettrans_old b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
@@ -241,16 +233,16 @@ BEGIN
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND custid = @custid
 				AND statusID IN (112, 113)
-				AND 1 = CASE
-							WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
-									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
-									WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
-									WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
-									WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
-									WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
-									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
-									ELSE 0 END
-							ELSE 1 END
+				AND (
+					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+						AND b.bettype = 29 AND b.betteam = N'1' AND (b.oddsspread NOT IN (1, -100) OR b.oddsspread IS NULL))
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+						AND b.bettype = 29 AND b.betteam <> N'1')
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = -100)
+					)		
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 
 		END
@@ -272,6 +264,7 @@ BEGIN
 		,b.winlost_baseRM
 		,b.company_winlost_baseRM
 		,b.IsGOF
+		,b.IsParlayGenerator
 	FROM #tmpBettrans b
 		INNER JOIN #tmpSelection s ON b.combo = s.selection
 		INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
@@ -282,5 +275,6 @@ BEGIN
 	DROP TABLE #tmpSelection
 	DROP TABLE #tmpSport
 	DROP TABLE #tmpCurrency
+	DROP TABLE #ParlayType
 END
 GO

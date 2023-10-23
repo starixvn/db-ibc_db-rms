@@ -32,6 +32,7 @@ AS
 		- 20210701@Danny: Track User Monitoring [RedmineID: #153875]
 		- 20220519@Danny: add filter by Site AND username [RedmineID: #172691]
 		- 20230420@Cherry: Add Site column (#186735)
+		- 20231020@Cherry: Parlay Generator (#195498)
 
 	Parameter's Explanation:
 		- @selection:
@@ -171,35 +172,21 @@ BEGIN
 			level TINYINT,
 			oddsspread SMALLMONEY,
 			CustomerClass SMALLINT
-		)
-
-	
+		)	
 
 		CREATE TABLE #bettype (bettype SMALLINT)
-		-- Combo parlay
-		DECLARE @ComboType TINYINT = 0	
-				--1: mix parlay only, 
-				--2: combo parlay only, 
-				--3: GOF only, 
-				--4: combined between mix parlay and GOF, 
-				--5: combined between combo parlay and GOF,
-				--6: combined between mix parlay and combo parlay, 
-				--7: combined all
-		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%'
+
+		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+	
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
 
-			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT value) = 3 AND SUM(DISTINCT CAST(value as SMALLINT)) = 8 THEN 7 
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 3 THEN 6
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 6 THEN 4
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 7 THEN 5
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 1 THEN 1
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 2 THEN 2
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 5 THEN 3
-								END
-			FROM STRING_SPLIT(@ParlayType, ',') WHERE value IN (1,2,5)
+			INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+			WHERE value IN (1,2,5,6)
 		END
 
 		-- Single match parlay
@@ -251,16 +238,16 @@ BEGIN
 				AND b.currency <> 20
 				AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 				AND	ISNULL(mc.level,0) IN (SELECT l.level FROM #level l)
-				AND 1 = CASE
-							WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
-							WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
-							WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
-							WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
-							WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
-							WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
-							WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
-							ELSE 0 END
-								ELSE 1 END
+				AND (
+					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+						AND b.bettype = 29 AND b.betteam = N'1' AND (b.oddsspread NOT IN (1, -100) OR b.oddsspread IS NULL))
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+						AND b.bettype = 29 AND b.betteam <> N'1')
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = -100)
+					)		
 				AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
 
 			DROP TABLE #rmTransRecommend
@@ -297,16 +284,16 @@ BEGIN
 				AND b.currency <> 20
 				AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 				AND	ISNULL(mc.level,0) IN(SELECT l.level FROM #level l)
-				AND 1 = CASE
-							WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
-							WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
-							WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
-							WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
-							WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
-							WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
-							WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
-							ELSE 0 END
-								ELSE 1 END
+				AND (
+					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+						AND b.bettype = 29 AND b.betteam = N'1' AND (b.oddsspread NOT IN (1, -100) OR b.oddsspread IS NULL))
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+						AND b.bettype = 29 AND b.betteam <> N'1')
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = -100)
+					)		
 				AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
 		END
 
@@ -421,5 +408,6 @@ BEGIN
 	END
 	
 	DROP TABLE #bettrans_details
+	DROP TABLE #ParlayType
 END
 GO
