@@ -23,6 +23,7 @@ AS
 		- 20210628@Danny: Add Column Member Potential Winning [RedmineID: #156979]
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20230320@Cherry: Change formula of Stake (#185251)
+		- 20231020@Cherry: Parlay Generator (#195498)
 		
 	Parameter's Explanation:
 		- @selection:
@@ -43,6 +44,7 @@ AS
 					. 3: Single Match Parlay
 					. 4: Panalty shootout combo
 					. 5: GOF
+					. 6: Parlay Generator
 */
 
 BEGIN
@@ -105,30 +107,17 @@ BEGIN
 
 		CREATE TABLE #bettype (bettype SMALLINT)
 
-		-- Combo parlay
-		DECLARE @ComboType TINYINT = 0	
-				--1: mix parlay only, 
-				--2: combo parlay only, 
-				--3: GOF only, 
-				--4: combined between mix parlay and GOF, 
-				--5: combined between combo parlay and GOF,
-				--6: combined between mix parlay and combo parlay, 
-				--7: combined all
-		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%'
+		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+	
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
 
-			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT val) = 3 AND SUM(DISTINCT CAST(val as SMALLINT)) = 8 THEN 7 
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 3 THEN 6
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 6 THEN 4
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 7 THEN 5
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 1 THEN 1
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 2 THEN 2
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 5 THEN 3
-								END
-			FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2,5)
+			INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+			WHERE value IN (1,2,5,6)
 		END
 
 		-- Single match parlay
@@ -149,6 +138,16 @@ BEGIN
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 		WHERE b.statusID = 0
 			AND b.custid = @custid
+			AND (
+				(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+					AND b.bettype = 29 AND b.betteam = N'1' AND (b.oddsspread NOT IN (1, -100) OR b.oddsspread IS NULL))
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+					AND b.bettype = 29 AND b.betteam <> N'1')
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+				AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = -100)
+				)		
 
 		DROP TABLE #bettype
 		DROP TABLE #tmpSelection
@@ -191,24 +190,7 @@ BEGIN
 			DELETE b
 			FROM #bettrans b
 			WHERE b.CornerParlay = 0
-		END
-
-		-- Filter by ComboType
-		IF @ComboType IN (1,2,3,4,5,6)
-		BEGIN
-			IF @ComboType = 1 -- Mix parlay only
-				DELETE #bettrans WHERE bettype = 29 AND  betteam <> N'1' OR (bettype = 29 AND betteam = N'1' AND oddsspread = 1)
-				ELSE IF @ComboType = 2 -- Combo parlay only
-					DELETE #bettrans WHERE bettype = 29 AND betteam = N'1'
-					ELSE IF @ComboType = 3 -- GOF only
-						DELETE #bettrans WHERE (bettype = 29 AND betteam <> N'1') OR (bettype = 29 AND betteam = N'1' AND (oddsspread <> 1 OR oddsspread IS NULL))
-						ELSE IF @ComboType = 4  -- combined between mix parlay and GOF
-							DELETE #bettrans WHERE bettype = 29 AND betteam <> N'1'
-							ELSE IF @ComboType = 5  -- combined between combo parlay and GOF
-								DELETE #bettrans WHERE bettype = 29 AND  betteam = N'1' AND (oddsspread <> 1 OR oddsspread IS NULL)
-								ELSE IF @ComboType = 6  -- combined between mix parlay and combo parlay
-									DELETE #bettrans WHERE bettype = 29 AND  betteam = N'1' AND oddsspread = 1
-		END
+		END		
 		
 	END
 
@@ -228,6 +210,7 @@ BEGIN
 			,rb.TotalBet AS TotalBet
 			,CASE WHEN rb.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE rb.transid2 END AS Sporttype,
 			CAST(CASE WHEN rb.bettype = 29 AND rb.betteam= N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF,
+			CAST(CASE WHEN rb.bettype = 29 AND rb.betteam= N'1' AND rb.oddsspread = -100 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator,
 			(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt,
 			ci.CustomerClass
 		FROM rmBettrans rb WITH(NOLOCK)
@@ -237,5 +220,6 @@ BEGIN
 	END
 
 	DROP TABLE #bettrans
+	DROP TABLE #ParlayType
 END
 GO
