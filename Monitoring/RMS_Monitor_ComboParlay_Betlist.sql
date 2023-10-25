@@ -43,6 +43,7 @@ AS
 		- 20221121@Danny: enhance perfomance [RedmineID: #180707]
 		- 20230320@Cherry: Change formula of Stake (#185251)
 		- 20230420@Cherry: Add Site column (#186735)
+		- 20230824@Cherry: Parlay Boost Bonus (#192681)
 
 	Parameter's Explanation:
 		- @selection:
@@ -383,6 +384,7 @@ BEGIN
 		(
 			custid INT
 			,transdate DATETIME
+			,IsBoostBonus BIT
 			,transid BIGINT
 			,refno BIGINT
 			,SiteGroup VARCHAR(10)
@@ -409,12 +411,13 @@ BEGIN
 		)
 		INSERT INTO #Result
 		(
-			custid, transdate, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
+			custid, transdate, IsBoostBonus, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
 			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF, potentialWinningAmt, CustomerClass , TrackingUser
 		)
 		SELECT
 			rb.custid
 			,rb.transdate
+			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
 			,rb.transid
 			,rb.refno
 			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
@@ -446,7 +449,7 @@ BEGIN
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.custid = rb.custid
 			LEFT JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
 		WHERE ISNULL(mc.level, 0) IN (SELECT level FROM #level)
-		AND ((rb.odds2 * rb.TotalBet) <= @Odds OR @Odds IS NULL)
+			AND ((rb.odds2 * rb.TotalBet) <= @Odds OR @Odds IS NULL)
 			AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 			AND  (rb.stake * rb.actualrate) >= CASE WHEN @reportType = 1 THEN @stake ELSE 0 END
 			AND  ((rb.odds2 - 1) * rb.stake * rb.actualrate * (1 - rb.tpositiontaking)) >= CASE WHEN @reportType = 2 THEN @maxpayout ELSE 0 END
@@ -473,10 +476,10 @@ BEGIN
 
 		CREATE INDEX IX_Index ON #Result (transid)
 		
-		SELECT custid, transdate, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
+		SELECT custid, transdate, IsBoostBonus, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
 			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt, CustomerClass, TrackingUser
 		FROM (
-				SELECT custid, transdate, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
+				SELECT custid, transdate, IsBoostBonus, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
 					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, potentialWinningAmt, CustomerClass, TrackingUser
 					,ROW_NUMBER() OVER(ORDER BY transid DESC) AS rn
 				FROM #Result
