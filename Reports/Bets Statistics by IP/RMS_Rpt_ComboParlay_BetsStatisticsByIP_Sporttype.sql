@@ -17,7 +17,7 @@ AS
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
-
+		- 20231020@Cherry: Parlay Boost Bonus (#192681)
 
 	Parameter's Explanation:
 		@sporttype = '1': soccer only
@@ -32,7 +32,18 @@ BEGIN
             a.transdate,
             a.bettype,
             a.modds,
-            a.odds,
+			CASE WHEN a.bettype = 29 AND a.betteam = N'1' AND a.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus,
+            CASE WHEN a.bettype = 29 AND a.betteam = N'1' AND a.oddsspread = 2 THEN
+				CAST((a.odds2 + TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS DECIMAL(19,6))) / 
+					(1 + TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS DECIMAL(19,6))) AS SMALLMONEY)				
+				ELSE a.odds END odds,
+			CASE WHEN a.statusID = 112 AND ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) > 0 
+				THEN r.mOdds
+				ELSE a.odds2 END odds2,
+			CASE WHEN a.statusID = 112 AND ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) > 0 
+				THEN r.ExtraValue
+				ELSE ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) END bbp,
+			ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) bba,
             a.stake,
 			a.statusid,
             a.status,
@@ -52,10 +63,11 @@ BEGIN
 			a.oddsspread,
 			bm.ExtraInfo,
 			a.actual_stake,
-			CAST( CASE WHEN a.bettype = 29 AND a.oddsspread = 1 AND  a.betteam = N'1' THEN 1 ELSE 0 END AS BIT) IsGOF
+			CAST(CASE WHEN a.bettype = 29 AND a.oddsspread = 1 AND  a.betteam = N'1' THEN 1 ELSE 0 END AS BIT) IsGOF
      FROM dbo.rmBettrans a WITH (NOLOCK)
           LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON m.matchid = a.matchid AND a.bettype IN (38, 376)
 		  LEFT JOIN  bodb02.dbo.bettrans bm WITH (NOLOCK) ON a.transid = bm.transid
+		  LEFT JOIN bodb02.dbo.BetParlayResult r WITH (NOLOCK) ON bm.refno = r.RefNo
      WHERE a.IP = @IP
 		AND a.custid = @custid
 		AND a.transdate >= @fromdate AND a.transdate < DATEADD(DAY, 1, @fromdate)
