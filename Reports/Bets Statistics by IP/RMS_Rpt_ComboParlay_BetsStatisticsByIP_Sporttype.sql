@@ -63,7 +63,7 @@ BEGIN
 			a.oddsspread,
 			bm.ExtraInfo,
 			a.actual_stake,
-			CAST(CASE WHEN a.bettype = 29 AND a.oddsspread = 1 AND  a.betteam = N'1' THEN 1 ELSE 0 END AS BIT) IsGOF
+			CAST(CASE WHEN a.bettype = 29 AND a.oddsspread = 1 AND a.betteam = N'1' THEN 1 ELSE 0 END AS BIT) IsGOF
      FROM dbo.rmBettrans a WITH (NOLOCK)
           LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON m.matchid = a.matchid AND a.bettype IN (38, 376)
 		  LEFT JOIN  bodb02.dbo.bettrans bm WITH (NOLOCK) ON a.transid = bm.transid
