@@ -9,6 +9,8 @@ AS
 		Date: 2014-04-18
 		Task: Get details info for Combination System Parlay
 		DB: DBRMS/bodb_RMS
+		Revision:
+			- 20231020@Cherry: Parlay Boost Bonus (#192681)
 		
 	*/ 
 BEGIN
