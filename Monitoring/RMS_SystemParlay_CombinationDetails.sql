@@ -99,7 +99,7 @@ BEGIN
 	-- return combo detail
 	SELECT 
 		winlostdate,
-		0 transid,
+		transid,
 		serial,
 		statusid,	
 		CASE statusid WHEN 101 THEN 'REJECT'
