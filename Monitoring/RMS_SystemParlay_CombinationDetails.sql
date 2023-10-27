@@ -43,8 +43,8 @@ BEGIN
 			awayid		INT
 		)	
 		
-	INSERT INTO #tmpResults(winlostdate, serial, statusid, modds, IsBoostBonus, odds, odds2, bbp, bba, stake, winlost)
-		SELECT b.winlostdate, b.serial, b.statusid, b.modds, 
+	INSERT INTO #tmpResults(winlostdate, transid, serial, statusid, modds, IsBoostBonus, odds, odds2, bbp, bba, stake, winlost)
+		SELECT b.winlostdate, bm.transid, b.serial, b.statusid, b.modds, 
 			CASE WHEN bm.bettype = 29 AND bm.betteam = N'1' AND bm.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus,
             CASE WHEN bm.bettype = 29 AND bm.betteam = N'1' AND bm.oddsspread = 2 THEN
 				CAST((a.odds2 + TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS DECIMAL(19,6))) / 
@@ -59,8 +59,8 @@ BEGIN
 			ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) bba,
 			b.stake, b.winlost
 		FROM bodb02.dbo.betparlayresult b WITH(NOLOCK) 
-			LEFT JOIN bodb02.dbo.bettrans bm WITH (NOLOCK) ON bm.refno = b.RefNo
-			LEFT JOIN dbo.rmBettrans a WITH (NOLOCK) ON b.transid = a.transid
+			INNER JOIN bodb02.dbo.bettrans bm WITH (NOLOCK) ON bm.refno = b.RefNo
+			INNER JOIN dbo.rmBettrans a WITH (NOLOCK) ON bm.transid = a.transid
 		WHERE b.refno = @refno
 	
 	INSERT INTO #BetParlayDetail(RefNo, Serial, matchid)
