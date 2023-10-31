@@ -100,7 +100,7 @@ BEGIN
 	SELECT 
 		winlostdate,
 		transid,
-		serial,
+		CASE WHEN statusid IN (0,1,113) THEN 0 ELSE serial END serial,
 		statusid,	
 		CASE statusid WHEN 101 THEN 'REJECT'
 						WHEN 102 THEN 'VOID'
