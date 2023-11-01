@@ -241,13 +241,13 @@ BEGIN
 				AND	ISNULL(mc.level,0) IN (SELECT l.level FROM #level l)
 				AND (
 					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND b.bettype = 29 AND b.betteam = N'1' AND (b.oddsspread NOT IN (1, -100) OR b.oddsspread IS NULL))
+						AND b.bettype = 29 AND b.betteam = N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = -100)
+					AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
 					)		
 				AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
 
@@ -287,13 +287,13 @@ BEGIN
 				AND	ISNULL(mc.level,0) IN(SELECT l.level FROM #level l)
 				AND (
 					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND b.bettype = 29 AND b.betteam = N'1' AND (b.oddsspread NOT IN (1, -100) OR b.oddsspread IS NULL))
+						AND b.bettype = 29 AND b.betteam = N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = -100)
+					AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
 					)		
 				AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
 		END

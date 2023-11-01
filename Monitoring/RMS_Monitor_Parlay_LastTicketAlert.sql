@@ -15,6 +15,7 @@ AS
 		- 20200703@Percy: Add jobtype to support many jobs [RedmineID: #137010]
 		- 20210414@Danny: Notify/Alert for ticket have half-lose selection [RedmineID: #137010]
 		- 20230620@Cherry: Manage Alert (#189147)
+		- 20231101@Cherry: Parlay Generator (#195498)
 */
 
 BEGIN
@@ -39,6 +40,7 @@ BEGIN
 	  totalbets			INT,
       housept           MONEY, 
       betteam           NVARCHAR(10), 
+	  ExtraInfo			VARCHAR(1000),
       numberlose        INT DEFAULT(0), 
       numberrunning     INT DEFAULT(0)
      );
@@ -55,7 +57,8 @@ BEGIN
 	  stake,
 	  totalbets,
       housept, 
-      betteam
+      betteam,
+	  ExtraInfo
      )
             SELECT b.transid, 
                    b.refno, 
@@ -77,7 +80,8 @@ BEGIN
 				   SUM(b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END) AS stake,
 				   SUM(b.totalbet) AS totalbets,
                    AVG(1 - b.tpositiontaking) AS HousePT, 
-                   b.betteam AS BetTeam
+                   b.betteam AS BetTeam,
+				   b.ExtraInfo
             FROM rmBettrans AS b WITH(NOLOCK)
             WHERE b.bettype = @BetType
                   AND b.statusid = 0
@@ -91,7 +95,8 @@ BEGIN
                      b.Username, 
                      b.CurrencyName, 
                      b.hdp2, 
-                     b.betteam
+                     b.betteam,
+					 b.ExtraInfo
             HAVING SUM((b.odds2 - 1) * b.stake * CASE
                                                      WHEN @IsTest = 1
                                                      THEN 1
@@ -153,8 +158,8 @@ BEGIN
 			WHERE ISNULL(JobType, 1) = 1;
      -- SELECT 
      SELECT CASE
-                WHEN s.betteam = '1'
-                THEN 'Mix Parlay'
+                WHEN s.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0) <> 5 THEN 'Mix Parlay'
+				WHEN s.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0) = 5 THEN 'Parlay Generator'
                 ELSE 'Combo Parlay'
             END AS ParlayType, 
             s.transid AS TransId, 
@@ -167,8 +172,8 @@ BEGIN
             s.housept AS HousePt, 
             ISNULL(p.AlertAmount, 0) AS AlertAmount,
 			COMPRESS((SELECT CAST(t.TransId AS VARCHAR) AS 'tl',
-					CASE WHEN t.betteam = '1'
-						THEN 'Mix Parlay'
+					CASE WHEN s.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0) <> 5 THEN 'Mix Parlay'
+						WHEN s.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0) = 5 THEN 'Parlay Generator'
 						ELSE 'Combo Parlay'
 					END AS 'sp',
 					CAST(t.totalselection AS VARCHAR) AS 'sl',

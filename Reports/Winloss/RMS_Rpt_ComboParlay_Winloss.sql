@@ -182,13 +182,13 @@ BEGIN
 				AND b.currency <> 20
 				AND (
 					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND b.bettype = 29 AND b.betteam = N'1' AND (b.oddsspread NOT IN (1, -100) OR b.oddsspread IS NULL))
+						AND b.bettype = 29 AND b.betteam = N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = -100)
+					AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
 					)		
 				AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)

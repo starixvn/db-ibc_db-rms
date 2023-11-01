@@ -11,6 +11,7 @@ AS
 	Revisions:
 		- 20200703@Percy: Initialize SP [RedmineID: #137010]
 		- 20230620@Cherry: Manage Alert (#189147)
+		- 20231101@Cherry: Parlay Generator (#195498)
 */
 
 BEGIN
@@ -56,7 +57,9 @@ BEGIN
 	)
 	SELECT
 		b.TransId,
-		CASE WHEN b.betteam = N'1' THEN 'Mix Parlay' ELSE 'Combo Parlay' END AS ParlayType,
+		CASE WHEN b.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0) <> 5 THEN 'Mix Parlay' 
+			WHEN b.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0) = 5 THEN 'Parlay Generator'
+			ELSE 'Combo Parlay' END AS ParlayType,
 		b.Username,
 		e.currency,
 		b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END AS stake,

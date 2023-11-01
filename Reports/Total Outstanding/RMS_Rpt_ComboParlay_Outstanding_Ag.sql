@@ -155,13 +155,13 @@ BEGIN
 				AND statusid = 0
 				AND (
 					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND rb.bettype = 29 AND rb.betteam = N'1' AND (rb.oddsspread NOT IN (1, -100) OR rb.oddsspread IS NULL))
+						AND rb.bettype = 29 AND rb.betteam = N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND rb.bettype = 29 AND rb.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = -100)
+					AND rb.bettype = 29 AND rb.betteam = N'1' AND TRY_CAST(TRY_CAST(rb.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
 					)		
 				AND t.CornerParlay > 0
 			GROUP BY rb.custid,	rb.username, ci.CustomerClass
@@ -186,13 +186,13 @@ BEGIN
 				AND statusid = 0
 				AND (
 					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND rb.bettype = 29 AND rb.betteam = N'1' AND (rb.oddsspread NOT IN (1, -100) OR rb.oddsspread IS NULL))
+						AND rb.bettype = 29 AND rb.betteam = N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND rb.bettype = 29 AND rb.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = -100)
+					AND rb.bettype = 29 AND rb.betteam = N'1' AND TRY_CAST(TRY_CAST(rb.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
 					)		
 			GROUP BY  rb.custid, rb.username, ci.CustomerClass
 			ORDER  BY net_win DESC

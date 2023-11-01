@@ -159,7 +159,7 @@ BEGIN
 				,(winlost - actual_stake) * actualrate
 				,CASE WHEN 1 - tpositiontaking = 0 THEN 0 ELSE (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate END
 				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
-				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = -100 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
+				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
@@ -170,13 +170,13 @@ BEGIN
 				AND b.currency <> 20
 				AND (
 					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND b.bettype = 29 AND b.betteam = N'1' AND (b.oddsspread NOT IN (1, -100) OR b.oddsspread IS NULL))
+						AND b.bettype = 29 AND b.betteam = N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = -100)
+					AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
 				)		
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 		END
@@ -205,7 +205,7 @@ BEGIN
 				,(winlost - actual_stake) * actualrate
 				,(-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate
 				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
-				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = -100 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
+				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 			FROM dbo.rmBettrans_old b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
@@ -216,13 +216,13 @@ BEGIN
 				AND b.currency <> 20
 				AND (
 					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND b.bettype = 29 AND b.betteam = N'1' AND (b.oddsspread NOT IN (1, -100) OR b.oddsspread IS NULL))
+						AND b.bettype = 29 AND b.betteam = N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = -100)
+					AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
 					)		
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 

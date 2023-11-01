@@ -145,13 +145,13 @@ BEGIN
 		AND b.currency <> 20
 		AND (
 			(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-				AND b.bettype = 29 AND b.betteam = N'1' AND (b.oddsspread NOT IN (1, -100) OR b.oddsspread IS NULL))
+				AND b.bettype = 29 AND b.betteam = N'1')
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 				AND b.bettype = 29 AND b.betteam <> N'1')
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 				AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-			AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = -100)
+			AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
 			)		
 
 	CREATE CLUSTERED INDEX CIX_bettype ON #bettrans (bettype)
@@ -209,7 +209,7 @@ BEGIN
 		,b.hdp2 AS TotalSelection
 		,b.TotalBet AS TotalBet
 		,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
-		,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = -100 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
+		,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 		,l.username AS TrackingUser
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN #bettrans rb ON rb.transid = b.transid
