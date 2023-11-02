@@ -364,9 +364,8 @@ BEGIN
 						+  'SELECT transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName, CustomerClass, IsParlayGenerator
 							FROM
 							(
-								SELECT
-									b.transdate,b.transid,b.refno,b.custid,b.SiteGroup,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName, b.CustomerClass, b.IsParlayGenerator
-									,ROW_NUMBER() OVER(ORDER BY b.' + @sortedColumn + CASE WHEN @IsSortAsc = 0 THEN ' DESC' ELSE ' ' END + ') AS rn
+								SELECT ROW_NUMBER() OVER(ORDER BY b.' + @sortedColumn + CASE WHEN @IsSortAsc = 0 THEN ' DESC' ELSE ' ' END + ') AS rn,
+									b.transdate,b.transid,b.refno,b.custid,b.SiteGroup,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName, b.CustomerClass, b.IsParlayGenerator									
 								FROM #rmBettrans b
 									LEFT JOIN dbo.rmCustomer c WITH (NOLOCK) ON b.custid = c.custid
 								WHERE ISNULL(c.level, 0) IN (SELECT level FROM #level)
