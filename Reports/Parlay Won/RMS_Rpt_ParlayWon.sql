@@ -34,6 +34,7 @@ AS
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
 		- 20230420@Cherry: Add Site column (#186735)
+		- 20231020@Cherry: Parlay Generator (#195498)
 
 	Parameter's Explanation:
 		- @selection:
@@ -60,6 +61,7 @@ AS
 					. 3: Single Match Parlay
 					. 4: Panalty shootout combo
 					. 5: GOF
+					. 6: Parlay Generator
 
 		- @SortById: sort base on column:
 					. 1: transdate
@@ -142,38 +144,28 @@ BEGIN
 	BEGIN
 		DECLARE @bettypes VARCHAR(MAX)
 
-		-- Combo parlay
-		DECLARE @ComboType TINYINT = 0	
-				--1: mix parlay only, 
-				--2: combo parlay only, 
-				--3: GOF only, 
-				--4: combined between mix parlay and GOF, 
-				--5: combined between combo parlay and GOF,
-				--6: combined between mix parlay and combo parlay, 
-				--7: combined all
-		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%'
-		BEGIN
-			SELECT @bettypes = COALESCE(@bettypes + ',', '') + '29'
+		CREATE TABLE #bettype (bettype SMALLINT)
 
-			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT val) = 3 AND SUM(DISTINCT CAST(val as SMALLINT)) = 8 THEN 7 
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 3 THEN 6
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 6 THEN 4
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 7 THEN 5
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 1 THEN 1
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 2 THEN 2
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 5 THEN 3
-								END
-			FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2,5)
+		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+	
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
+		BEGIN
+			INSERT INTO #bettype (bettype)
+			VALUES (29)
+
+			INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+			WHERE value IN (1,2,5,6)
 		END
 
 		-- Single match parlay
 		IF ',' + @ParlayType + ',' LIKE '%,3,%'
-			SELECT @bettypes = COALESCE(@bettypes + ',', '') + '38'
+			INSERT INTO #bettype (bettype) VALUES (38)
 
 		-- Penalty shootout combo
 		IF ',' + @ParlayType + ',' LIKE '%,4,%'
-			SELECT @bettypes = COALESCE(@bettypes + ',', '') + '376'
+			INSERT INTO #bettype (bettype) VALUES (376)
 
 		DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME
 
@@ -197,6 +189,7 @@ BEGIN
 			,IP					VARCHAR(45)
 			,currencyName		NVARCHAR(50)
 			,CustomerClass		SMALLINT
+			,IsParlayGenerator  BIT
 		)
 
 		IF @ToDate > @MoveBetsDay
@@ -207,10 +200,10 @@ BEGIN
 		
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator
 			)
 			SELECT
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator
 			FROM
 			(
 				SELECT
@@ -232,29 +225,29 @@ BEGIN
 					,b.IP
 					,b.CurrencyName
 					,ci.CustomerClass
+					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END IsParlayGenerator
 				FROM dbo.rmBettrans b WITH (NOLOCK)
+					INNER JOIN #bettype bt ON b.bettype = bt.bettype
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
 					CROSS APPLY (SELECT TOP 1 sp.sporttype FROM @tmpSport sp WHERE b.transid2 = sp.sporttype) sp
 					CROSS APPLY (SELECT TOP 1 tc.currency FROM @tmpCurrency tc WHERE b.currency = tc.currency) tc
 					INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
 					INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
 					INNER JOIN bodb02.dbo.Site st WITH(NOLOCK) ON ct.site = st.site
-				WHERE b.winlostdate BETWEEN @FDate AND @TDate
-					AND b.bettype IN (29, 38, 376)
-					AND CHARINDEX(',' + CONVERT(VARCHAR(10), b.bettype) + ',', ',' + @bettypes + ',') > 0
+				WHERE b.winlostdate BETWEEN @FDate AND @TDate					
 					AND b.statusID = 112
 					AND b.currency <> 20
 					AND ((winlost - actual_stake) * (1 - b.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate >= @FromHouseAmt
-					AND 1 = CASE
-									WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
-									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
-									WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
-									WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
-									WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
-									WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
-									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
-									ELSE 0 END
-								ELSE 1 END
+					AND (
+						(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+							AND b.bettype = 29 AND b.betteam = N'1')
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+							AND b.bettype = 29 AND b.betteam <> N'1')
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+						AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
+						)		
 					AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 					AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 					AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
@@ -269,10 +262,10 @@ BEGIN
 
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator
 			)
 			SELECT
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator
 			FROM
 			(
 				SELECT
@@ -294,29 +287,29 @@ BEGIN
 					,b.IP
 					,b.CurrencyName
 					,ci.CustomerClass
+					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END IsParlayGenerator
 				FROM dbo.rmBettrans_Old b WITH (NOLOCK)
+					INNER JOIN #bettype bt ON b.bettype = bt.bettype
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
 					CROSS APPLY (SELECT TOP 1 sp.sporttype FROM @tmpSport sp WHERE b.transid2 = sp.sporttype) sp
 					CROSS APPLY (SELECT TOP 1 tc.currency FROM @tmpCurrency tc WHERE b.currency = tc.currency) tc
 					INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
 					INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
 					INNER JOIN bodb02.dbo.Site st WITH(NOLOCK) ON ct.site = st.site
-				WHERE b.winlostdate BETWEEN @FDate AND @TDate
-					AND b.bettype IN (29, 38, 376)
-					AND CHARINDEX(',' + CONVERT(VARCHAR(10), b.bettype) + ',', ',' + @bettypes + ',') > 0
+				WHERE b.winlostdate BETWEEN @FDate AND @TDate					
 					AND b.statusID = 112
 					AND b.currency <> 20
 					AND ((winlost - actual_stake) * (1 - b.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate >= @FromHouseAmt
-					AND 1 = CASE
-								WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
-									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
-									WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
-									WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
-									WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
-									WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
-									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
-									ELSE 0 END
-								ELSE 1 END
+					AND (
+						(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+							AND b.bettype = 29 AND b.betteam = N'1')
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+							AND b.bettype = 29 AND b.betteam <> N'1')
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+						AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
+						)		
 					AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 					AND (b.livehomescore = @LiveStatus OR @LiveStatus = 3)
 					AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
@@ -368,11 +361,11 @@ BEGIN
 		DECLARE @SQL VARCHAR(MAX)
 		SELECT  @SQL = 'CREATE INDEX IX_Index ON #rmBettrans (' + @sortedColumn + ')' + CHAR(13)
 		SELECT  @SQL = @SQL
-						+  'SELECT transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName, CustomerClass
+						+  'SELECT transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName, CustomerClass, IsParlayGenerator
 							FROM
 							(
 								SELECT
-									b.transdate,b.transid,b.refno,b.custid,b.SiteGroup,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName, b.CustomerClass
+									b.transdate,b.transid,b.refno,b.custid,b.SiteGroup,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName, b.CustomerClass, b.IsParlayGenerator
 									,ROW_NUMBER() OVER(ORDER BY b.' + @sortedColumn + CASE WHEN @IsSortAsc = 0 THEN ' DESC' ELSE ' ' END + ') AS rn
 								FROM #rmBettrans b
 									LEFT JOIN dbo.rmCustomer c WITH (NOLOCK) ON b.custid = c.custid
@@ -385,5 +378,7 @@ BEGIN
 
 	DROP TABLE #level
 	DROP TABLE #rmBettrans
+	DROP TABLE #bettype
+	DROP TABLE #ParlayType
 END
 GO
