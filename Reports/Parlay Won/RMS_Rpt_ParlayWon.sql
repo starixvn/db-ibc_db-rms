@@ -169,6 +169,12 @@ BEGIN
 
 		DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME
 
+		CREATE TABLE #tmpBettrans
+		(
+			transid BIGINT,
+			bact INT
+		)
+
 		CREATE TABLE #rmBettrans
 		(
 			transdate			DATETIME
@@ -196,7 +202,17 @@ BEGIN
 		BEGIN
 			SELECT	@FDate = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END
 					,@TDate = @ToDate
-
+			
+			INSERT INTO #tmpBettrans(transid, bact)
+			SELECT transid,
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+			FROM 
+				dbo.rmBettrans WITH (NOLOCK)
+			WHERE winlostdate BETWEEN @FDate AND @TDate
+				AND statusID = 112
+				AND currency <> 20
+				AND bettype = 29 
+				AND betteam = N'1'
 		
 			INSERT INTO #rmBettrans
 			(
@@ -234,6 +250,7 @@ BEGIN
 					INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
 					INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
 					INNER JOIN bodb02.dbo.Site st WITH(NOLOCK) ON ct.site = st.site
+					LEFT JOIN #tmpBettrans t ON b.transid = t.transid
 				WHERE b.winlostdate BETWEEN @FDate AND @TDate					
 					AND b.statusID = 112
 					AND b.currency <> 20
@@ -246,7 +263,7 @@ BEGIN
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-						AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
+							AND t.bact = 5)
 						)		
 					AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 					AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
@@ -260,6 +277,17 @@ BEGIN
 			SELECT	@FDate = @FromDate
 					,@TDate = CASE WHEN @ToDate > @MoveBetsDay THEN @MoveBetsDay ELSE @ToDate END
 
+			INSERT INTO #tmpBettrans(transid, bact)
+			SELECT transid,
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+			FROM 
+				dbo.rmBettrans WITH (NOLOCK)
+			WHERE winlostdate BETWEEN @FDate AND @TDate
+				AND statusID = 112
+				AND currency <> 20
+				AND bettype = 29 
+				AND betteam = N'1'
+			
 			INSERT INTO #rmBettrans
 			(
 				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator
@@ -296,6 +324,7 @@ BEGIN
 					INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
 					INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
 					INNER JOIN bodb02.dbo.Site st WITH(NOLOCK) ON ct.site = st.site
+					LEFT JOIN #tmpBettrans t ON b.transid = t.transid
 				WHERE b.winlostdate BETWEEN @FDate AND @TDate					
 					AND b.statusID = 112
 					AND b.currency <> 20
@@ -308,7 +337,7 @@ BEGIN
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-						AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
+							AND t.bact = 5)
 						)		
 					AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 					AND (b.livehomescore = @LiveStatus OR @LiveStatus = 3)
@@ -379,5 +408,6 @@ BEGIN
 	DROP TABLE #rmBettrans
 	DROP TABLE #bettype
 	DROP TABLE #ParlayType
+	DROP TABLE #tmpBettrans
 END
 GO

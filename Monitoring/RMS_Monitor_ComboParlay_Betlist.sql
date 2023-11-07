@@ -214,6 +214,8 @@ BEGIN
 			,IsCornerParlay		BIT DEFAULT(0)
 			,isSelected			BIT DEFAULT(0)
 		)
+
+		CREATE TABLE #tmpBettrans (transid BIGINT, bact INT)
 		
 		CREATE TABLE #bettype (bettype SMALLINT)
 
@@ -243,6 +245,18 @@ BEGIN
 		-- Get main ticket
 		IF EXISTS (SELECT 1 FROM #bettype WHERE bettype = 29) 
 		BEGIN
+			INSERT INTO #tmpBettrans(transid, bact)
+			SELECT transid,
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+			FROM 
+				dbo.rmBettrans WITH (NOLOCK)
+			WHERE winlostdate >= @today
+				AND statusID = 0
+				AND currency <> 20
+				AND bettype = 29 
+				AND matchid = 29
+				AND betteam = N'1'
+
 			INSERT INTO #bettrans (transid, bettype, matchid, refno)
 			SELECT  DISTINCT b.transid, b.bettype, b.matchid, b.refno
 			FROM dbo.rmBettrans b WITH (NOLOCK)
@@ -250,6 +264,7 @@ BEGIN
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 				INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
 				INNER JOIN #company cp ON cp.Site = ct.site
+				LEFT JOIN #tmpBettrans t ON b.transid = t.transid
 			WHERE b.winlostdate >= @today
 			AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
 			AND b.matchid = 29
@@ -264,7 +279,7 @@ BEGIN
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
+					AND t.bact = 5)
 				)		
 			
 		END
@@ -437,13 +452,14 @@ BEGIN
 			,rb.betteam
 			,rb.oddsspread
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END
-			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND TRY_CAST(TRY_CAST(rb.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END
+			,CASE WHEN t.bact = 5 THEN 1 ELSE 0 END
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate
 			,ci.CustomerClass
 			,l.username AS TrackingUser
 		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN #bettrans b ON rb.transid = b.transid AND b.isSelected = 1
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rb.custid = ci.custid
+			LEFT JOIN #tmpBettrans t ON rb.transid = t.transid
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
 			LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON rb.transid = l.transid
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.custid = rb.custid
@@ -476,6 +492,7 @@ BEGIN
 	DROP TABLE #League
 	DROP TABLE #ParlayType
 	DROP TABLE #userList
+	DROP TABLE #tmpBettrans
 
 END
 GO

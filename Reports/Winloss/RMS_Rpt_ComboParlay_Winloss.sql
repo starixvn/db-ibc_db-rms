@@ -141,18 +141,7 @@ BEGIN
 		(
 			transid BIGINT,
 			bact INT
-		)
-
-		INSERT INTO #tmpBettrans(transid, bact)
-		SELECT transid,
-			ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
-		FROM 
-			dbo.rmBettrans WITH (NOLOCK)
-		WHERE winlostdate BETWEEN @f_date AND @t_date
-			AND statusID IN (112, 113)
-			AND currency <> 20
-			AND bettype = 29 
-			AND betteam = N'1'
+		)		
 
 		CREATE TABLE #rptWinloss
 		(
@@ -174,6 +163,17 @@ BEGIN
 		BEGIN
 			SELECT	@f_date = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END
 					,@t_date = @ToDate
+
+			INSERT INTO #tmpBettrans(transid, bact)
+			SELECT transid,
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+			FROM 
+				dbo.rmBettrans WITH (NOLOCK)
+			WHERE winlostdate BETWEEN @f_date AND @t_date
+				AND statusID IN (112, 113)
+				AND currency <> 20
+				AND bettype = 29 
+				AND betteam = N'1'
 
 			INSERT INTO #rptWinloss
 			(
