@@ -129,6 +129,8 @@ BEGIN
 
 		DECLARE @f_date SMALLDATETIME, @t_date SMALLDATETIME
 
+		CREATE TABLE #tmpBettrans (transid BIGINT, bact INT)
+
 		CREATE TABLE #tmpSum
 		(
 			month			VARCHAR(7)
@@ -148,6 +150,16 @@ BEGIN
 		BEGIN
 			SELECT	@f_date = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END
 					,@t_date = @ToDate
+
+			INSERT INTO #tmpBettrans (transid, bact)
+			SELECT transid,
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+			FROM dbo.rmBettrans WITH (NOLOCK)
+			WHERE winlostdate BETWEEN @f_date AND @t_date
+				AND statusID IN (112, 113)
+				AND currency <> 20
+				AND bettype = 29 
+				AND betteam = N'1'
 
 			INSERT INTO #tmpSum
 			(
@@ -177,6 +189,7 @@ BEGIN
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+				LEFT JOIN #tmpBettrans t ON b.transid = t.transid
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND custid = @custid
 				AND statusID IN (112, 113)
@@ -189,7 +202,7 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
+						AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
 					)		
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120)
@@ -302,5 +315,6 @@ BEGIN
 	DROP TABLE #tmpSport
 	DROP TABLE #tmpSum
 	DROP TABLE #ParlayType
+	DROP TABLE #tmpBettrans
 END
 GO
