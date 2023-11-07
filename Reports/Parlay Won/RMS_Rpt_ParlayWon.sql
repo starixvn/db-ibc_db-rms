@@ -241,7 +241,7 @@ BEGIN
 					,b.IP
 					,b.CurrencyName
 					,ci.CustomerClass
-					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END IsParlayGenerator
+					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5 THEN 1 ELSE 0 END IsParlayGenerator
 				FROM dbo.rmBettrans b WITH (NOLOCK)
 					INNER JOIN #bettype bt ON b.bettype = bt.bettype
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
@@ -281,7 +281,7 @@ BEGIN
 			SELECT transid,
 				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
 			FROM 
-				dbo.rmBettrans WITH (NOLOCK)
+				dbo.rmBettrans_Old WITH (NOLOCK)
 			WHERE winlostdate BETWEEN @FDate AND @TDate
 				AND statusID = 112
 				AND currency <> 20
@@ -315,7 +315,7 @@ BEGIN
 					,b.IP
 					,b.CurrencyName
 					,ci.CustomerClass
-					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END IsParlayGenerator
+					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5 THEN 1 ELSE 0 END IsParlayGenerator
 				FROM dbo.rmBettrans_Old b WITH (NOLOCK)
 					INNER JOIN #bettype bt ON b.bettype = bt.bettype
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
