@@ -94,7 +94,7 @@ BEGIN
 		TotalSelection SMALLMONEY,
 		Sporttype BIGINT,
 		Status NVARCHAR(10),
-		IsGenerator BIT,
+		IsParlayGenerator BIT,
 	)
 	
 	SELECT @AlertType = AlertType
@@ -225,7 +225,7 @@ BEGIN
 			TotalSelection,
 			Sporttype,
 			Status,
-			IsGenerator
+			IsParlayGenerator
 		)
 		SELECT
 			transdate,
@@ -277,7 +277,7 @@ BEGIN
 			TotalSelection,
 			Sporttype,
 			Status,
-			IsGenerator
+			IsParlayGenerator
 		)
 		SELECT
 			transdate,
@@ -335,7 +335,7 @@ BEGIN
 				 WHEN t.Sporttype NOT IN (1, -4, -5, -3, -1) THEN s.SportName
 			END  AS SportType,
 			Status,
-			IsGenerator
+			IsParlayGenerator
 		FROM #tmpPotential t
 			LEFT JOIN bodb02.dbo.Sports s WITH(NOLOCK) ON t.Sporttype = s.SportType
 	END	
