@@ -210,7 +210,7 @@ BEGIN
 			,rb.TotalBet AS TotalBet
 			,CASE WHEN rb.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE rb.transid2 END AS Sporttype,
 			CAST(CASE WHEN rb.bettype = 29 AND rb.betteam= N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF,
-			CAST(CASE WHEN rb.bettype = 29 AND rb.betteam= N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator,
+			CAST(CASE WHEN rb.bettype = 29 AND rb.betteam= N'1' AND TRY_CAST(TRY_CAST(rb.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator,
 			(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt,
 			ci.CustomerClass
 		FROM rmBettrans rb WITH(NOLOCK)

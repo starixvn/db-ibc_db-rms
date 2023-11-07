@@ -22,6 +22,7 @@ AS
 		- 20211111@Danny: Total Combo Bet data is incorrectly [RedmineID: #164563]
 		- 20230420@Cherry: Add Site column (#186735)
 		- 20231005@Cherry: Enhance code (#195077)
+		- 20231020@Cherry: Parlay Generator (#195498)
 		
 	Parameter's Explanation:
 		- @selection:
@@ -48,6 +49,7 @@ AS
 					. 3: Single Match Parlay
 					. 4: Panalty shootout combo
 					. 5: GOF
+					. 6: Parlay Generator
 */
 
 BEGIN
@@ -147,42 +149,28 @@ BEGIN
 		)
 
 
-		DECLARE  @bettype TABLE (bettype SMALLINT)
-
-		-- Combo parlay
-		DECLARE @ComboType TINYINT = 0	
-				--1: mix parlay only, 
-				--2: combo parlay only, 
-				--3: GOF only, 
-				--4: combined between mix parlay and GOF, 
-				--5: combined between combo parlay and GOF,
-				--6: combined between mix parlay and combo parlay, 
-				--7: combined all
+		CREATE TABLE #bettype (bettype SMALLINT)	
+		CREATE TABLE #ParlayType (ParlayType SMALLINT)
 		
 		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%'
 		BEGIN
-			INSERT INTO @bettype (bettype)
+			INSERT INTO #bettype (bettype)
 			VALUES (29)
 
-			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT val) = 3 AND SUM(DISTINCT CAST(val as SMALLINT)) = 8 THEN 7 
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 3 THEN 6
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 6 THEN 4
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 7 THEN 5
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 1 THEN 1
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 2 THEN 2
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 5 THEN 3
-								END
-			FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2,5)
+			INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+			WHERE value IN (1,2,5,6)
 		END
 
 		-- Single match parlay
 		IF ',' + @ParlayType + ',' LIKE '%,3,%'
-			INSERT INTO @bettype (bettype)
+			INSERT INTO #bettype (bettype)
 			VALUES (38)
 
 		-- Penalty shootout combo
 		IF ',' + @ParlayType + ',' LIKE '%,4,%'
-			INSERT INTO @bettype (bettype)
+			INSERT INTO #bettype (bettype)
 			VALUES (376)
 
 		
@@ -195,15 +183,25 @@ BEGIN
 			INSERT INTO  #bettrans (transid, matchid, refno, bettype, betteam, oddsspread, custid)
 			SELECT	    b.transid, b.matchid, b.refno, b.bettype, b.betteam, b.oddsspread, b.custid
 			FROM		dbo.rmBettrans b WITH (NOLOCK)
-			INNER JOIN @bettype bt ON b.bettype = bt.bettype
-			INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
-			INNER JOIN @tmpSport sp ON b.transid2 = sp.sporttype
-			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
+				INNER JOIN #bettype bt ON b.bettype = bt.bettype
+				INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN @tmpSport sp ON b.transid2 = sp.sporttype
+				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
 			WHERE 	  b.custid = @CustID
-						AND b.statusID = 0
-						AND b.currency <> 20
-						AND b.recommend = @recommend
-						and ISNULL(mc.level, 0) IN (SELECT level FROM @levelTab)
+					AND b.statusID = 0
+					AND b.currency <> 20
+					AND b.recommend = @recommend
+					AND ISNULL(mc.level, 0) IN (SELECT level FROM @levelTab)
+					AND (
+						(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+							AND b.bettype = 29 AND b.betteam = N'1')
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+							AND b.bettype = 29 AND b.betteam <> N'1')
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+						AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
+						)		
 
 		END
 		ELSE
@@ -214,7 +212,7 @@ BEGIN
 			INSERT INTO #bettrans (transid, matchid, refno, bettype, betteam, oddsspread, custid)
 			SELECT b.transid, b.matchid, b.refno,b.bettype,  b.betteam, b.oddsspread, b.custid
 			FROM dbo.rmBettrans b WITH (NOLOCK)
-				INNER JOIN @bettype bt ON b.bettype = bt.bettype
+				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN @tmpSport sp ON b.transid2 = sp.sporttype
 				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
@@ -222,23 +220,17 @@ BEGIN
 				AND b.statusID = 0
 				AND b.currency <> 20
 				AND ISNULL(mc.level, 0) IN (SELECT level FROM @levelTab)
-		END
-		IF @ComboType IN (1,2,3,4,5,6)
-		BEGIN
-			CREATE CLUSTERED INDEX CIX_bettype ON #bettrans (bettype)
-			IF @ComboType = 1 -- Mix parlay only
-				DELETE #bettrans WHERE bettype = 29 AND  betteam <> N'1' OR (bettype = 29 AND betteam = N'1' AND oddsspread = 1)
-				ELSE IF @ComboType = 2 -- Combo parlay only
-					DELETE #bettrans WHERE bettype = 29 AND betteam = N'1'
-					ELSE IF @ComboType = 3 -- GOF only
-						DELETE #bettrans WHERE (bettype = 29 AND betteam <> N'1') OR (bettype = 29 AND betteam = N'1' AND (oddsspread <> 1 OR oddsspread IS NULL))
-						ELSE IF @ComboType = 4  -- combined between mix parlay and GOF
-							DELETE #bettrans WHERE bettype = 29 AND betteam <> N'1'
-							ELSE IF @ComboType = 5  -- combined between combo parlay and GOF
-								DELETE #bettrans WHERE bettype = 29 AND  betteam = N'1' AND (oddsspread <> 1 OR oddsspread IS NULL)
-								ELSE IF @ComboType = 6  -- combined between mix parlay and combo parlay
-									DELETE #bettrans WHERE bettype = 29 AND  betteam = N'1' AND oddsspread = 1
-		END
+				AND (
+						(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+							AND b.bettype = 29 AND b.betteam = N'1')
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+							AND b.bettype = 29 AND b.betteam <> N'1')
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+						AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
+						)		
+		END		
 
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype IN (38, 376))
 		BEGIN
@@ -306,6 +298,8 @@ BEGIN
 		DROP TABLE #bettrans
 		DROP TABLE #tmpbettransm
 		DROP TABLE #finalbettransm
+		DROP TABLE #bettype
+		DROP TABLE #ParlayType
 	END
 
 	-- Return data
