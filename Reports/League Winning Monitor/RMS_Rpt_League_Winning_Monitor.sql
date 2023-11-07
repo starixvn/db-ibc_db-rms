@@ -138,6 +138,7 @@ BEGIN
 			,oddsspread			SMALLMONEY
 			,leagueid			INT
 			,custid				INT
+			,IsParlayGenerator  BIT
 		)
 
 		CREATE TABLE #Result
@@ -146,6 +147,7 @@ BEGIN
 			,custid				INT
 			,transid			BIGINT
 			,bettype			INT
+			,IsParlayGenerator  BIT
 		)
 
 
@@ -180,8 +182,9 @@ BEGIN
 			DECLARE @recommend INT 
 			SELECT @recommend = recommend FROM bodb02.dbo.Customer WITH(NOLOCK) WHERE custid = @CustID
 
-			INSERT INTO  #bettrans (transid, matchid, refno, bettype, betteam, oddsspread, custid)
-			SELECT	    b.transid, b.matchid, b.refno, b.bettype, b.betteam, b.oddsspread, b.custid
+			INSERT INTO  #bettrans (transid, matchid, refno, bettype, betteam, oddsspread, custid, IsParlayGenerator)
+			SELECT	    b.transid, b.matchid, b.refno, b.bettype, b.betteam, b.oddsspread, b.custid,
+					CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END
 			FROM		dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
@@ -209,8 +212,9 @@ BEGIN
 			DECLARE @min_transid BIGINT
 			SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans WITH (NOLOCK) WHERE statusID = 0
 
-			INSERT INTO #bettrans (transid, matchid, refno, bettype, betteam, oddsspread, custid)
-			SELECT b.transid, b.matchid, b.refno,b.bettype,  b.betteam, b.oddsspread, b.custid
+			INSERT INTO #bettrans (transid, matchid, refno, bettype, betteam, oddsspread, custid, IsParlayGenerator)
+			SELECT b.transid, b.matchid, b.refno,b.bettype,  b.betteam, b.oddsspread, b.custid,
+				CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
@@ -234,10 +238,10 @@ BEGIN
 
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype IN (38, 376))
 		BEGIN
-			INSERT INTO #Result(leagueid, transid, bettype)
-			SELECT m.leagueid, t.transid, t.bettype
+			INSERT INTO #Result(leagueid, transid, bettype, IsParlayGenerator)
+			SELECT m.leagueid, t.transid, t.bettype, t.IsParlayGenerator
 			FROM #bettrans t
-			INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON t.matchid = m.matchid
+				INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON t.matchid = m.matchid
 			WHERE t.bettype IN (38, 376) AND m.leagueid IN (SELECT x.LeagueId FROM #tmpLeague x)
 
 		END
@@ -275,8 +279,8 @@ BEGIN
 
 			IF @ReportType = 1
 			BEGIN
-				INSERT INTO #Result(leagueid, transid, bettype, custid)
-				SELECT u.leagueid, t.transid, t.bettype, t.custid
+				INSERT INTO #Result(leagueid, transid, bettype, custid, IsParlayGenerator)
+				SELECT u.leagueid, t.transid, t.bettype, t.custid, t.IsParlayGenerator
 				FROM #bettrans t
 					INNER JOIN #finalbettransm u ON t.refno = u.refno
 				WHERE t.bettype = 29 AND u.leagueid IN  (SELECT x.LeagueId FROM #tmpLeague x)
@@ -284,8 +288,8 @@ BEGIN
 
 			IF @ReportType = 2
 			BEGIN
-				INSERT INTO #Result( transid, bettype, custid)
-				SELECT DISTINCT t.transid, t.bettype, t.custid
+				INSERT INTO #Result( transid, bettype, custid, IsParlayGenerator)
+				SELECT DISTINCT t.transid, t.bettype, t.custid, t.IsParlayGenerator
 				FROM #bettrans t
 					INNER JOIN #finalbettransm u ON t.refno = u.refno
 				WHERE t.bettype = 29 AND u.leagueid IN  (SELECT x.LeagueId FROM #tmpLeague x)
@@ -371,7 +375,8 @@ BEGIN
 					rm.IP,
 					rm.custid,
 					rm.refno,
-					rm.bettype
+					rm.bettype, 
+					r.IsParlayGenerator
 			FROM	#Result r
 				INNER JOIN rmBettrans rm WITH(NOLOCK) ON r.transid = rm.transid
 				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON r.custid = mc.custid
