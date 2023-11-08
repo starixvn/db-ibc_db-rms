@@ -33,17 +33,14 @@ BEGIN
             a.bettype,
             a.modds,
 			CASE WHEN a.bettype = 29 AND a.betteam = N'1' AND a.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus,
-            CASE WHEN a.bettype = 29 AND a.betteam = N'1' AND a.oddsspread = 2 THEN
-				CAST((a.odds2 + TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS DECIMAL(19,6))) / 
-					(1 + TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS DECIMAL(19,6))) AS SMALLMONEY)				
-				ELSE a.odds END odds, --Original Odds
-			CASE WHEN a.statusID = 112 AND ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) > 0 
+            a.odds, --Original Odds
+			CASE WHEN a.statusID = 112 AND ISNULL(TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) > 0 
 				THEN r.mOdds
 				ELSE a.odds2 END odds2, --Boost Odds
-			CASE WHEN a.statusID = 112 AND ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) > 0 
+			CASE WHEN a.statusID = 112 AND ISNULL(TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) > 0 
 				THEN r.ExtraValue
-				ELSE ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) END bbp, --Boost Rate
-			ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) bba,
+				ELSE ISNULL(TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) END bbp, --Boost Rate
+			ISNULL(TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) bba,
             a.stake,
 			a.statusid,
             a.status,

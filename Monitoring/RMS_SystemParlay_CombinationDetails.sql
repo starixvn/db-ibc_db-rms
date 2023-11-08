@@ -46,21 +46,17 @@ BEGIN
 	INSERT INTO #tmpResults(winlostdate, transid, serial, statusid, modds, IsBoostBonus, odds, odds2, bbp, bba, stake, winlost)
 		SELECT b.winlostdate, bm.transid, b.serial, b.statusid, b.modds, 
 			CASE WHEN bm.bettype = 29 AND bm.betteam = N'1' AND bm.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus,
-            CASE WHEN bm.bettype = 29 AND bm.betteam = N'1' AND bm.oddsspread = 2 THEN
-				CAST((a.odds2 + TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS DECIMAL(19,6))) / 
-					(1 + TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS DECIMAL(19,6))) AS SMALLMONEY)				
-				END odds, --Original Odds
-			CASE WHEN a.statusID = 112 AND ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) > 0 
+            bm.odds, --Original Odds
+			CASE WHEN bm.statusID = 112 AND ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY),0) > 0 
 				THEN b.mOdds
-				ELSE a.odds2 END odds2, --Boost Odds
-			CASE WHEN a.statusID = 112 AND ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) > 0 
+				ELSE TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbo)[1]', 'VARCHAR(50)') AS SMALLMONEY) END odds2, --Boost Odds
+			CASE WHEN bm.statusID = 112 AND ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY),0) > 0 
 				THEN b.ExtraValue
-				ELSE ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) END bbp, --Boost Rate
-			ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)),0) bba,
+				ELSE ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS SMALLMONEY),0) END bbp, --Boost Rate
+			ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY),0) bba,
 			b.stake, b.winlost
 		FROM bodb02.dbo.betparlayresult b WITH(NOLOCK) 
 			INNER JOIN bodb02.dbo.bettrans bm WITH (NOLOCK) ON bm.refno = b.RefNo
-			INNER JOIN dbo.rmBettrans a WITH (NOLOCK) ON bm.transid = a.transid
 		WHERE b.refno = @refno
 	
 	INSERT INTO #BetParlayDetail(RefNo, Serial, matchid)
