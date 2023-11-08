@@ -86,9 +86,9 @@ BEGIN
 
 	--Site
 	BEGIN
-		DECLARE @SiteTab TABLE (SiteName NVARCHAR(50), IsDeposit BIT)
+		CREATE TABLE #SiteTab (SiteName NVARCHAR(50), IsDeposit BIT)
 
-		INSERT INTO @SiteTab(SiteName, IsDeposit)
+		INSERT INTO #SiteTab(SiteName, IsDeposit)
 		SELECT Site, CASE WHEN Site = 'Saba789'  THEN 0 ELSE isDeposit END
 		FROM bodb02.dbo.Site (NOLOCK)
 	END
@@ -258,8 +258,8 @@ BEGIN
 					AND b.statusID = 112
 					AND b.currency <> 20
 					AND ((winlost - actual_stake) * (1 - b.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate >= @FromHouseAmt
-					AND (
-						(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+					AND (b.bettype <> 29
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 							AND b.bettype = 29 AND b.betteam = N'1')
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 							AND b.bettype = 29 AND b.betteam <> N'1')
@@ -267,8 +267,8 @@ BEGIN
 							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
 							AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
-						OR b.bettype <> 29)		
-					AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
+						)		
+					AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 					AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 					AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 			) r
@@ -332,17 +332,17 @@ BEGIN
 					AND b.statusID = 112
 					AND b.currency <> 20
 					AND ((winlost - actual_stake) * (1 - b.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate >= @FromHouseAmt
-					AND (
-						(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+					AND (b.bettype <> 29
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 							AND b.bettype = 29 AND b.betteam = N'1')
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 							AND b.bettype = 29 AND b.betteam <> N'1')
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-							AND t.bact = 5)
+							AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
 						)		
-					AND ct.Site IN (SELECT SiteName FROM @SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
+					AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 					AND (b.livehomescore = @LiveStatus OR @LiveStatus = 3)
 					AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 			) r
@@ -412,5 +412,6 @@ BEGIN
 	DROP TABLE #bettype
 	DROP TABLE #ParlayType
 	DROP TABLE #tmpBettrans
+	DROP TABLE #SiteTab
 END
 GO

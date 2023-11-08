@@ -200,8 +200,8 @@ BEGIN
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (112, 113)
 				AND b.currency <> 20
-				AND (
-					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+				AND (b.bettype <> 29
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 						AND b.bettype = 29 AND b.betteam = N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
@@ -209,7 +209,7 @@ BEGIN
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
 						AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
-					OR b.bettype <> 29)		
+					)		
 				AND EXISTS(SELECT TOP 1 1 FROM bodb02.dbo.Customer ct WITH(NOLOCK) WHERE b.custid = ct.custid 
 						AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END))
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
