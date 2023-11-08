@@ -113,16 +113,19 @@ BEGIN
 		CREATE TABLE #bettype (bettype SMALLINT)
 
 		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+
+		INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
+			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+			INSERT INTO #ParlayType (ParlayType) VALUES (6)
 	
 		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
-			VALUES (29)
-
-			INSERT INTO #ParlayType (ParlayType)
-			SELECT	value
-			FROM STRING_SPLIT(@ParlayType, ',') 
-			WHERE value IN (1,2,5,6)
+			VALUES (29)			
 		END
 
 		-- Single match parlay
@@ -241,7 +244,7 @@ BEGIN
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 				AND a.statusID IN (112, 113)
 				AND a.currency <> 20
-				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
+				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND EXISTS(SELECT TOP 1 1 FROM bodb02.dbo.Customer ct WITH(NOLOCK) WHERE a.custid = ct.custid 
 						AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END))
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
@@ -276,7 +279,7 @@ BEGIN
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 				AND a.statusID IN (112, 113)
 				AND a.currency <> 20
-				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
+				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND EXISTS(SELECT TOP 1 1 FROM bodb02.dbo.Customer ct WITH(NOLOCK) WHERE a.custid = ct.custid 
 						AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END))
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
