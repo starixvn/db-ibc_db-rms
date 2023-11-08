@@ -47,13 +47,13 @@ BEGIN
 		SELECT b.winlostdate, bm.transid, b.serial, b.statusid, b.modds, 
 			CASE WHEN bm.bettype = 29 AND bm.betteam = N'1' AND bm.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus,
             bm.odds, --Original Odds
-			CASE WHEN bm.statusID = 112 AND ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY),0) > 0 
+			CASE WHEN bm.statusID = 112 AND TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY) > 0 
 				THEN b.mOdds
 				ELSE TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbo)[1]', 'VARCHAR(50)') AS SMALLMONEY) END odds2, --Boost Odds
-			CASE WHEN bm.statusID = 112 AND ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY),0) > 0 
+			CASE WHEN bm.statusID = 112 AND TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY) > 0 
 				THEN b.ExtraValue
-				ELSE ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS SMALLMONEY),0) END bbp, --Boost Rate
-			ISNULL(TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY),0) bba,
+				ELSE TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS SMALLMONEY) END bbp, --Boost Rate
+			TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY) bba,
 			b.stake, b.winlost
 		FROM bodb02.dbo.betparlayresult b WITH(NOLOCK) 
 			INNER JOIN bodb02.dbo.bettrans bm WITH (NOLOCK) ON bm.refno = b.RefNo
