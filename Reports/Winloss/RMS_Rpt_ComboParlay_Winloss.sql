@@ -320,5 +320,6 @@ BEGIN
 	DROP TABLE #tmpSport
 	DROP TABLE #ParlayType
 	DROP TABLE #tmpBettrans
+	DROP TABLE #SiteTab
 END
 GO
