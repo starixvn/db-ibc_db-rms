@@ -211,6 +211,7 @@ BEGIN
 						AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END))
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY b.winlostdate, b.hdp2, b.transid2
+			OPTION (RECOMPILE)
 		END
 
 		-- rmSumWinloss
@@ -245,6 +246,7 @@ BEGIN
 						AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END))
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY a.winlostdate, a.combo, a.sporttype
+			OPTION (RECOMPILE)
 		END
 
 		-- rmSumWinloss_Old
@@ -279,6 +281,7 @@ BEGIN
 						AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END))
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY a.winlostdate, a.combo, a.sporttype
+			OPTION (RECOMPILE)
 		END
 	END
 
