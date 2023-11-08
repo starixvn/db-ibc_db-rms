@@ -208,8 +208,8 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-						AND t.bact = 5)
-					)		
+						AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+					OR b.bettype <> 29)		
 				AND EXISTS(SELECT TOP 1 1 FROM bodb02.dbo.Customer ct WITH(NOLOCK) WHERE b.custid = ct.custid 
 						AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END))
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)

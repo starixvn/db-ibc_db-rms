@@ -277,13 +277,13 @@ BEGIN
 			AND b.bettype = 29 
 			AND (
 				(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-					AND b.bettype = 29 AND b.betteam = N'1')
+					AND b.betteam = N'1')
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
-					AND b.bettype = 29 AND b.betteam <> N'1')
+					AND b.betteam <> N'1')
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
-					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+					AND b.betteam = N'1' AND b.oddsspread = 1)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND t.bact = 5)
+					AND b.betteam = N'1' AND t.bact = 5)
 				)		
 			
 		END
