@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [dbo].[RMS_SystemParlay_CombinationDetails] 
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+
+ALTER PROCEDURE [dbo].[RMS_SystemParlay_CombinationDetails] 
 	@refno	BIGINT = 0,
 	@Outstanding MONEY = 0 OUTPUT
 AS
@@ -7,60 +9,77 @@ AS
 		Date: 2014-04-18
 		Task: Get details info for Combination System Parlay
 		DB: DBRMS/bodb_RMS
+		Revision:
+			- 20231020@Cherry: Parlay Boost Bonus (#192681)
 		
 	*/ 
 BEGIN
 	SET NOCOUNT ON
 	
-	DECLARE @tmpResults TABLE (
+	CREATE TABLE #tmpResults (
 		winlostdate DATETIME,
 		transid		BIGINT,
 		serial		BIGINT,
-		statusid	INT,
-		status		VARCHAR(20),	
+		statusid	INT,	
 		modds		SMALLMONEY,
+		IsBoostBonus BIT,	
+		odds		MONEY,
+		odds2		MONEY,
+		bbp			MONEY,
+		bba			MONEY,
 		stake		MONEY,
 		winlost		MONEY
 	)
 
-	DECLARE @betParlayDetail TABLE (
+	CREATE TABLE #BetParlayDetail (
 		RefNo		bigint, 
 		Serial		int, 				 				
 		matchid		int				
 	)
 	
-	DECLARE @tmpMatch AS TABLE(
+	CREATE TABLE #tmpMatch (
 			serial		BIGINT,
 			homeid		INT,
 			awayid		INT
 		)	
 		
-	INSERT INTO @tmpResults(winlostdate, serial, modds, stake, winlost, statusid)
-		SELECT winlostdate, serial, modds, stake, winlost, statusid
+	INSERT INTO #tmpResults(winlostdate, transid, serial, statusid, modds, IsBoostBonus, odds, odds2, bbp, bba, stake, winlost)
+		SELECT b.winlostdate, bm.transid, b.serial, b.statusid, b.modds, 
+			CASE WHEN bm.bettype = 29 AND bm.betteam = N'1' AND bm.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus,
+            bm.odds, --Original Odds
+			CASE WHEN bm.statusID = 112 AND TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY) > 0 
+				THEN b.mOdds
+				ELSE TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbo)[1]', 'VARCHAR(50)') AS SMALLMONEY) END odds2, --Boost Odds
+			CASE WHEN bm.statusID = 112 AND TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY) > 0 
+				THEN b.ExtraValue
+				ELSE TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS SMALLMONEY) END bbp, --Boost Rate
+			TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY) bba,
+			b.stake, b.winlost
 		FROM bodb02.dbo.betparlayresult b WITH(NOLOCK) 
-		WHERE refno = @refno
+			INNER JOIN bodb02.dbo.bettrans bm WITH (NOLOCK) ON bm.refno = b.RefNo
+		WHERE b.refno = @refno
 	
-	INSERT INTO @betParlayDetail(RefNo, Serial, matchid )
+	INSERT INTO #BetParlayDetail(RefNo, Serial, matchid)
 		SELECT refno, serial, matchid
 		FROM bodb02.dbo.betParlayDetail WITH(NOLOCK)
 		WHERE refno = @refno
 	
-	INSERT INTO @tmpMatch
+	INSERT INTO #tmpMatch
 		SELECT
 			p.serial,
 			homeid,
 			awayid
-		FROM @tmpResults p 
-			INNER JOIN @betParlayDetail b ON p.Serial = b.Serial
+		FROM #tmpResults p 
+			INNER JOIN #BetParlayDetail b ON p.Serial = b.Serial
 			INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid	
 		WHERE p.statusid <> 113
-		union 
+		UNION 
 		SELECT
 			p.serial,
 			homeid,
 			awayid
-		FROM @tmpResults p 
-			INNER JOIN @betParlayDetail b ON p.Serial = b.Serial
+		FROM #tmpResults p 
+			INNER JOIN #BetParlayDetail b ON p.Serial = b.Serial
 			INNER JOIN bodb02.dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid	
 		WHERE p.statusid <> 113
 	
@@ -70,45 +89,40 @@ BEGIN
 		AND refno = @refno
 	
 	SELECT @outStanding = @outStanding - ISNULL(SUM(stake),0)
-	FROM @tmpResults
+	FROM #tmpResults
 	WHERE statusid not in (0,1)
 		
 	-- return combo detail
 	SELECT 
 		winlostdate,
-		0 transid,
-		serial,
+		transid,
+		CASE WHEN statusid IN (0,1,113) THEN 0 ELSE serial END serial,
 		statusid,	
 		CASE statusid WHEN 101 THEN 'REJECT'
 						WHEN 102 THEN 'VOID'
 						WHEN 103 THEN 'REFUND'
 						WHEN 111 THEN 'DRAW'
-						WHEN 112 THEN 'WON' ELSE '' END AS status,
+						WHEN 112 THEN 'WON' 
+						WHEN 113 THEN 'LOSE'
+						WHEN 0 THEN 'RUNNING'
+						WHEN 1 THEN 'WAITING'
+						ELSE '' END AS status,
 		modds,
+		IsBoostBonus,
+		odds OriginalOdds,
+		odds2 BoostOdds,
+		bbp BoostRate,
+		bba,
 		stake,
 		winlost - stake AS winlost
-	FROM @tmpResults
-	WHERE statusid NOT IN (0,1,113)
-
-	UNION ALL
-
-	SELECT 
-		winlostdate,	
-		0 AS transid,	
-		0 AS serial,
-		113 AS statusid,	
-		'LOSE' AS status,
-		0 AS modds,	
-		SUM(stake) AS stake,	
-		SUM(winlost - stake) AS winlost
-	FROM @tmpResults
-	WHERE statusid = 113
-	GROUP BY 
-		winlostdate 
+	FROM #tmpResults
 	ORDER BY winlostdate ASC
+	
+	SELECT * FROM #tmpMatch
 
-	SELECT * FROM @tmpMatch
+	DROP TABLE #BetParlayDetail
+	DROP TABLE #tmpMatch
+	DROP TABLE #tmpResults
 	
 END
 GO
-GRANT EXECUTE ON [dbo].[RMS_SystemParlay_CombinationDetails] TO [bodbRMSNet]

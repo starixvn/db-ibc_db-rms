@@ -17,7 +17,7 @@ AS
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
-
+		- 20231020@Cherry: Parlay Boost Bonus (#192681)
 
 	Parameter's Explanation:
 		@sporttype = '1': soccer only
@@ -32,7 +32,15 @@ BEGIN
             a.transdate,
             a.bettype,
             a.modds,
-            a.odds,
+			CASE WHEN a.bettype = 29 AND a.betteam = N'1' AND a.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus,
+            a.odds, --Original Odds
+			CASE WHEN a.statusID = 112 AND TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY) > 0 
+				THEN r.mOdds
+				ELSE TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@bbo)[1]', 'VARCHAR(50)') AS SMALLMONEY) END odds2, --Boost Odds
+			CASE WHEN a.statusID = 112 AND TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY) > 0 
+				THEN r.ExtraValue
+				ELSE TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS SMALLMONEY) END bbp, --Boost Rate
+			TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY) bba,
             a.stake,
 			a.statusid,
             a.status,
@@ -52,10 +60,11 @@ BEGIN
 			a.oddsspread,
 			bm.ExtraInfo,
 			a.actual_stake,
-			CAST( CASE WHEN a.bettype = 29 AND a.oddsspread = 1 AND  a.betteam = N'1' THEN 1 ELSE 0 END AS BIT) IsGOF
+			CAST(CASE WHEN a.bettype = 29 AND a.oddsspread = 1 AND a.betteam = N'1' THEN 1 ELSE 0 END AS BIT) IsGOF
      FROM dbo.rmBettrans a WITH (NOLOCK)
           LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON m.matchid = a.matchid AND a.bettype IN (38, 376)
 		  LEFT JOIN  bodb02.dbo.bettrans bm WITH (NOLOCK) ON a.transid = bm.transid
+		  LEFT JOIN bodb02.dbo.BetParlayResult r WITH (NOLOCK) ON bm.refno = r.RefNo
      WHERE a.IP = @IP
 		AND a.custid = @custid
 		AND a.transdate >= @fromdate AND a.transdate < DATEADD(DAY, 1, @fromdate)
