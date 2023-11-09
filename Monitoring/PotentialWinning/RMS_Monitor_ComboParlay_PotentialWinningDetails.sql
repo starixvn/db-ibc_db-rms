@@ -104,22 +104,26 @@ BEGIN
 			refno BIGINT, 
 			bettype SMALLINT, 
 			transid BIGINT,
-			CornerParlay	 INT DEFAULT(0)
-			,betteam	NVARCHAR(10)
-			,oddsspread SMALLMONEY
+			CornerParlay	 INT DEFAULT(0),
+			betteam	NVARCHAR(10),
+			oddsspread SMALLMONEY,
+			IsParlayGenerator BIT
 		)
 
 		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+
+		INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
+			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+			INSERT INTO #ParlayType (ParlayType) VALUES (6)
 	
 		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
-			VALUES (29)
-
-			INSERT INTO #ParlayType (ParlayType)
-			SELECT	value
-			FROM STRING_SPLIT(@ParlayType, ',') 
-			WHERE value IN (1,2,5,6)
+			VALUES (29)			
 		END
 
 		-- Single match parlay
@@ -133,25 +137,37 @@ BEGIN
 			VALUES (376)
 	END
 
+	CREATE TABLE #Generator (transid BIGINT, bact INT)
+	INSERT INTO #Generator(transid, bact)
+	SELECT transid,
+		TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) 
+	FROM dbo.rmBettrans WITH (NOLOCK)
+	WHERE custid = @CustID
+		AND statusID = 0
+		AND currency <> 20
+		AND bettype = 29
+		AND betteam = N'1'
 
-	INSERT INTO #bettrans (transid, bettype, refno, betteam, oddsspread)
-	SELECT b.transid, b.bettype, b.refno, b.betteam, b.oddsspread
+	INSERT INTO #bettrans (transid, bettype, refno, betteam, oddsspread, IsParlayGenerator)
+	SELECT b.transid, b.bettype, b.refno, b.betteam, b.oddsspread,
+		CAST(CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5 THEN 1 ELSE 0 END AS BIT)
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN #bettype bt ON b.bettype = bt.bettype
 		INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 		INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+		LEFT JOIN #Generator t ON b.transid = t.transid
 	WHERE custid = @CustID
 		AND b.statusID = 0
 		AND b.currency <> 20
-		AND (
-			(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+		AND (b.bettype <> 29
+			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 				AND b.bettype = 29 AND b.betteam = N'1')
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 				AND b.bettype = 29 AND b.betteam <> N'1')
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 				AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-			AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
+				AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
 			)		
 
 	CREATE CLUSTERED INDEX CIX_bettype ON #bettrans (bettype)
@@ -209,7 +225,7 @@ BEGIN
 		,b.hdp2 AS TotalSelection
 		,b.TotalBet AS TotalBet
 		,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
-		,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
+		,rb.IsParlayGenerator
 		,l.username AS TrackingUser
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN #bettrans rb ON rb.transid = b.transid
@@ -223,5 +239,6 @@ BEGIN
 	DROP TABLE #tmpSelection
 	DROP TABLE #tmpSport
 	DROP TABLE #ParlayType
+	DROP TABLE #Generator
 END
 GO

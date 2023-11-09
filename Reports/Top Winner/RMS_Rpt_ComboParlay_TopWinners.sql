@@ -123,16 +123,19 @@ BEGIN
 		CREATE TABLE #bettype (bettype SMALLINT)
 
 		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+
+		INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
+			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+			INSERT INTO #ParlayType (ParlayType) VALUES (6)
 	
 		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
-
-			INSERT INTO #ParlayType (ParlayType)
-			SELECT	value
-			FROM STRING_SPLIT(@ParlayType, ',') 
-			WHERE value IN (1,2,5,6)
 		END
 
 		-- Single match parlay
@@ -146,6 +149,8 @@ BEGIN
 			VALUES (376)
 
 		DECLARE @f_date SMALLDATETIME, @t_date SMALLDATETIME
+
+		CREATE TABLE #tmpBettrans (transid BIGINT, bact INT)
 
 		CREATE TABLE #tmpSum
 		(
@@ -167,6 +172,15 @@ BEGIN
 			SELECT	@f_date = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END
 					,@t_date = @ToDate
 
+			INSERT INTO #tmpBettrans (transid, bact)
+			SELECT transid,
+				TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT)
+			FROM dbo.rmBettrans WITH (NOLOCK)
+			WHERE winlostdate BETWEEN @f_date AND @t_date
+				AND statusID IN (112, 113)
+				AND bettype = 29
+				AND betteam = N'1'
+
 			INSERT INTO #tmpSum
 			(
 				custid, username, currency, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, betcount
@@ -184,17 +198,18 @@ BEGIN
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 				INNER JOIN #tmpCurrency tc ON tc.currency = b.currency
+				LEFT JOIN #tmpBettrans t ON b.transid = t.transid
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (112, 113)
-				AND (
-					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+				AND (b.bettype <> 29
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 						AND b.bettype = 29 AND b.betteam = N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
+						AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
 					)		
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY custid, username, b.currency
@@ -224,7 +239,7 @@ BEGIN
 				INNER JOIN #tmpCurrency tc ON tc.currency = a.currency
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
-				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
+				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY custid, username, a.currency
 		END
@@ -253,7 +268,7 @@ BEGIN
 				INNER JOIN #tmpCurrency tc ON tc.currency = a.currency
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
-				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
+				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY custid, username, a.currency
 		END
@@ -309,5 +324,6 @@ BEGIN
 	DROP TABLE #tmpSum
 	DROP TABLE #tmpCurrency
 	DROP TABLE #ParlayType
+	DROP TABLE #tmpBettrans
 END
 GO

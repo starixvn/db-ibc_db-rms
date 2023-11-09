@@ -99,16 +99,19 @@ BEGIN
 		CREATE TABLE #bettype (bettype SMALLINT)
 
 		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+
+		INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
+			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+			INSERT INTO #ParlayType (ParlayType) VALUES (6)
 	
 		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
-			VALUES (29)
-
-			INSERT INTO #ParlayType (ParlayType)
-			SELECT	value
-			FROM STRING_SPLIT(@ParlayType, ',') 
-			WHERE value IN (1,2,5,6)
+			VALUES (29)			
 		END
 
 		-- Single match parlay
@@ -139,6 +142,12 @@ BEGIN
 			AND ToDate < @ExtraPTCutOffDate
 		GROUP BY SuperId, FromDate, ToDate
 
+		CREATE TABLE #tmpGenerator
+		(
+			transid BIGINT,
+			bact INT
+		)	
+
 		CREATE TABLE #tmpBettrans
 		(
 			transid					BIGINT PRIMARY KEY NONCLUSTERED
@@ -159,6 +168,16 @@ BEGIN
 			,IsParlayGenerator		BIT
 			,currency				TINYINT
 		)
+
+		INSERT INTO #tmpGenerator (transid, bact)
+		SELECT transid,
+			ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+		FROM dbo.bettrans_bk WITH (NOLOCK)
+		WHERE winlostdate BETWEEN @FromDate AND @ToDate
+			AND statusID IN (112, 113)
+			AND custid = @custid
+			AND bettype = 29 
+			AND betteam = N'1'
 
 		INSERT INTO #tmpBettrans
 		(
@@ -181,7 +200,7 @@ BEGIN
 			,currency
 		)		
 		SELECT
-			transid
+			b.transid
 			,refno
 			,CASE WHEN bettype IN (38, 376) THEN 1 ELSE 0 END AS sporttype
 			,bettype
@@ -201,23 +220,24 @@ BEGIN
 			,(winlost - actual_stake) * actualrate
 			,(-(winlost - actual_stake) * (1 - tpositiontaking - ISNULL(e.ExtraPT, CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)))) - scomm  + scomm * ISNULL(e.ExtraPT, CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) / (1 - tpositiontaking)) * actualrate	
 			,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
-			,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
+			,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND t.bact = 5 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 			,b.currency
 		FROM dbo.bettrans_bk b WITH (NOLOCK)
 			LEFT JOIN #ExtraPT e ON b.srecommend = e.SuperId AND b.winlostdate BETWEEN e.FromDate AND e.Todate
+			LEFT JOIN #tmpGenerator t ON b.transid = t.transid
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
 			AND statusID IN (112, 113)
 			AND custid = @custid
 			AND EXISTS (SELECT 1 FROM #bettype bt WHERE b.bettype = bt.bettype)
-			AND (
-					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND b.bettype = 29 AND b.betteam = N'1')
-					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
-						AND b.bettype = 29 AND b.betteam <> N'1')
-					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
-						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
-					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
+			AND (b.bettype <> 29
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+					AND b.bettype = 29 AND b.betteam = N'1')
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+					AND b.bettype = 29 AND b.betteam <> N'1')
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+					AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
 				)		
 
 		IF EXISTS (SELECT 1 FROM #tmpBettrans WHERE bettype = 29 AND sporttype = 0)
@@ -313,5 +333,7 @@ BEGIN
 	DROP TABLE #tmpSelection
 	DROP TABLE #tmpSport
 	DROP TABLE #tmpCurrency
+	DROP TABLE #ParlayType
+	DROP TABLE #tmpGenerator
 END
 GO

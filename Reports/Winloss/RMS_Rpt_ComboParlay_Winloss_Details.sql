@@ -91,16 +91,19 @@ BEGIN
 		CREATE TABLE #bettype (bettype SMALLINT)
 
 		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+
+		INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
+			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+			INSERT INTO #ParlayType (ParlayType) VALUES (6)
 	
 		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
-			VALUES (29)
-
-			INSERT INTO #ParlayType (ParlayType)
-			SELECT	value
-			FROM STRING_SPLIT(@ParlayType, ',') 
-			WHERE value IN (1,2,5,6)
+			VALUES (29)			
 		END
 
 		-- Single match parlay
@@ -182,8 +185,8 @@ BEGIN
 				AND custid = @custid
 				AND statusID IN (112, 113)
 				AND b.currency <> 20
-				AND (
-					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+				AND (b.bettype <> 29
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 						AND b.bettype = 29 AND b.betteam = N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
@@ -216,7 +219,7 @@ BEGIN
 			(
 				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, IsGOF, IsParlayGenerator
 			)
-			SELECT transid, refno, transid2, b.bettype, hdp2 AS combo, TotalBet AS TotalCombo
+			SELECT b.transid, refno, transid2, b.bettype, hdp2 AS combo, TotalBet AS TotalCombo
 				,CASE
 					WHEN b.bettype = 29 AND betteam = N'1' THEN 1
 					WHEN b.bettype = 29 AND betteam <> N'1' THEN 2
@@ -240,8 +243,8 @@ BEGIN
 				AND custid = @custid
 				AND statusID IN (112, 113)
 				AND b.currency <> 20
-				AND (
-					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+				AND (b.bettype <> 29 
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 						AND b.bettype = 29 AND b.betteam = N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')

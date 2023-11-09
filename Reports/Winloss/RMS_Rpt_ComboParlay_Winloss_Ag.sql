@@ -104,16 +104,19 @@ BEGIN
 		CREATE TABLE #bettype (bettype SMALLINT)
 
 		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+
+		INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
+			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+			INSERT INTO #ParlayType (ParlayType) VALUES (6)
 	
 		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
-			VALUES (29)
-
-			INSERT INTO #ParlayType (ParlayType)
-			SELECT	value
-			FROM STRING_SPLIT(@ParlayType, ',') 
-			WHERE value IN (1,2,5,6)
+			VALUES (29)			
 		END
 
 		-- Single match parlay
@@ -203,8 +206,8 @@ BEGIN
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (112, 113)
 				AND b.currency <> 20
-				AND (
-					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+				AND (b.bettype <> 29 
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 						AND b.bettype = 29 AND b.betteam = N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
@@ -261,7 +264,7 @@ BEGIN
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
 				AND a.currency <> 20
-				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
+				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), a.custid ,a.username, ci.CustomerClass
 		END
@@ -311,7 +314,7 @@ BEGIN
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
 				AND a.currency <> 20
-				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
+				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), a.custid, a.username, ci.CustomerClass
 		END
