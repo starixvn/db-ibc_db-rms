@@ -145,7 +145,7 @@ BEGIN
 			AND betteam = N'1'
 
 		INSERT INTO #bettrans (transid, bettype, refno, betteam, oddsspread, bact)
-		SELECT b.transid, b.bettype, b.refno, b.betteam, b.oddsspread
+		SELECT b.transid, b.bettype, b.refno, b.betteam, b.oddsspread, t.bact
 		FROM dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
