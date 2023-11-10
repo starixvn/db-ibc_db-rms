@@ -95,16 +95,19 @@ BEGIN
 		CREATE TABLE #bettype (bettype SMALLINT)
 
 		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+
+		INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
+			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+			INSERT INTO #ParlayType (ParlayType) VALUES (6)
 	
 		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
-			VALUES (29)
-
-			INSERT INTO #ParlayType (ParlayType)
-			SELECT	value
-			FROM STRING_SPLIT(@ParlayType, ',') 
-			WHERE value IN (1,2,5,6)
+			VALUES (29)			
 		END
 
 		-- Single match parlay
@@ -117,6 +120,16 @@ BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (376)
 	END
+
+	CREATE TABLE #Generator (transid BIGINT, bact INT)
+	INSERT INTO #Generator (transid, bact)
+	SELECT transid,
+		TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT)
+	FROM rmBettrans WITH (NOLOCK)
+	WHERE recommend = @custid
+		AND statusid = 0
+		AND bettype = 29
+		AND betteam = N'1'
 
 	-- Return data
 	BEGIN
@@ -135,6 +148,7 @@ BEGIN
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
 				INNER JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custID = rb.custid
+				LEFT JOIN #Generator o ON rb.transid = o.transid
 			CROSS APPLY
 			(
 				SELECT SUM(t.CornerParlay) as CornerParlay
@@ -153,15 +167,15 @@ BEGIN
 			) t
 			WHERE rb.recommend = @custid
 				AND statusid = 0
-				AND (
-					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+				AND (rb.bettype <> 29
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 						AND rb.bettype = 29 AND rb.betteam = N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND rb.bettype = 29 AND rb.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND rb.bettype = 29 AND rb.betteam = N'1' AND TRY_CAST(TRY_CAST(rb.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
+						AND rb.bettype = 29 AND rb.betteam = N'1' AND o.bact = 5)
 					)		
 				AND t.CornerParlay > 0
 			GROUP BY rb.custid,	rb.username, ci.CustomerClass
@@ -182,17 +196,18 @@ BEGIN
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
 				INNER JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custID = rb.custid
+				LEFT JOIN #Generator o ON rb.transid = o.transid
 			WHERE rb.recommend = @custid
 				AND statusid = 0
-				AND (
-					(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+				AND (rb.bettype <> 29
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 						AND rb.bettype = 29 AND rb.betteam = N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND rb.bettype = 29 AND rb.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND rb.bettype = 29 AND rb.betteam = N'1' AND TRY_CAST(TRY_CAST(rb.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
+						AND rb.bettype = 29 AND rb.betteam = N'1' AND o.bact = 5)
 					)		
 			GROUP BY  rb.custid, rb.username, ci.CustomerClass
 			ORDER  BY net_win DESC
@@ -204,5 +219,6 @@ BEGIN
 	DROP TABLE #ParlayType
 	DROP TABLE #tmpSelection
 	DROP TABLE #tmpSport
+	DROP TABLE #Generator
 END
 GO
