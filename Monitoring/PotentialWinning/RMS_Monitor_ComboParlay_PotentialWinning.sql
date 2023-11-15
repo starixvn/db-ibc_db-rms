@@ -425,10 +425,6 @@ BEGIN
 	
 	DROP TABLE #bettrans_details
 	DROP TABLE #ParlayType
-	DROP TABLE #bettransmSummary
-	DROP TABLE #company
-	DROP TABLE #Generator
-	DROP TABLE #level
-	DROP TABLE #userList
+
 END
 GO
