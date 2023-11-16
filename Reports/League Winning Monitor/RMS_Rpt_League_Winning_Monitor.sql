@@ -141,6 +141,12 @@ BEGIN
 			,IsParlayGenerator  BIT
 		)
 
+		CREATE TABLE #tmpBettrans
+		(
+			transid BIGINT,
+			bact INT
+		)
+
 		CREATE TABLE #Result
 		(
 			leagueid			INT
@@ -154,15 +160,18 @@ BEGIN
 		CREATE TABLE #bettype (bettype SMALLINT)	
 		CREATE TABLE #ParlayType (ParlayType SMALLINT)
 		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%'
+		INSERT INTO #ParlayType (ParlayType)
+		SELECT	value
+		FROM STRING_SPLIT(@ParlayType, ',') 
+
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
+			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+			INSERT INTO #ParlayType (ParlayType) VALUES (6)
+		
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
-
-			INSERT INTO #ParlayType (ParlayType)
-			SELECT	value
-			FROM STRING_SPLIT(@ParlayType, ',') 
-			WHERE value IN (1,2,5,6)
 		END
 
 		-- Single match parlay
@@ -182,28 +191,41 @@ BEGIN
 			DECLARE @recommend INT 
 			SELECT @recommend = recommend FROM bodb02.dbo.Customer WITH(NOLOCK) WHERE custid = @CustID
 
+			INSERT INTO #tmpBettrans(transid, bact)
+			SELECT transid,
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+			FROM 
+				dbo.rmBettrans WITH (NOLOCK)
+			WHERE custid = @CustID
+				AND statusID = 0
+				AND currency <> 20
+				AND recommend = @recommend
+				AND bettype = 29 
+				AND betteam = N'1'
+
 			INSERT INTO  #bettrans (transid, matchid, refno, bettype, betteam, oddsspread, custid, IsParlayGenerator)
 			SELECT	    b.transid, b.matchid, b.refno, b.bettype, b.betteam, b.oddsspread, b.custid,
-					CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END
+					CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5 THEN 1 ELSE 0 END
 			FROM		dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN @tmpSport sp ON b.transid2 = sp.sporttype
 				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
+				LEFT JOIN #tmpBettrans t ON b.transid = t.transid
 			WHERE 	  b.custid = @CustID
 					AND b.statusID = 0
 					AND b.currency <> 20
 					AND b.recommend = @recommend
 					AND ISNULL(mc.level, 0) IN (SELECT level FROM @levelTab)
-					AND (
-						(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+					AND (b.bettype <> 29
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 							AND b.bettype = 29 AND b.betteam = N'1')
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 							AND b.bettype = 29 AND b.betteam <> N'1')
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-						AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
+							AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
 						)		
 
 		END
@@ -212,28 +234,40 @@ BEGIN
 			DECLARE @min_transid BIGINT
 			SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans WITH (NOLOCK) WHERE statusID = 0
 
+			INSERT INTO #tmpBettrans(transid, bact)
+			SELECT transid,
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+			FROM 
+				dbo.rmBettrans WITH (NOLOCK)
+			WHERE transid >= @min_transid
+				AND statusID = 0
+				AND currency <> 20
+				AND bettype = 29 
+				AND betteam = N'1'
+
 			INSERT INTO #bettrans (transid, matchid, refno, bettype, betteam, oddsspread, custid, IsParlayGenerator)
 			SELECT b.transid, b.matchid, b.refno,b.bettype,  b.betteam, b.oddsspread, b.custid,
-				CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END
+				CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5 THEN 1 ELSE 0 END
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN @tmpSport sp ON b.transid2 = sp.sporttype
 				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
+				LEFT JOIN #tmpBettrans t ON b.transid = t.transid
 			WHERE b.transid >= @min_transid
 				AND b.statusID = 0
 				AND b.currency <> 20
 				AND ISNULL(mc.level, 0) IN (SELECT level FROM @levelTab)
-				AND (
-						(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-							AND b.bettype = 29 AND b.betteam = N'1')
-						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
-							AND b.bettype = 29 AND b.betteam <> N'1')
-						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
-							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
-						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-						AND b.bettype = 29 AND b.betteam = N'1' AND TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5)
-						)		
+				AND (b.bettype <> 29
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+						AND b.bettype = 29 AND b.betteam = N'1')
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+						AND b.bettype = 29 AND b.betteam <> N'1')
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+						AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+					)		
 		END		
 
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype IN (38, 376))
@@ -385,5 +419,6 @@ BEGIN
 		END
 	END
 	DROP TABLE #Result
+	DROP TABLE #tmpBettrans
 END
 GO
