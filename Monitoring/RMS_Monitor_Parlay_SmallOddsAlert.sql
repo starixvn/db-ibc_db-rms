@@ -41,6 +41,19 @@ BEGIN
 		TotalBets INT
 	)
 
+	CREATE TABLE #tmpBettrans (transid BIGINT, bact INT)
+
+	INSERT INTO #tmpBettrans (transid, bact)
+	SELECT transid,
+		ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+	FROM dbo.rmBettrans WITH (NOLOCK)
+	WHERE TransDate > @LastTransDate
+		AND matchid = 29
+		AND statusID = 0
+		AND ((@IsTest = 0 AND currency <> 20) 
+			OR (@IsTest = 1 AND currency = 20)
+			)
+
 	INSERT INTO #Result
 	(
 		TransId,
@@ -57,8 +70,8 @@ BEGIN
 	)
 	SELECT
 		b.TransId,
-		CASE WHEN b.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0) <> 5 THEN 'Mix Parlay' 
-			WHEN b.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0) = 5 THEN 'Parlay Generator'
+		CASE WHEN b.betteam = N'1' AND t.bact <> 5 THEN 'Mix Parlay' 
+			WHEN b.betteam = N'1' AND t.bact = 5 THEN 'Parlay Generator'
 			ELSE 'Combo Parlay' END AS ParlayType,
 		b.Username,
 		e.currency,
@@ -77,6 +90,7 @@ BEGIN
 				AND bm.odds <= 1.1
 		) bm
 		INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON b.currency = e.exchangeid
+		LEFT JOIN #tmpBettrans t ON b.transid = t.transid
 	WHERE b.TransDate > @LastTransDate
 		AND b.matchid = 29
 		AND b.statusID = 0
@@ -114,5 +128,6 @@ BEGIN
 	SELECT CONVERT(VARCHAR(200), @TransDate, 121) AS TransDate
 
 	DROP TABLE #Result
+	DROP TABLE #tmpBettrans
 END
 GO
