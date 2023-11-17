@@ -18,6 +18,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ParlayWon]
 	,@Site			TINYINT = 2
 	,@LiveStatus	TINYINT = 3
 	,@CustomerClass	SMALLINT = NULL
+	,@IP			VARCHAR(45) = NULL
 AS
 /*
 	Created: 20200512@Percy
@@ -35,6 +36,7 @@ AS
 		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
 		- 20230420@Cherry: Add Site column (#186735)
 		- 20231020@Cherry: Parlay Generator (#195498)
+		- 20231115@Cherry: Add param IP (#196550)
 
 	Parameter's Explanation:
 		- @selection:
@@ -271,6 +273,7 @@ BEGIN
 					AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 					AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 					AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
+					AND (b.IP = @IP OR @IP IS NULL)
 			) r
 			WHERE @ToHouseAmt = 0 OR HouseLoseAmount <= @ToHouseAmt
 		END
@@ -345,6 +348,7 @@ BEGIN
 					AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 					AND (b.livehomescore = @LiveStatus OR @LiveStatus = 3)
 					AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
+					AND (b.IP = @IP OR @IP IS NULL)
 			) r
 			WHERE @ToHouseAmt = 0 OR HouseLoseAmount <= @ToHouseAmt
 		END

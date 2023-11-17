@@ -2,6 +2,7 @@
 ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_BetsStatisticsByIP]
 	@IP			VARCHAR(45)
 	,@fromdate	DATETIME
+	,@TicketStatus	VARCHAR(50) = '-1'
 AS
 
 /*
@@ -13,10 +14,25 @@ AS
 		- 20200510@Percy: Change condition of transdate [RedmineID: #133961]
 		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
 		- 20230420@Cherry: Add Site column (#186735)
+		- 20231115@Cherry: Add param TicketStatus (#196550)
+	
+	Parameter's Explanation:
+		@TicketStatus: 
+			-1:  All
+			0:   Running
+			112: Won
+			113: Lose
+			111: Draw
+			101: Reject
+			102: Void
 */
 
 BEGIN 
 	SET NOCOUNT ON 
+
+	CREATE TABLE #tmpStatus (statusid INT)
+	INSERT INTO #tmpStatus (statusid)
+	SELECT value FROM STRING_SPLIT(@TicketStatus, ',')
 	
 	SELECT
 		b.custid
@@ -29,7 +45,12 @@ BEGIN
 		LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 	WHERE b.ip = @IP
 		AND transdate >= @fromdate AND transdate < DATEADD(DAY, 1, @fromdate)
+		AND (@TicketStatus = -1 OR
+					 EXISTS (SELECT TOP 1 1 FROM #tmpStatus t WHERE b.statusID = t.statusid)
+			)
 	GROUP BY b.custid, b.username,
 			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
+
+	DROP TABLE #tmpStatus
 END
 GO
