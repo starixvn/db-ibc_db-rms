@@ -225,7 +225,7 @@ BEGIN
 			INSERT INTO #tmpGenerator (transid, bact)
 			SELECT transid,
 				TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT)
-			FROM dbo.rmBettrans WITH (NOLOCK)
+			FROM dbo.rmBettrans_old WITH (NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND custid = @custid
 				AND statusID IN (112, 113)
