@@ -273,10 +273,12 @@ BEGIN
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt
 			,ci.CustomerClass
 			,rb.CurrencyName Currency
+			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND b.bact = 5 THEN 1 ELSE 0 END IsParlayGenerator
 		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN trans t ON rb.transid = t.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rb.custid = ci.custid
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rb.custid = mc.custid
+			LEFT JOIN #tmpBettrans b ON rb.transid = b.transid
 
 	END
 	ELSE 
