@@ -14,7 +14,7 @@ AS
 		- 20200510@Percy: Change condition of transdate [RedmineID: #133961]
 		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
 		- 20230420@Cherry: Add Site column (#186735)
-		- 20231115@Cherry: Add param TicketStatus (#196550)
+		- 20231115@Cherry: Add param TicketStatus, output column (#196550)
 	
 	Parameter's Explanation:
 		@TicketStatus: 
@@ -40,6 +40,13 @@ BEGIN
 		,b.username
 		,SUM(CASE WHEN b.liveawayscore = 1 THEN 1 ELSE 0 END) as cnt_soccer
 		,SUM(CASE WHEN b.liveawayscore IN (2,3) THEN 1 ELSE 0 END) as cnt_others
+		,SUM(stake * actualrate) Stake
+		,SUM(CASE WHEN statusid = 0 THEN (odds2 - 1) * stake * actualrate
+				ELSE (winlost - actual_stake) * actualrate
+			END) WinningAmount
+		,SUM(CASE WHEN statusid = 0 THEN (odds2 - 1) * stake * actualrate
+				ELSE ((winlost - actual_stake) * (1 - tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate
+			END) HouseLoseAmount
 	FROM dbo.rmBettrans b WITH (NOLOCK)	
 		LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
 		LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
