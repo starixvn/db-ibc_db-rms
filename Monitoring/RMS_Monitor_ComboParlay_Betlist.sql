@@ -16,6 +16,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_Betlist]
 	,@leagueGroupId VARCHAR(200)
 	,@company		VARCHAR(MAX) = '' 
 	,@UserName		NVARCHAR(50) = ''
+
 AS
 
 /*

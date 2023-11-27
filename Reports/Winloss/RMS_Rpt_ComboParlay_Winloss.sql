@@ -10,6 +10,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss]
 	@ReportType		TINYINT = 1,
 	@Site			TINYINT = 2,
 	@LiveStatus		TINYINT = 3
+
 AS
 
 /*
