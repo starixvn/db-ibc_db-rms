@@ -12,6 +12,7 @@ AS
 
 	Revisions:
 		- 20230404@Cherry: Initialize SP [RedmineID: #186037]
+		- 20231101@Cherry: Parlay Generator (#195498)
 */
 
 BEGIN
@@ -272,7 +273,7 @@ BEGIN
 				cb.username,
 				substring(cb.username2, LEN(cb.[Site])+2, LEN(cb.username2)-LEN(cb.[Site])),
 				ci.CustomerClass,
-				CASE WHEN @bettype = 29 AND @betteam = '1' THEN 'Mix Parlay'
+				CASE WHEN @bettype = 29 AND @betteam = '1' THEN 'Mix Parlay/ Parlay Generator'
 					WHEN @bettype = 29 AND @betteam <> '1' THEN 'Combo Parlay'
 					WHEN @bettype = 38 THEN 'Single Match Parlay'
 				END,
@@ -320,7 +321,7 @@ BEGIN
 				cb.username,
 				substring(cb.username2, LEN(cb.[Site])+2, LEN(cb.username2)-LEN(cb.[Site])),
 				ci.CustomerClass,
-				CASE WHEN @bettype = 29 AND @betteam = '1' THEN 'Mix Parlay'
+				CASE WHEN @bettype = 29 AND @betteam = '1' THEN 'Mix Parlay/ Parlay Generator'
 					WHEN @bettype = 29 AND @betteam <> '1' THEN 'Combo Parlay'
 					WHEN @bettype = 38 THEN 'Single Match Parlay'
 				END,

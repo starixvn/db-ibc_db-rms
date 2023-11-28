@@ -28,6 +28,7 @@ AS
 			- 20220519@Danny: add filter by Live Status [RedmineID: #172691]
 			- 20230420@Cherry: Add Site column (#186735)
 			- 20230830@Cherry: Add TotalBets (#192682)
+			- 20231020@Cherry: Parlay Generator (#195498)
 
 	Parameter's Explanation:
 		- @sporttype:
@@ -44,6 +45,7 @@ AS
 					. 3: Single Match Parlay
 					. 4: Panalty shootout combo
 					. 5: GOF
+					. 6: Parlay Generator
 */
 
 BEGIN
@@ -102,30 +104,20 @@ BEGIN
 	BEGIN
 		CREATE TABLE #bettype (bettype SMALLINT)
 
-		-- Combo parlay
-		DECLARE @ComboType TINYINT = 0	
-				--1: mix parlay only, 
-				--2: combo parlay only, 
-				--3: GOF only, 
-				--4: combined between mix parlay and GOF, 
-				--5: combined between combo parlay and GOF,
-				--6: combined between mix parlay and combo parlay, 
-				--7: combined all
-		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%'
+		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+
+		INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
+			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+			INSERT INTO #ParlayType (ParlayType) VALUES (6)
+	
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
-			VALUES (29)
-
-			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT value) = 3 AND SUM(DISTINCT CAST(value as SMALLINT)) = 8 THEN 7 
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 3 THEN 6
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 6 THEN 4
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 7 THEN 5
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 1 THEN 1
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 2 THEN 2
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 5 THEN 3
-								END
-			FROM STRING_SPLIT(@ParlayType, ',') WHERE value IN (1,2,5)
+			VALUES (29)			
 		END
 
 		-- Single match parlay
@@ -139,6 +131,8 @@ BEGIN
 			VALUES (376)
 
 		DECLARE @f_date SMALLDATETIME, @t_date SMALLDATETIME
+
+		CREATE TABLE #tmpBettrans (transid BIGINT, bact INT)
 
 		CREATE TABLE #tmpSum
 		(
@@ -159,6 +153,16 @@ BEGIN
 		BEGIN
 			SELECT	@f_date = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END
 					,@t_date = @ToDate
+
+			INSERT INTO #tmpBettrans (transid, bact)
+			SELECT transid,
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+			FROM dbo.rmBettrans WITH (NOLOCK)
+			WHERE winlostdate BETWEEN @f_date AND @t_date
+				AND statusID IN (112, 113)
+				AND currency <> 20
+				AND bettype = 29 
+				AND betteam = N'1'
 
 			INSERT INTO #tmpSum
 			(
@@ -188,20 +192,21 @@ BEGIN
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
+				LEFT JOIN #tmpBettrans t ON b.transid = t.transid
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND custid = @custid
 				AND statusID IN (112, 113)
 				AND currency <> 20
-				AND 1 = CASE
-							WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
-									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
-									WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
-									WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
-									WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
-									WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
-									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
-									ELSE 0 END
-							ELSE 1 END
+				AND (b.bettype <> 29
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+						AND b.bettype = 29 AND b.betteam = N'1')
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+						AND b.bettype = 29 AND b.betteam <> N'1')
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+						AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+					)		
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120)
 		END
@@ -243,7 +248,7 @@ BEGIN
 				AND a.custid = @custid
 				AND a.statusID IN (112, 113)
 				AND currency <> 20
-				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
+				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120)
 		END
@@ -285,7 +290,7 @@ BEGIN
 				AND a.custid = @custid
 				AND a.statusID IN (112, 113)
 				AND currency <> 20
-				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), a.ParlayType - 1) + ',%'
+				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120)
 		END
@@ -312,5 +317,7 @@ BEGIN
 	DROP TABLE #tmpSelection
 	DROP TABLE #tmpSport
 	DROP TABLE #tmpSum
+	DROP TABLE #ParlayType
+	DROP TABLE #tmpBettrans
 END
 GO
