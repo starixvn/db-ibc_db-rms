@@ -44,7 +44,7 @@ BEGIN
 		,SUM(CASE WHEN statusid = 0 THEN (odds2 - 1) * stake * actualrate
 				ELSE (winlost - actual_stake) * actualrate
 			END) WinningAmount
-		,SUM(CASE WHEN statusid = 0 THEN (odds2 - 1) * stake * actualrate
+		,SUM(CASE WHEN statusid = 0 THEN (odds2 - 1) * stake * actualrate * (1 - tpositiontaking)
 				ELSE ((winlost - actual_stake) * (1 - tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate
 			END) HouseLoseAmount
 	FROM dbo.rmBettrans b WITH (NOLOCK)	
