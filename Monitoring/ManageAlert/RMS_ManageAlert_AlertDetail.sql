@@ -15,6 +15,7 @@ AS
 	Revisions:		
 		20230620@Cherry: Initial (#189147)
 		20230830@Cherry: Enhance (#192682)
+		20231101@Cherry: Parlay Generator (#195498)
 
 	Param:
 		@TicketStatus = 112: Won
@@ -92,7 +93,8 @@ BEGIN
 		TotalBet INT,
 		TotalSelection SMALLMONEY,
 		Sporttype BIGINT,
-		Status NVARCHAR(10)
+		Status NVARCHAR(10),
+		IsParlayGenerator BIT,
 	)
 	
 	SELECT @AlertType = AlertType
@@ -222,7 +224,8 @@ BEGIN
 			TotalBet,
 			TotalSelection,
 			Sporttype,
-			Status
+			Status,
+			IsParlayGenerator
 		)
 		SELECT
 			transdate,
@@ -246,7 +249,8 @@ BEGIN
 			TotalBet,
 			hdp2 AS TotalSelection,
 			transid2 AS Sporttype,
-			status
+			status,
+			CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
@@ -272,7 +276,8 @@ BEGIN
 			TotalBet,
 			TotalSelection,
 			Sporttype,
-			Status
+			Status,
+			IsParlayGenerator
 		)
 		SELECT
 			transdate,
@@ -296,7 +301,8 @@ BEGIN
 			TotalBet,
 			hdp2 AS TotalSelection,
 			transid2 AS Sporttype,
-			status
+			status,
+			CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END
 		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
@@ -328,7 +334,8 @@ BEGIN
 				 WHEN t.Sporttype = -1 THEN 'Combined Other Sports'
 				 WHEN t.Sporttype NOT IN (1, -4, -5, -3, -1) THEN s.SportName
 			END  AS SportType,
-			Status
+			Status,
+			IsParlayGenerator
 		FROM #tmpPotential t
 			LEFT JOIN bodb02.dbo.Sports s WITH(NOLOCK) ON t.Sporttype = s.SportType
 	END	

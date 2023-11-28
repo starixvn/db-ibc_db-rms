@@ -25,6 +25,7 @@ AS
 		- 20220425@Danny: Monitor detail Performance for Event/Bettype/BetChoice [RedmineID: #170032]
 		- 20230130@Danny: Monitor detail Performance for Event/Bettype/BetChoice Soccer [RedmineID: #182724]
 		- 20230815@Cherry: Add Total Stake column (#192680)
+		- 20231020@Cherry: Parlay Generator (#195498)
 	
 	Parameter's Explanation:
 		- @selection:
@@ -45,6 +46,7 @@ AS
 					. 3: Single Match Parlay
 					. 4: Panalty shootout combo
 					. 5: GOF
+					. 6: Parlay Generator
 
 		EXEC RMS_Monitor_EventPerformance_Summary 
 				@selection		 = '0',
@@ -166,30 +168,20 @@ BEGIN
 
 	-- get data
 	BEGIN
-		-- Combo parlay
-		DECLARE @ComboType TINYINT = 0	
-				--1: mix parlay only, 
-				--2: combo parlay only, 
-				--3: GOF only, 
-				--4: combined between mix parlay and GOF, 
-				--5: combined between combo parlay and GOF,
-				--6: combined between mix parlay and combo parlay, 
-				--7: combined all
+		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+
+		INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',')
+			
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
+			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+			INSERT INTO #ParlayType (ParlayType) VALUES (6)
 		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
-
-			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT value) = 3 AND SUM(DISTINCT CAST(value as SMALLINT)) = 8 THEN 7 
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 3 THEN 6
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 6 THEN 4
-										WHEN COUNT(DISTINCT value) = 2 AND SUM(DISTINCT CAST(value as SMALLINT)) = 7 THEN 5
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 1 THEN 1
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 2 THEN 2
-										WHEN COUNT(DISTINCT value) = 1 AND SUM(DISTINCT CAST(value as SMALLINT)) = 5 THEN 3
-								END
-			FROM STRING_SPLIT(@ParlayType, ',') WHERE value IN (1,2,5)
 		END
 
 		-- Single match parlay
@@ -214,11 +206,20 @@ BEGIN
 	FROM	bodb02.dbo.bettransm WITH(NOLOCK)
 	WHERE	matchid IN (SELECT x.matchID FROM #match x) AND statusID = 0
 
+	CREATE TABLE #tmpBettrans (transid BIGINT, bact INT)
+	INSERT INTO #tmpBettrans (transid, bact)
+	SELECT transid,
+		ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+	FROM rmBettrans WITH(NOLOCK)
+	WHERE winlostdate >= @yesterday AND custID > 0 AND matchid = 29 AND statusID = 0 AND currency <> 20
+		AND bettype IN (SELECT bettype FROM #bettype)
+
 	INSERT INTO  #tmpMainTicket (refno, stake, bettype, betteam, oddsspread)
 	SELECT  refno, stake * actualrate, bettype, betteam, oddsspread
 	FROM	rmBettrans rm WITH(NOLOCK)
-	INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rm.custid = ci.custid
-	LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rm.custid = mc.custid
+		INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rm.custid = ci.custid
+		LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rm.custid = mc.custid
+		LEFT JOIN #tmpBettrans t ON rm.transid = t.transid
 	WHERE	winlostdate >= @yesterday AND rm.custID > 0 AND matchid = 29 AND statusID = 0 AND rm.currency <> 20
 		AND bettype IN (SELECT x.bettype FROM #bettype x)
 		AND refno IN (SELECT DISTINCT y.refno FROM #bettransm y)
@@ -226,24 +227,16 @@ BEGIN
 		AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 		AND ISNULL(mc.level, 0) IN (SELECT level FROM #level)
 		AND ( rm.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
-
-	IF @ComboType IN (1,2,3,4,5,6)
-		BEGIN
-			IF @ComboType = 1 -- Mix parlay only
-				DELETE #tmpMainTicket WHERE bettype = 29 AND  betteam <> N'1' OR (bettype = 29 AND betteam = N'1' AND oddsspread = 1)
-				ELSE IF @ComboType = 2 -- Combo parlay only
-					DELETE #tmpMainTicket WHERE bettype = 29 AND betteam = N'1'
-					ELSE IF @ComboType = 3 -- GOF only
-						DELETE #tmpMainTicket WHERE (bettype = 29 AND betteam <> N'1') OR (bettype = 29 AND betteam = N'1' AND (oddsspread <> 1 OR oddsspread IS NULL))
-						ELSE IF @ComboType = 4  -- combined between mix parlay and GOF
-							DELETE #tmpMainTicket WHERE bettype = 29 AND betteam <> N'1'
-							ELSE IF @ComboType = 5  -- combined between combo parlay and GOF
-								DELETE #tmpMainTicket WHERE bettype = 29 AND  betteam = N'1' AND (oddsspread <> 1 OR oddsspread IS NULL)
-								ELSE IF @ComboType = 6  -- combined between mix parlay and combo parlay
-									DELETE #tmpMainTicket WHERE bettype = 29 AND  betteam = N'1' AND oddsspread = 1
-		END
-
-
+		AND (rm.bettype <> 29
+			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+				AND rm.bettype = 29 AND rm.betteam = N'1')
+			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+				AND rm.bettype = 29 AND rm.betteam <> N'1')
+			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+				AND rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 1)
+			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+				AND rm.bettype = 29 AND rm.betteam = N'1' AND t.bact = 5)
+			)		
 	END
 
 	IF @isViewDetail = 0
@@ -356,5 +349,7 @@ BEGIN
 	DROP TABLE #bettype_selection
 	DROP TABLE #Details
 	DROP TABLE #Result
+	DROP TABLE #ParlayType
+	DROP TABLE #tmpBettrans
 END
 GO

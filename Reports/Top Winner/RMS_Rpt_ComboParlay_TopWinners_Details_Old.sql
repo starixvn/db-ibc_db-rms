@@ -25,6 +25,7 @@ AS
 		- 20201204@Danny: Separate Data of Virtual Soccer & Virtual Basketball  [RedmineID: #145926]
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20210303@Danny: Change on Report Top Winners [RedmineID: #146554]
+		- 20231020@Cherry: Parlay Generator (#195498)
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -97,30 +98,20 @@ BEGIN
 	BEGIN
 		CREATE TABLE #bettype (bettype SMALLINT)
 
-		-- Combo parlay
-		DECLARE @ComboType TINYINT = 0	
-				--1: mix parlay only, 
-				--2: combo parlay only, 
-				--3: GOF only, 
-				--4: combined between mix parlay and GOF, 
-				--5: combined between combo parlay and GOF,
-				--6: combined between mix parlay and combo parlay, 
-				--7: combined all
-		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%'
+		CREATE TABLE #ParlayType (ParlayType SMALLINT)
+
+		INSERT INTO #ParlayType (ParlayType)
+			SELECT	value
+			FROM STRING_SPLIT(@ParlayType, ',') 
+
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
+			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+			INSERT INTO #ParlayType (ParlayType) VALUES (6)
+	
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
-			VALUES (29)
-
-			SELECT	@ComboType = CASE	WHEN COUNT(DISTINCT val) = 3 AND SUM(DISTINCT CAST(val as SMALLINT)) = 8 THEN 7 
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 3 THEN 6
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 6 THEN 4
-										WHEN COUNT(DISTINCT val) = 2 AND SUM(DISTINCT CAST(val as SMALLINT)) = 7 THEN 5
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 1 THEN 1
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 2 THEN 2
-										WHEN COUNT(DISTINCT val) = 1 AND SUM(DISTINCT CAST(val as SMALLINT)) = 5 THEN 3
-								END
-			FROM dbo.f_RMS_strSplit(@ParlayType, ',') WHERE val IN (1,2,5)
+			VALUES (29)			
 		END
 
 		-- Single match parlay
@@ -151,6 +142,12 @@ BEGIN
 			AND ToDate < @ExtraPTCutOffDate
 		GROUP BY SuperId, FromDate, ToDate
 
+		CREATE TABLE #tmpGenerator
+		(
+			transid BIGINT,
+			bact INT
+		)	
+
 		CREATE TABLE #tmpBettrans
 		(
 			transid					BIGINT PRIMARY KEY NONCLUSTERED
@@ -168,8 +165,19 @@ BEGIN
 			,winlost_baseRM			MONEY
 			,company_winlost_baseRM MONEY
 			,IsGOF					BIT
+			,IsParlayGenerator		BIT
 			,currency				TINYINT
 		)
+
+		INSERT INTO #tmpGenerator (transid, bact)
+		SELECT transid,
+			ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+		FROM dbo.bettrans_bk WITH (NOLOCK)
+		WHERE winlostdate BETWEEN @FromDate AND @ToDate
+			AND statusID IN (112, 113)
+			AND custid = @custid
+			AND bettype = 29 
+			AND betteam = N'1'
 
 		INSERT INTO #tmpBettrans
 		(
@@ -188,10 +196,11 @@ BEGIN
 			,winlost_baseRM
 			,company_winlost_baseRM
 			,IsGOF
+			,IsParlayGenerator
 			,currency
 		)		
 		SELECT
-			transid
+			b.transid
 			,refno
 			,CASE WHEN bettype IN (38, 376) THEN 1 ELSE 0 END AS sporttype
 			,bettype
@@ -211,23 +220,25 @@ BEGIN
 			,(winlost - actual_stake) * actualrate
 			,(-(winlost - actual_stake) * (1 - tpositiontaking - ISNULL(e.ExtraPT, CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)))) - scomm  + scomm * ISNULL(e.ExtraPT, CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) / (1 - tpositiontaking)) * actualrate	
 			,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
+			,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND t.bact = 5 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 			,b.currency
 		FROM dbo.bettrans_bk b WITH (NOLOCK)
 			LEFT JOIN #ExtraPT e ON b.srecommend = e.SuperId AND b.winlostdate BETWEEN e.FromDate AND e.Todate
+			LEFT JOIN #tmpGenerator t ON b.transid = t.transid
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
 			AND statusID IN (112, 113)
 			AND custid = @custid
 			AND EXISTS (SELECT 1 FROM #bettype bt WHERE b.bettype = bt.bettype)
-			AND 1 = CASE
-						WHEN b.bettype = 29 AND @ComboType IN (1, 2, 3, 4, 5, 6) THEN CASE
-									WHEN @ComboType = 1 AND b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL) THEN 1
-									WHEN @ComboType = 2 AND b.betteam <> N'1' THEN 1
-									WHEN @ComboType = 3 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1
-									WHEN @ComboType = 4 AND b.betteam = N'1' THEN 1
-									WHEN @ComboType = 5 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND b.oddsspread = 1)) THEN 1
-									WHEN @ComboType = 6 AND (b.betteam <> N'1' OR (b.betteam = N'1' AND (b.oddsspread <> 1 OR b.oddsspread IS NULL))) THEN 1
-									ELSE 0 END
-						ELSE 1 END
+			AND (b.bettype <> 29
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+					AND b.bettype = 29 AND b.betteam = N'1')
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
+					AND b.bettype = 29 AND b.betteam <> N'1')
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
+					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+					AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+				)		
 
 		IF EXISTS (SELECT 1 FROM #tmpBettrans WHERE bettype = 29 AND sporttype = 0)
 		BEGIN
@@ -309,6 +320,7 @@ BEGIN
 		,b.winlost_baseRM
 		,b.company_winlost_baseRM
 		,b.IsGOF
+		,b.IsParlayGenerator
 	FROM #tmpBettrans b
 		INNER JOIN #tmpSelection s ON b.combo = s.selection
 		INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
@@ -321,5 +333,7 @@ BEGIN
 	DROP TABLE #tmpSelection
 	DROP TABLE #tmpSport
 	DROP TABLE #tmpCurrency
+	DROP TABLE #ParlayType
+	DROP TABLE #tmpGenerator
 END
 GO
