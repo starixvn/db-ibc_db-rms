@@ -26,6 +26,7 @@ AS
 		- 20230417@Cherry: Duplicate data Similar Bet (#186993)
 		- 20230420@Cherry: Add Site column (#186735)
 		- 20231020@Cherry: Parlay Generator (#195498)
+		- 20231115@Cherry: Add IP column (#196550)
 */
 
 BEGIN
@@ -334,6 +335,7 @@ BEGIN
 			,(p.stake * p.actualrate) AS stake
 			,ci.CustomerClass
 			,(p.odds2 - 1) * p.stake * p.actualrate AS potentialWinningAmt
+			, p.ip IP
 		FROM @result r
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
@@ -418,6 +420,7 @@ BEGIN
 			,(p.stake * p.actualrate) AS stake
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate AS houseLoseAmt
 			,ci.CustomerClass
+			,p.ip IP
 		FROM @result r
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
@@ -438,6 +441,7 @@ BEGIN
 			,(p.stake * p.actualrate) AS stake
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate AS houseLoseAmt
 			,ci.CustomerClass
+			,p.ip IP
 		FROM @result r
 			INNER JOIN dbo.rmBettrans_Old p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid

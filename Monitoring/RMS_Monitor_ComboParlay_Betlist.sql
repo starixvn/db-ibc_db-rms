@@ -16,6 +16,8 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_Betlist]
 	,@leagueGroupId VARCHAR(200)
 	,@company		VARCHAR(MAX) = '' 
 	,@UserName		NVARCHAR(50) = ''
+	,@LiveStatus	TINYINT = 3
+	,@IP			VARCHAR(45) = NULL
 AS
 
 /*
@@ -45,6 +47,7 @@ AS
 		- 20230420@Cherry: Add Site column (#186735)
 		- 20230824@Cherry: Parlay Boost Bonus (#192681)
 		- 20231020@Cherry: Parlay Generator (#195498)
+		- 20231115@Cherry: Add param IP, LiveStatus (#196550)
 
 	Parameter's Explanation:
 		- @selection:
@@ -75,6 +78,11 @@ AS
 					. 4: Panalty shootout combo
 					. 5: GOF
 					. 6: Parlay Generator
+		- @@LiveStatus:
+					. Non live : 0, 
+					. Live : 1, 
+					. Mix Live and Non live: 2
+					. All : 3
 */
 
 BEGIN
@@ -285,6 +293,8 @@ BEGIN
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
 					AND b.betteam = N'1' AND t.bact = 5)
 				)		
+			AND (b.livehomescore = @LiveStatus OR @LiveStatus = 3)
+			AND (b.IP = @IP OR @IP IS NULL)
 			
 		END
 	
@@ -312,6 +322,8 @@ BEGIN
 			AND b.currency <> 20
 			AND b.bettype IN (38, 376)
 			AND m.leagueid IN  (SELECT x.LeagueId FROM #League x)
+			AND (b.liveindicator = @LiveStatus OR @LiveStatus = 3)
+			AND (b.IP = @IP OR @IP IS NULL)
 			
 		END
 
