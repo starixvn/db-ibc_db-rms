@@ -52,8 +52,8 @@ BEGIN
 		LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 	WHERE b.ip = @IP
 		AND transdate >= @fromdate AND transdate < DATEADD(DAY, 1, @fromdate)
-		AND (@TicketStatus = -1 OR
-					 EXISTS (SELECT TOP 1 1 FROM #tmpStatus t WHERE b.statusID = t.statusid)
+		AND (@TicketStatus = '-1' OR
+			EXISTS (SELECT TOP 1 1 FROM #tmpStatus t WHERE b.statusID = t.statusid)
 			)
 	GROUP BY b.custid, b.username,
 			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END

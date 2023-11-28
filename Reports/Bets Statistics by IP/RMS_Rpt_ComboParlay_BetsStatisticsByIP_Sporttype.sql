@@ -86,8 +86,8 @@ BEGIN
 			(@sporttype = 1 AND a.liveawayscore = 1)
             OR (@sporttype = 2 AND a.liveawayscore IN (2,3))
 			)
-		AND (@TicketStatus = -1 OR
-					 EXISTS (SELECT TOP 1 1 FROM #tmpStatus t WHERE a.statusID = t.statusid)
+		AND (@TicketStatus = '-1' OR
+			EXISTS (SELECT TOP 1 1 FROM #tmpStatus t WHERE a.statusID = t.statusid)
 			)
 
 	DROP TABLE #tmpStatus

@@ -70,7 +70,7 @@ BEGIN
 					END) HouseLoseAmount
 			FROM rmBettrans b WITH(NOLOCK)
 			WHERE transdate >= @fromdate AND transdate < DATEADD(DAY, 1, @fromdate)
-				AND (@TicketStatus = -1 OR
+				AND (@TicketStatus = '-1' OR
 					 EXISTS (SELECT TOP 1 1 FROM #tmpStatus t WHERE b.statusID = t.statusid)
 					)
 			GROUP BY IP
