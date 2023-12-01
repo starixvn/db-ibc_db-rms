@@ -37,6 +37,7 @@ AS
 		- 20230420@Cherry: Add Site column (#186735)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20231115@Cherry: Add param IP (#196550)
+		- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
 
 	Parameter's Explanation:
 		- @selection:
@@ -64,6 +65,7 @@ AS
 					. 4: Panalty shootout combo
 					. 5: GOF
 					. 6: Parlay Generator
+					. 7: Parlay Boost
 
 		- @SortById: sort base on column:
 					. 1: transdate
@@ -154,9 +156,16 @@ BEGIN
 			SELECT	value
 			FROM STRING_SPLIT(@ParlayType, ',') 
 
-		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
-			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-			INSERT INTO #ParlayType (ParlayType) VALUES (6)
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) 
+		BEGIN
+			IF NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+				INSERT INTO #ParlayType (ParlayType) VALUES (6)
+			IF NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
+				INSERT INTO #ParlayType (ParlayType) VALUES (7)
+		END
+
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType IN (6,7)) 
+			INSERT INTO #ParlayType (ParlayType) VALUES (77) --Parlay Generator & Boost
 	
 		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
 		BEGIN
@@ -269,6 +278,8 @@ BEGIN
 							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
 							AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
+							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 						)		
 					AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 					AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
@@ -344,6 +355,8 @@ BEGIN
 							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
 							AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
+							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 						)		
 					AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 					AND (b.livehomescore = @LiveStatus OR @LiveStatus = 3)
