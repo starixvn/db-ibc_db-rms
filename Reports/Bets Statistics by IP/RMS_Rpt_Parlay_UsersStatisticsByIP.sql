@@ -46,8 +46,11 @@ BEGIN
 	FROM
 	(
 		SELECT IP
-		FROM dbo.rmBettrans WITH (NOLOCK)
+		FROM dbo.rmBettrans b WITH (NOLOCK)
 		WHERE transdate >= @fromdate AND transdate < DATEADD(DAY, 1, @fromdate)
+			AND (@TicketStatus = '-1' OR
+				EXISTS (SELECT TOP 1 1 FROM #tmpStatus t WHERE b.statusID = t.statusid)
+				)
 		GROUP BY IP
 		HAVING COUNT(DISTINCT custid) >= 2
 	) r
