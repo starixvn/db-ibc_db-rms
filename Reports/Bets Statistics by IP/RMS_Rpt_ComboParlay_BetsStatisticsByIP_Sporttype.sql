@@ -3,7 +3,8 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_BetsStatisticsByIP_Sporttype]
 	@fromdate  DATETIME,
 	@IP        VARCHAR(45),
 	@custid    INT,
-	@sporttype TINYINT
+	@sporttype TINYINT,
+	@TicketStatus	VARCHAR(50) = '-1'
 AS
 
 /*
@@ -18,14 +19,27 @@ AS
 		- 20210218@Danny: Monitor Performance of GOF  [RedmineID: #149966]
 		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
 		- 20231020@Cherry: Parlay Boost Bonus (#192681)
+		- 20231115@Cherry: Add param TicketStatus (#196550)
 
 	Parameter's Explanation:
 		@sporttype = '1': soccer only
 					= 2: others
+		@TicketStatus: 
+			-1:  All
+			0:   Running
+			112: Won
+			113: Lose
+			111: Draw
+			101: Reject
+			102: Void
 */
 
 BEGIN
 	SET NOCOUNT ON
+
+	CREATE TABLE #tmpStatus (statusid INT)
+	INSERT INTO #tmpStatus (statusid)
+	SELECT value FROM STRING_SPLIT(@TicketStatus, ',')
 
 	SELECT  a.transid,
             a.refno,
@@ -71,6 +85,11 @@ BEGIN
         AND (
 			(@sporttype = 1 AND a.liveawayscore = 1)
             OR (@sporttype = 2 AND a.liveawayscore IN (2,3))
-		)
+			)
+		AND (@TicketStatus = '-1' OR
+			EXISTS (SELECT TOP 1 1 FROM #tmpStatus t WHERE a.statusID = t.statusid)
+			)
+
+	DROP TABLE #tmpStatus
 END
 GO
