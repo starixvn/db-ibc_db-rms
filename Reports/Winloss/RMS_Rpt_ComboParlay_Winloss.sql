@@ -29,7 +29,8 @@ AS
 		- 20210428@Danny: Add filtering by Site[RedmineID: #153874]
 		- 20220519@Danny: add filter by Live Status [RedmineID: #172691]
 		- 20231020@Cherry: Parlay Generator (#195498)
-		- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
+		- 20231206@Cherry: Tuning performance (#196605)
+		- 20231215@Cherry: Parlay Type for Parlay Boost (#197680)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -131,7 +132,7 @@ BEGIN
 		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType IN (6,7)) 
 			INSERT INTO #ParlayType (ParlayType) VALUES (77) --Parlay Generator & Boost
 	
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)			
