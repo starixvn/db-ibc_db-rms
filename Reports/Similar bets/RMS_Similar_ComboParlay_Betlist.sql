@@ -2,6 +2,7 @@
 ALTER PROCEDURE [dbo].[RMS_Similar_ComboParlay_Betlist]
 	@transid BIGINT,
 	@isSimilar BIT = 0 --100%
+
 AS
 
 /*

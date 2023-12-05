@@ -3,6 +3,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_BetsStatisticsByIP]
 	@IP			VARCHAR(45)
 	,@fromdate	DATETIME
 	,@TicketStatus	VARCHAR(50) = '-1'
+
 AS
 
 /*

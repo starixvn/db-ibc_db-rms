@@ -5,6 +5,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_BetsStatisticsByIP_Sporttype]
 	@custid    INT,
 	@sporttype TINYINT,
 	@TicketStatus	VARCHAR(50) = '-1'
+
 AS
 
 /*

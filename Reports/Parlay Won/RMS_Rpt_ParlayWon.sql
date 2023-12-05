@@ -19,6 +19,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ParlayWon]
 	,@LiveStatus	TINYINT = 3
 	,@CustomerClass	SMALLINT = NULL
 	,@IP			VARCHAR(45) = NULL
+
 AS
 /*
 	Created: 20200512@Percy

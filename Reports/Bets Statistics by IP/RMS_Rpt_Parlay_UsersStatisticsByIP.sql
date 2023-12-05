@@ -7,6 +7,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_UsersStatisticsByIP]
 	,@pageSize		INT = 100
 	,@totalItems	INT = 0 OUTPUT
 	,@max_transid	BIGINT = 0 OUTPUT
+
 AS
 
 /*

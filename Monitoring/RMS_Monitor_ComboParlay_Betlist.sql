@@ -18,6 +18,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_Betlist]
 	,@UserName		NVARCHAR(50) = ''
 	,@LiveStatus	TINYINT = 3
 	,@IP			VARCHAR(45) = NULL
+
 AS
 
 /*
