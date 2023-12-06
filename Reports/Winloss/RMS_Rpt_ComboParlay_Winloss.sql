@@ -180,8 +180,8 @@ BEGIN
 			DELETE t
 			FROM #tmpCust t
 				LEFT JOIN bodb02.dbo.customer c WITH(NOLOCK) ON t.custid = c.custid
-			WHERE c.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
-				AND c.custid IS NULL
+					AND c.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
+			WHERE c.custid IS NULL
 
 			INSERT INTO #tmpBettrans(transid, bact)
 			SELECT transid,
@@ -249,8 +249,8 @@ BEGIN
 			DELETE t
 			FROM #tmpCust t
 				LEFT JOIN bodb02.dbo.customer c WITH(NOLOCK) ON t.custid = c.custid
-			WHERE c.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
-				AND c.custid IS NULL
+					AND c.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
+			WHERE c.custid IS NULL
 
 			INSERT INTO #rptWinloss
 			(
@@ -297,8 +297,8 @@ BEGIN
 			DELETE t
 			FROM #tmpCust t
 				LEFT JOIN bodb02.dbo.customer c WITH(NOLOCK) ON t.custid = c.custid
-			WHERE c.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
-				AND c.custid IS NULL
+					AND c.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
+			WHERE c.custid IS NULL
 			
 			INSERT INTO #rptWinloss
 			(
