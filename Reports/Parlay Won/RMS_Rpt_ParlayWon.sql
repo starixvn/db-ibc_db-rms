@@ -210,6 +210,7 @@ BEGIN
 			,currencyName		NVARCHAR(50)
 			,CustomerClass		SMALLINT
 			,IsParlayGenerator  BIT
+			,IsBoostBonus		BIT
 		)
 
 		IF @ToDate > @MoveBetsDay
@@ -230,10 +231,10 @@ BEGIN
 		
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus
 			)
 			SELECT
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus
 			FROM
 			(
 				SELECT
@@ -256,6 +257,7 @@ BEGIN
 					,b.CurrencyName
 					,ci.CustomerClass
 					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5 THEN 1 ELSE 0 END IsParlayGenerator
+					,CASE WHEN rb.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
 				FROM dbo.rmBettrans b WITH (NOLOCK)
 					INNER JOIN #bettype bt ON b.bettype = bt.bettype
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
@@ -307,10 +309,10 @@ BEGIN
 			
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus
 			)
 			SELECT
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus
 			FROM
 			(
 				SELECT
@@ -333,6 +335,7 @@ BEGIN
 					,b.CurrencyName
 					,ci.CustomerClass
 					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5 THEN 1 ELSE 0 END IsParlayGenerator
+					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
 				FROM dbo.rmBettrans_Old b WITH (NOLOCK)
 					INNER JOIN #bettype bt ON b.bettype = bt.bettype
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
@@ -410,11 +413,11 @@ BEGIN
 		DECLARE @SQL VARCHAR(MAX)
 		SELECT  @SQL = 'CREATE INDEX IX_Index ON #rmBettrans (' + @sortedColumn + ')' + CHAR(13)
 		SELECT  @SQL = @SQL
-						+  'SELECT transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName, CustomerClass, IsParlayGenerator
+						+  'SELECT transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName, CustomerClass, IsParlayGenerator, IsBoostBonus
 							FROM
 							(
 								SELECT ROW_NUMBER() OVER(ORDER BY b.' + @sortedColumn + CASE WHEN @IsSortAsc = 0 THEN ' DESC' ELSE ' ' END + ',transdate) AS rn,
-									b.transdate,b.transid,b.refno,b.custid,b.SiteGroup,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName, b.CustomerClass, b.IsParlayGenerator									
+									b.transdate,b.transid,b.refno,b.custid,b.SiteGroup,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName, b.CustomerClass, b.IsParlayGenerator, b.IsBoostBonus								
 								FROM #rmBettrans b
 									LEFT JOIN dbo.rmCustomer c WITH (NOLOCK) ON b.custid = c.custid
 								WHERE ISNULL(c.level, 0) IN (SELECT level FROM #level)
