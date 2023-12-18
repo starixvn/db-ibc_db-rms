@@ -20,6 +20,7 @@ AS
 		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
 		- 20231020@Cherry: Parlay Boost Bonus (#192681)
 		- 20231115@Cherry: Add param TicketStatus (#196550)
+		- 20231218@Cherry: Change Original Odds of Parlay Boost
 
 	Parameter's Explanation:
 		@sporttype = '1': soccer only
@@ -47,7 +48,7 @@ BEGIN
             a.bettype,
             a.modds,
 			CASE WHEN a.bettype = 29 AND a.betteam = N'1' AND a.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus,
-            a.odds, --Original Odds
+            TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@o)[1]', 'VARCHAR(50)') AS SMALLMONEY) odds, --Original Odds
 			CASE WHEN a.statusID = 112 AND TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY) > 0 
 				THEN r.mOdds
 				ELSE TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@bbo)[1]', 'VARCHAR(50)') AS SMALLMONEY) END odds2, --Boost Odds
