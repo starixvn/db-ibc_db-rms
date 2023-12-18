@@ -48,7 +48,10 @@ BEGIN
             a.bettype,
             a.modds,
 			CASE WHEN a.bettype = 29 AND a.betteam = N'1' AND a.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus,
-            TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@o)[1]', 'VARCHAR(50)') AS SMALLMONEY) odds, --Original Odds
+            CASE WHEN a.bettype = 29 AND a.betteam = N'1' AND a.oddsspread = 2  
+				THEN TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@o)[1]', 'VARCHAR(50)') AS SMALLMONEY) 
+				ELSE a.odds
+				END odds, --Original Odds
 			CASE WHEN a.statusID = 112 AND TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY) > 0 
 				THEN r.mOdds
 				ELSE TRY_CAST(TRY_CAST(a.ExtraInfo AS XML).value('(/p1/@bbo)[1]', 'VARCHAR(50)') AS SMALLMONEY) END odds2, --Boost Odds
