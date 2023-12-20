@@ -37,6 +37,7 @@ AS
 		- 20230420@Cherry: Add Site column (#186735)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20231115@Cherry: Add param IP (#196550)
+		- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
 
 	Parameter's Explanation:
 		- @selection:
@@ -64,6 +65,7 @@ AS
 					. 4: Panalty shootout combo
 					. 5: GOF
 					. 6: Parlay Generator
+					. 7: Parlay Boost
 
 		- @SortById: sort base on column:
 					. 1: transdate
@@ -154,11 +156,15 @@ BEGIN
 			SELECT	value
 			FROM STRING_SPLIT(@ParlayType, ',') 
 
-		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
-			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-			INSERT INTO #ParlayType (ParlayType) VALUES (6)
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) 
+		BEGIN
+			IF NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+				INSERT INTO #ParlayType (ParlayType) VALUES (6)
+			IF NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
+				INSERT INTO #ParlayType (ParlayType) VALUES (7)
+		END
 	
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)			
@@ -201,6 +207,7 @@ BEGIN
 			,currencyName		NVARCHAR(50)
 			,CustomerClass		SMALLINT
 			,IsParlayGenerator  BIT
+			,IsBoostBonus		BIT
 		)
 
 		IF @ToDate > @MoveBetsDay
@@ -221,10 +228,10 @@ BEGIN
 		
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus
 			)
 			SELECT
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus
 			FROM
 			(
 				SELECT
@@ -247,6 +254,7 @@ BEGIN
 					,b.CurrencyName
 					,ci.CustomerClass
 					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5 THEN 1 ELSE 0 END IsParlayGenerator
+					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
 				FROM dbo.rmBettrans b WITH (NOLOCK)
 					INNER JOIN #bettype bt ON b.bettype = bt.bettype
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
@@ -269,6 +277,8 @@ BEGIN
 							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
 							AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
+							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 						)		
 					AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 					AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
@@ -296,10 +306,10 @@ BEGIN
 			
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus
 			)
 			SELECT
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus
 			FROM
 			(
 				SELECT
@@ -322,6 +332,7 @@ BEGIN
 					,b.CurrencyName
 					,ci.CustomerClass
 					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5 THEN 1 ELSE 0 END IsParlayGenerator
+					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
 				FROM dbo.rmBettrans_Old b WITH (NOLOCK)
 					INNER JOIN #bettype bt ON b.bettype = bt.bettype
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
@@ -344,6 +355,8 @@ BEGIN
 							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
 							AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
+							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 						)		
 					AND ct.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 					AND (b.livehomescore = @LiveStatus OR @LiveStatus = 3)
@@ -397,11 +410,11 @@ BEGIN
 		DECLARE @SQL VARCHAR(MAX)
 		SELECT  @SQL = 'CREATE INDEX IX_Index ON #rmBettrans (' + @sortedColumn + ')' + CHAR(13)
 		SELECT  @SQL = @SQL
-						+  'SELECT transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName, CustomerClass, IsParlayGenerator
+						+  'SELECT transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName, CustomerClass, IsParlayGenerator, IsBoostBonus
 							FROM
 							(
 								SELECT ROW_NUMBER() OVER(ORDER BY b.' + @sortedColumn + CASE WHEN @IsSortAsc = 0 THEN ' DESC' ELSE ' ' END + ',transdate) AS rn,
-									b.transdate,b.transid,b.refno,b.custid,b.SiteGroup,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName, b.CustomerClass, b.IsParlayGenerator									
+									b.transdate,b.transid,b.refno,b.custid,b.SiteGroup,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName, b.CustomerClass, b.IsParlayGenerator, b.IsBoostBonus								
 								FROM #rmBettrans b
 									LEFT JOIN dbo.rmCustomer c WITH (NOLOCK) ON b.custid = c.custid
 								WHERE ISNULL(c.level, 0) IN (SELECT level FROM #level)
