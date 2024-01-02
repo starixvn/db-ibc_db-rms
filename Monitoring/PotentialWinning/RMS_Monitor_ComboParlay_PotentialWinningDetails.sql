@@ -24,6 +24,7 @@ AS
 		- 20210701@Danny: Track User Monitoring [RedmineID: #153875]
 		- 20230320@Cherry: Change formula of Stake (#185251)
 		- 20231020@Cherry: Parlay Generator (#195498)
+		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
 
 	Parameter's Explanation:
 		- @selection:
@@ -44,6 +45,7 @@ AS
 					. 4: Panalty shootout combo
 					. 5: GOF
 					. 6: Parlay Generator
+					. 7: Parlay Boost
 */
 
 BEGIN
@@ -116,11 +118,15 @@ BEGIN
 			SELECT	value
 			FROM STRING_SPLIT(@ParlayType, ',') 
 
-		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
-			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-			INSERT INTO #ParlayType (ParlayType) VALUES (6)
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) 
+		BEGIN
+			IF NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+				INSERT INTO #ParlayType (ParlayType) VALUES (6)
+			IF NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
+				INSERT INTO #ParlayType (ParlayType) VALUES (7)
+		END
 	
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)			
@@ -168,6 +174,8 @@ BEGIN
 				AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
 				AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
+				AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 			)		
 
 	CREATE CLUSTERED INDEX CIX_bettype ON #bettrans (bettype)
@@ -226,6 +234,7 @@ BEGIN
 		,b.TotalBet AS TotalBet
 		,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 		,rb.IsParlayGenerator
+		,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 		,l.username AS TrackingUser
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN #bettrans rb ON rb.transid = b.transid
