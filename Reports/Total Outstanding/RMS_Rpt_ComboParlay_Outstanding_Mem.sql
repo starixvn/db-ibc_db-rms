@@ -24,6 +24,7 @@ AS
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20230320@Cherry: Change formula of Stake (#185251)
 		- 20231020@Cherry: Parlay Generator (#195498)
+		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
 		
 	Parameter's Explanation:
 		- @selection:
@@ -223,11 +224,12 @@ BEGIN
 			,rb.hdp2 AS TotalSelection
 			,ISNULL(b.NumberWon, 0) AS NumberWon
 			,rb.TotalBet AS TotalBet
-			,CASE WHEN rb.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE rb.transid2 END AS Sporttype,
-			CAST(CASE WHEN rb.bettype = 29 AND rb.betteam= N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF,
-			CASE WHEN b.bact = 5 THEN 1 ELSE 0 END AS IsParlayGenerator,
-			(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt,
-			ci.CustomerClass
+			,CASE WHEN rb.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE rb.transid2 END AS Sporttype
+			,CAST(CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
+			,CASE WHEN b.bact = 5 THEN 1 ELSE 0 END AS IsParlayGenerator
+			,CAST(CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
+			,(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt
+			,ci.CustomerClass
 		FROM rmBettrans rb WITH(NOLOCK)
 			INNER JOIN #bettrans b ON rb.transid = b.transid
 			INNER JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custID = rb.custid
