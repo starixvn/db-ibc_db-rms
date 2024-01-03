@@ -16,6 +16,7 @@ AS
 		20230620@Cherry: Initial (#189147)
 		20230830@Cherry: Enhance (#192682)
 		20231101@Cherry: Parlay Generator (#195498)
+		20240102@Cherry: Parlay Type for Parlay Boost (#199217)
 
 	Param:
 		@TicketStatus = 112: Won
