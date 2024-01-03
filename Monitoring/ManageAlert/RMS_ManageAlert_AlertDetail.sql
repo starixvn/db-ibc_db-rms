@@ -95,6 +95,7 @@ BEGIN
 		Sporttype BIGINT,
 		Status NVARCHAR(10),
 		IsParlayGenerator BIT,
+		IsBoostBonus BIT
 	)
 	
 	SELECT @AlertType = AlertType
@@ -225,7 +226,8 @@ BEGIN
 			TotalSelection,
 			Sporttype,
 			Status,
-			IsParlayGenerator
+			IsParlayGenerator,
+			IsBoostBonus
 		)
 		SELECT
 			transdate,
@@ -250,7 +252,8 @@ BEGIN
 			hdp2 AS TotalSelection,
 			transid2 AS Sporttype,
 			status,
-			CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END
+			CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END AS BIT),
+			CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 2 THEN 1 ELSE 0 END AS BIT)
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
@@ -277,7 +280,8 @@ BEGIN
 			TotalSelection,
 			Sporttype,
 			Status,
-			IsParlayGenerator
+			IsParlayGenerator,
+			IsBoostBonus
 		)
 		SELECT
 			transdate,
@@ -302,7 +306,8 @@ BEGIN
 			hdp2 AS TotalSelection,
 			transid2 AS Sporttype,
 			status,
-			CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END
+			CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) = 5 THEN 1 ELSE 0 END AS BIT),
+			CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 2 THEN 1 ELSE 0 END AS BIT)
 		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
@@ -335,7 +340,8 @@ BEGIN
 				 WHEN t.Sporttype NOT IN (1, -4, -5, -3, -1) THEN s.SportName
 			END  AS SportType,
 			Status,
-			IsParlayGenerator
+			IsParlayGenerator,
+			IsBoostBonus
 		FROM #tmpPotential t
 			LEFT JOIN bodb02.dbo.Sports s WITH(NOLOCK) ON t.Sporttype = s.SportType
 	END	

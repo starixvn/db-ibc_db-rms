@@ -172,6 +172,7 @@ BEGIN
 			,IsGOF					BIT
 			,IsParlayGenerator		BIT
 			,currency				TINYINT
+			,IsBoostBonus			BIT
 		)
 
 		INSERT INTO #tmpGenerator (transid, bact)
@@ -203,6 +204,7 @@ BEGIN
 			,IsGOF
 			,IsParlayGenerator
 			,currency
+			,IsBoostBonus
 		)		
 		SELECT
 			b.transid
@@ -227,6 +229,7 @@ BEGIN
 			,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 			,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND t.bact = 5 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 			,b.currency
+			,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 		FROM dbo.bettrans_bk b WITH (NOLOCK)
 			LEFT JOIN #ExtraPT e ON b.srecommend = e.SuperId AND b.winlostdate BETWEEN e.FromDate AND e.Todate
 			LEFT JOIN #tmpGenerator t ON b.transid = t.transid
@@ -328,6 +331,7 @@ BEGIN
 		,b.company_winlost_baseRM
 		,b.IsGOF
 		,b.IsParlayGenerator
+		,b.IsBoostBonus
 	FROM #tmpBettrans b
 		INNER JOIN #tmpSelection s ON b.combo = s.selection
 		INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
