@@ -24,6 +24,7 @@ AS
 		- 20210629@Danny: Add filtering by Customer Class[RedmineID: #156980]
 		- 20230320@Cherry: Change formula of Stake (#185251)
 		- 20231020@Cherry: Parlay Generator (#195498)
+		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
 	
 	Parameter's Explanation:
 		- @selection:
@@ -182,7 +183,7 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
 						AND rb.bettype = 29 AND rb.betteam = N'1' AND o.bact = 5)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
-						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
+						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2)
 					)		
 				AND t.CornerParlay > 0
 			GROUP BY rb.custid,	rb.username, ci.CustomerClass
