@@ -22,6 +22,7 @@ AS
 		- 20220421@Danny: Init SP #170032
 		- 20230130@Danny: Monitor detail Performance for Event/Bettype/BetChoice Soccer [RedmineID: #182724]
 		- 20231020@Cherry: Parlay Generator (#195498)
+		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
 
 	Parameter's Explanation:
 		- @selection:
@@ -43,6 +44,7 @@ AS
 					. 4: Panalty shootout combo
 					. 5: GOF
 					. 6: Parlay Generator
+					. 7: Parlay Boost
 
 		EXEC RMS_Monitor_EventPerformance_Summary 
 				@selection		 = '0',
@@ -170,11 +172,15 @@ BEGIN
 			SELECT	value
 			FROM STRING_SPLIT(@ParlayType, ',')
 			
-		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) AND
-			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-			INSERT INTO #ParlayType (ParlayType) VALUES (6)
+		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1) 
+		BEGIN
+			IF NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
+				INSERT INTO #ParlayType (ParlayType) VALUES (6)
+			IF NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
+				INSERT INTO #ParlayType (ParlayType) VALUES (7)
+		END
 		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
@@ -231,6 +237,8 @@ BEGIN
 				AND rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 1)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
 				AND rm.bettype = 29 AND rm.betteam = N'1' AND t.bact = 5)
+			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
+				AND rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 2)
 			)			
 	END
 
@@ -274,6 +282,7 @@ BEGIN
 			,ci.CustomerClass
 			,rb.CurrencyName Currency
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND b.bact = 5 THEN 1 ELSE 0 END IsParlayGenerator
+			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
 		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN trans t ON rb.transid = t.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rb.custid = ci.custid
