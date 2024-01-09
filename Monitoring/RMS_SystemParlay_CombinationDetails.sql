@@ -11,6 +11,7 @@ AS
 		DB: DBRMS/bodb_RMS
 		Revision:
 			- 20231020@Cherry: Parlay Boost Bonus (#192681)
+			- 20240109@Cherry: Change Original Odds from ExtraInfo
 		
 	*/ 
 BEGIN
@@ -46,7 +47,7 @@ BEGIN
 	INSERT INTO #tmpResults(winlostdate, transid, serial, statusid, modds, IsBoostBonus, odds, odds2, bbp, bba, stake, winlost)
 		SELECT b.winlostdate, bm.transid, b.serial, b.statusid, b.modds, 
 			CASE WHEN bm.bettype = 29 AND bm.betteam = N'1' AND bm.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus,
-            bm.odds, --Original Odds
+            TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@o)[1]', 'VARCHAR(50)') AS DECIMAL(19,4)) odds, --Original Odds
 			CASE WHEN bm.statusID = 112 AND TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY) > 0 
 				THEN b.mOdds
 				ELSE TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bbo)[1]', 'VARCHAR(50)') AS SMALLMONEY) END odds2, --Boost Odds
