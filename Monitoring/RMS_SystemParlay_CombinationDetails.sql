@@ -115,7 +115,7 @@ BEGIN
 		bbp BoostRate,
 		bba,
 		stake,
-		winlost - stake AS winlost
+		CASE WHEN statusid IN (0,1) THEN 0 ELSE winlost - stake END AS winlost
 	FROM #tmpResults
 	ORDER BY winlostdate ASC
 	
