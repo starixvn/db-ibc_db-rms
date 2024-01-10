@@ -57,7 +57,7 @@ BEGIN
 			TRY_CAST(TRY_CAST(bm.ExtraInfo AS XML).value('(/p1/@bba)[1]', 'VARCHAR(50)') AS SMALLMONEY) bba,
 			b.stake, b.winlost
 		FROM bodb02.dbo.betparlayresult b WITH(NOLOCK) 
-			INNER JOIN bodb02.dbo.bettrans bm WITH (NOLOCK) ON bm.refno = b.RefNo
+			INNER JOIN dbo.rmbettrans bm WITH (NOLOCK) ON bm.refno = b.RefNo
 		WHERE b.refno = @refno
 	
 	INSERT INTO #BetParlayDetail(RefNo, Serial, matchid)
