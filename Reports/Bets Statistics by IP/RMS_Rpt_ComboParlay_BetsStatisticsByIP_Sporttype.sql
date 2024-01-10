@@ -20,7 +20,7 @@ AS
 		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
 		- 20231020@Cherry: Parlay Boost Bonus (#192681)
 		- 20231115@Cherry: Add param TicketStatus (#196550)
-		- 20231218@Cherry: Change Original Odds from ExtraInfo
+		- 20240109@Cherry: Change Original Odds from ExtraInfo
 
 	Parameter's Explanation:
 		@sporttype = '1': soccer only
@@ -73,13 +73,14 @@ BEGIN
             ISNULL(m.SettlementStatus, 0) AS SettlementStatus,
             ISNULL(m.IsNeutral, CONVERT(BIT, 0)) AS IsNeutral,
 			a.oddsspread,
-			bm.ExtraInfo,
+			a.ExtraInfo,
 			a.actual_stake,
 			CAST(CASE WHEN a.bettype = 29 AND a.oddsspread = 1 AND a.betteam = N'1' THEN 1 ELSE 0 END AS BIT) IsGOF
      FROM dbo.rmBettrans a WITH (NOLOCK)
           LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON m.matchid = a.matchid AND a.bettype IN (38, 376)
-		  LEFT JOIN  bodb02.dbo.bettrans bm WITH (NOLOCK) ON a.transid = bm.transid
-		  LEFT JOIN bodb02.dbo.BetParlayResult r WITH (NOLOCK) ON bm.refno = r.RefNo
+		  LEFT JOIN (SELECT DISTINCT transid, refno, modds, ExtraValue
+                    FROM bodb02.dbo.BetParlayResult WITH (NOLOCK) 
+                    ) r ON a.refno = r.RefNo
      WHERE a.IP = @IP
 		AND a.custid = @custid
 		AND a.transdate >= @fromdate AND a.transdate < DATEADD(DAY, 1, @fromdate)
