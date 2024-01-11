@@ -188,8 +188,14 @@ BEGIN
 	ELSE IF @ReportBy = 3 -- view by league detail
 	BEGIN		
 		SELECT
+			m.MatchID MatchId,
 			m.HomeName + ' -vs- ' + m.AwayName AS [Event],
+			b.typeid BetTypeId,
 			b.typenamee AS BetType,
+			CASE WHEN s.Bettype IN (1,2,3,5,7,8,12,15) AND s.Betteam IN ('a','h','1','2','x') THEN s.Betteam
+				 WHEN s.Bettype IN (20,21,609,610,611,612) AND s.Betteam IN ('a','h') AND @SportType = 2 THEN s.Betteam
+				 ELSE '-'
+			END BetTeam,
 			CASE WHEN s.Bettype IN (1, 7) AND s.Betteam = 'h' THEN m.HomeName
 				  WHEN s.Bettype IN (1, 7) AND s.Betteam = 'a' THEN m.AwayName
 				  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'h' THEN 'Odd'
@@ -222,10 +228,16 @@ BEGIN
 			AND (@Site = 2 OR s.IsDeposit = @Site) 
 			AND s.leagueId IN (SELECT LeagueId FROM #Leagues)
 		GROUP BY
-			m.HomeName
-			,m.AwayName
-			,b.typenamee
-			,CASE WHEN s.Bettype IN (1, 7) AND s.Betteam = 'h' THEN m.HomeName
+			m.MatchID,
+			m.HomeName,
+			m.AwayName,
+			b.typeid,
+			b.typenamee,
+			CASE WHEN s.Bettype IN (1,2,3,5,7,8,12,15) AND s.Betteam IN ('a','h','1','2','x') THEN s.Betteam
+				 WHEN s.Bettype IN (20,21,609,610,611,612) AND s.Betteam IN ('a','h') AND @SportType = 2 THEN s.Betteam
+				 ELSE '-'
+			END,
+			CASE WHEN s.Bettype IN (1, 7) AND s.Betteam = 'h' THEN m.HomeName
 				  WHEN s.Bettype IN (1, 7) AND s.Betteam = 'a' THEN m.AwayName
 				  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'h' THEN 'Odd'
 				  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'a' THEN 'Even'
@@ -249,6 +261,7 @@ BEGIN
 	BEGIN
 		SELECT a.GroupName,
 			l.leaguename LeagueName,
+			m.MatchID MatchId,
 			m.HomeName + ' -vs- ' + m.AwayName AS [Event],
 			SUM(BetCount)			AS TotalTickets,
 			SUM(WonCount)			AS WonTickets,
@@ -267,6 +280,7 @@ BEGIN
 			AND s.leagueId IN (SELECT LeagueId FROM #Leagues)
 			AND s.Bettype = @BetType
 		GROUP BY
+			m.MatchID,
 			m.HomeName,
 			m.AwayName,
 			a.GroupName,
