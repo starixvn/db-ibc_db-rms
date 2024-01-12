@@ -8,7 +8,8 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss_Ag]
 	@sporttype		VARCHAR(100) = '',
 	@selection		VARCHAR(MAX) = '',
 	@ParlayType		VARCHAR(10) = '',
-	@LiveStatus		TINYINT = 3
+	@LiveStatus		TINYINT = 3,
+	@ReportBy		TINYINT = 1
 AS
 
 /*
@@ -32,6 +33,7 @@ AS
 		- 20230830@Cherry: Add TotalBets (#192682)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
+		- 20240115@Cherry: Report by Date (#199665)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -49,6 +51,11 @@ AS
 					. 5: GOF
 					. 6: Parlay Generator
 					. 7: Parlay Boost
+
+		- @ReportBy:
+					. 1: Report by Month
+					. 2: Report by Date
+*/
 */
 
 BEGIN
@@ -144,7 +151,7 @@ BEGIN
 
 		CREATE TABLE #tmpSum
 		(
-			month			VARCHAR(7)
+			winlostdate		DATETIME
 			,custid			INT
 			,username		VARCHAR(50)
 			,tickets_won	INT
@@ -177,7 +184,7 @@ BEGIN
 
 			INSERT INTO #tmpSum
 			(
-				month 
+				winlostdate 
 				,custid
 				,username
 				,tickets_won
@@ -192,7 +199,7 @@ BEGIN
 				,betcount
 			)
 			SELECT
-				CONVERT(VARCHAR(7), b.winlostdate, 120)
+				winlostdate
 				,b.custid
 				,b.username
 				,SUM(CASE WHEN statusID = 112 THEN 1 ELSE 0 END) AS tickets_won
@@ -228,7 +235,7 @@ BEGIN
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 				)		
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), b.custid, b.username, ci.CustomerClass
+			GROUP BY winlostdate, b.custid, b.username, ci.CustomerClass
 		END
 
 		-- rmSumWinloss
@@ -239,7 +246,7 @@ BEGIN
 
 			INSERT INTO #tmpSum
 			(
-				month 
+				winlostdate 
 				,custid
 				,username
 				,tickets_won
@@ -254,7 +261,7 @@ BEGIN
 				,betcount
 			)
 			SELECT 
-				CONVERT(VARCHAR(7), winlostdate, 120)
+				winlostdate
 				,a.custid
 				,a.username
 				,SUM(CASE WHEN statusID = 112 THEN betcount ELSE 0 END) AS tickets_won
@@ -277,7 +284,7 @@ BEGIN
 				AND a.currency <> 20
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), a.custid ,a.username, ci.CustomerClass
+			GROUP BY winlostdate, a.custid ,a.username, ci.CustomerClass
 		END
 
 		-- rmSumWinloss_Old
@@ -288,7 +295,7 @@ BEGIN
 
 			INSERT INTO #tmpSum
 			(
-				month 
+				winlostdate 
 				,custid
 				,username
 				,tickets_won
@@ -303,7 +310,7 @@ BEGIN
 				,betcount
 			)
 			SELECT 
-				CONVERT(VARCHAR(7), winlostdate, 120)
+				winlostdate
 				,a.custid
 				,a.username
 				,SUM(CASE WHEN statusID = 112 THEN betcount ELSE 0 END) AS tickets_won
@@ -320,37 +327,62 @@ BEGIN
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
 				INNER JOIN #recommend r ON a.recommend = r.recommend
-				INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON a.custid = ci.custid
-	
+				INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON a.custid = ci.custid	
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
 				AND a.currency <> 20
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120), a.custid, a.username, ci.CustomerClass
+			GROUP BY winlostdate a.custid, a.username, ci.CustomerClass
 		END
 	END
 	
 	-- Return data
-	SELECT b.month 
-		,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
-		,b.username
-		,SUM(b.tickets_won)	AS tickets_won
-		,SUM(b.tickets_lose)	AS tickets_lose
-		,SUM(b.stake_won)		AS stake_won
-		,SUM(b.stake_lose)	AS stake_lose
-		,SUM(b.member_won)	AS member_won
-		,SUM(b.member_lose)	AS member_lose
-		,SUM(b.ourPT_won) AS ourPT_won
-		,SUM(b.ourPT_lose)	AS ourPT_lose
-		,b.CustomerClass
-		,SUM(b.betcount) TotalBets
-	FROM #tmpSum b
-		LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
-		LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
-	GROUP BY b.month, b.username, b.CustomerClass,
-		CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
-	ORDER BY b.month, b.username
+	IF @ReportBy = 1
+	BEGIN
+		SELECT CONVERT(VARCHAR(7), b.winlostdate, 120)  
+			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+			,b.username
+			,SUM(b.tickets_won)	AS tickets_won
+			,SUM(b.tickets_lose)	AS tickets_lose
+			,SUM(b.stake_won)		AS stake_won
+			,SUM(b.stake_lose)	AS stake_lose
+			,SUM(b.member_won)	AS member_won
+			,SUM(b.member_lose)	AS member_lose
+			,SUM(b.ourPT_won) AS ourPT_won
+			,SUM(b.ourPT_lose)	AS ourPT_lose
+			,b.CustomerClass
+			,SUM(b.betcount) TotalBets
+		FROM #tmpSum b
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
+			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+		GROUP BY CONVERT(VARCHAR(7), b.winlostdate, 120), b.username, b.CustomerClass,
+			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
+		ORDER BY CONVERT(VARCHAR(7), b.winlostdate, 120), b.username
+	END
+
+	IF @ReportBy = 2
+	BEGIN
+		SELECT b.winlostdate 
+			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+			,b.username
+			,SUM(b.tickets_won)	AS tickets_won
+			,SUM(b.tickets_lose)	AS tickets_lose
+			,SUM(b.stake_won)		AS stake_won
+			,SUM(b.stake_lose)	AS stake_lose
+			,SUM(b.member_won)	AS member_won
+			,SUM(b.member_lose)	AS member_lose
+			,SUM(b.ourPT_won) AS ourPT_won
+			,SUM(b.ourPT_lose)	AS ourPT_lose
+			,b.CustomerClass
+			,SUM(b.betcount) TotalBets
+		FROM #tmpSum b
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
+			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+		GROUP BY b.winlostdate, b.username, b.CustomerClass,
+			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
+		ORDER BY b.winlostdate, b.username
+	END
 
 	DROP TABLE #bettype
 	DROP TABLE #recommend
