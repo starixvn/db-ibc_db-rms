@@ -316,7 +316,7 @@ BEGIN
 	IF @ReportBy = 1
 	BEGIN
 		SELECT
-			CONVERT(VARCHAR(7), winlostdate, 120) 
+			CONVERT(VARCHAR(7), winlostdate, 120) [Month]
 			,sum(tickets_won) as tickets_won
 			,sum(tickets_lose) as tickets_lose 
 			,sum(stake_won) as stake_won  
@@ -336,7 +336,7 @@ BEGIN
 	IF @ReportBy = 2 
 	BEGIN
 		SELECT
-			winlostdate 
+			winlostdate [Date]
 			,sum(tickets_won) as tickets_won
 			,sum(tickets_lose) as tickets_lose 
 			,sum(stake_won) as stake_won  

@@ -340,7 +340,7 @@ BEGIN
 	-- Return data
 	IF @ReportBy = 1
 	BEGIN
-		SELECT CONVERT(VARCHAR(7), b.winlostdate, 120)  
+		SELECT CONVERT(VARCHAR(7), b.winlostdate, 120)  [Month]
 			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
 			,b.username
 			,SUM(b.tickets_won)	AS tickets_won
@@ -363,7 +363,7 @@ BEGIN
 
 	IF @ReportBy = 2
 	BEGIN
-		SELECT b.winlostdate 
+		SELECT b.winlostdate [Date]
 			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
 			,b.username
 			,SUM(b.tickets_won)	AS tickets_won
