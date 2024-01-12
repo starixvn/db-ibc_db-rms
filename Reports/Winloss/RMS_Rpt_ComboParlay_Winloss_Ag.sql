@@ -56,7 +56,7 @@ AS
 					. 1: Report by Month
 					. 2: Report by Date
 */
-*/
+
 
 BEGIN
 	SET NOCOUNT ON
@@ -333,7 +333,7 @@ BEGIN
 				AND a.currency <> 20
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY winlostdate a.custid, a.username, ci.CustomerClass
+			GROUP BY winlostdate, a.custid, a.username, ci.CustomerClass
 		END
 	END
 	
