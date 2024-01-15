@@ -31,6 +31,7 @@ AS
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20231206@Cherry: Tuning performance (#196605)
 		- 20231215@Cherry: Parlay Type for Parlay Boost (#197680)
+		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -153,7 +154,7 @@ BEGIN
 		CREATE TABLE #tmpBettrans
 		(
 			transid BIGINT,
-			bact INT
+			bac INT
 		)		
 
 		CREATE TABLE #rptWinloss
@@ -192,9 +193,9 @@ BEGIN
 					AND c.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
 			WHERE c.custid IS NULL
 
-			INSERT INTO #tmpBettrans(transid, bact)
+			INSERT INTO #tmpBettrans(transid, bac)
 			SELECT transid,
-				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 			FROM 
 				dbo.rmBettrans WITH (NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date
@@ -233,7 +234,7 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-						AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+						AND b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 					)		

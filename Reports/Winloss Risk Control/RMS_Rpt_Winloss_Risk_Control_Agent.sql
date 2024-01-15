@@ -28,6 +28,7 @@ AS
 		- 20220519@Danny: add filter by Live Status [RedmineID: #172691]
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
+		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		
 	Parameter's Explanation:th
 		- @sporttype:
@@ -209,7 +210,7 @@ BEGIN
 		CREATE TABLE #tmpBettrans
 		(
 			transid BIGINT,
-			bact INT
+			bac INT
 		)		
 
 	-- get data Credit
@@ -220,9 +221,9 @@ BEGIN
 			SELECT	@f_date = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END
 					,@t_date = @ToDate
 
-			INSERT INTO #tmpBettrans(transid, bact)
+			INSERT INTO #tmpBettrans(transid, bac)
 			SELECT transid,
-				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 			FROM 
 				dbo.rmBettrans WITH (NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date
@@ -275,7 +276,7 @@ BEGIN
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+					AND b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 				)		

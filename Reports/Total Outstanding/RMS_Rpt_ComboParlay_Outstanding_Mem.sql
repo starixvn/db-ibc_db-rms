@@ -25,6 +25,7 @@ AS
 		- 20230320@Cherry: Change formula of Stake (#185251)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
+		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		
 	Parameter's Explanation:
 		- @selection:
@@ -105,7 +106,7 @@ BEGIN
 			,CornerParlay	 INT DEFAULT(0)
 			,betteam	NVARCHAR(10)
 			,oddsspread SMALLMONEY
-			,bact		INT
+			,bac		INT
 		)
 
 		CREATE TABLE #bettype (bettype SMALLINT)
@@ -140,18 +141,18 @@ BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (376)
 
-		CREATE TABLE #Generator (transid BIGINT, bact INT)
-		INSERT INTO #Generator (transid, bact)
+		CREATE TABLE #Generator (transid BIGINT, bac INT)
+		INSERT INTO #Generator (transid, bac)
 		SELECT transid,
-			TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT)
+			ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 		FROM dbo.rmBettrans WITH (NOLOCK)
 		WHERE statusID = 0
 			AND custid = @custid
 			AND bettype = 29
 			AND betteam = N'1'
 
-		INSERT INTO #bettrans (transid, bettype, refno, betteam, oddsspread, bact)
-		SELECT b.transid, b.bettype, b.refno, b.betteam, b.oddsspread, t.bact
+		INSERT INTO #bettrans (transid, bettype, refno, betteam, oddsspread, bac)
+		SELECT b.transid, b.bettype, b.refno, b.betteam, b.oddsspread, t.bac
 		FROM dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
 			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
@@ -167,7 +168,7 @@ BEGIN
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+					AND b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 				)		
@@ -233,7 +234,7 @@ BEGIN
 			,rb.TotalBet AS TotalBet
 			,CASE WHEN rb.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE rb.transid2 END AS Sporttype
 			,CAST(CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
-			,CASE WHEN b.bact = 5 THEN 1 ELSE 0 END AS IsParlayGenerator
+			,CASE WHEN b.bac <> 0 AND b.bac|16 = 16 THEN 1 ELSE 0 END AS IsParlayGenerator
 			,CAST(CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt
 			,ci.CustomerClass

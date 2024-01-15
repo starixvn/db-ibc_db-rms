@@ -16,6 +16,7 @@ AS
 		- 20210414@Danny: Notify/Alert for ticket have half-lose selection [RedmineID: #137010]
 		- 20230620@Cherry: Manage Alert (#189147)
 		- 20231101@Cherry: Parlay Generator (#195498)
+		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 */
 
 BEGIN
@@ -157,9 +158,10 @@ BEGIN
             FROM rmLastTicketAlert l WITH(NOLOCK)
 			WHERE ISNULL(JobType, 1) = 1;
      -- SELECT 
-     SELECT CASE
-                WHEN s.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0) <> 5 THEN 'Mix Parlay'
-				WHEN s.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0) = 5 THEN 'Parlay Generator'
+     SELECT CASE WHEN s.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0) <> 0
+							AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = 16
+					THEN 'Parlay Generator'
+				WHEN s.betteam = N'1' THEN 'Mix Parlay'
                 ELSE 'Combo Parlay'
             END AS ParlayType, 
             s.transid AS TransId, 
@@ -172,8 +174,10 @@ BEGIN
             s.housept AS HousePt, 
             ISNULL(p.AlertAmount, 0) AS AlertAmount,
 			COMPRESS((SELECT CAST(t.TransId AS VARCHAR) AS 'tl',
-					CASE WHEN s.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0) <> 5 THEN 'Mix Parlay'
-						WHEN s.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0) = 5 THEN 'Parlay Generator'
+					CASE WHEN s.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0) <> 0 
+								AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = 16
+							THEN 'Parlay Generator'
+						WHEN s.betteam = N'1' THEN 'Mix Parlay'
 						ELSE 'Combo Parlay'
 					END AS 'sp',
 					CAST(t.totalselection AS VARCHAR) AS 'sl',

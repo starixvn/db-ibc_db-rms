@@ -24,6 +24,7 @@ AS
 		- 20231005@Cherry: Enhance code (#195077)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
+		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		
 	Parameter's Explanation:
 		- @selection:
@@ -146,7 +147,7 @@ BEGIN
 		CREATE TABLE #tmpBettrans
 		(
 			transid BIGINT,
-			bact INT
+			bac INT
 		)
 
 		CREATE TABLE #Result
@@ -197,9 +198,9 @@ BEGIN
 			DECLARE @recommend INT 
 			SELECT @recommend = recommend FROM bodb02.dbo.Customer WITH(NOLOCK) WHERE custid = @CustID
 
-			INSERT INTO #tmpBettrans(transid, bact)
+			INSERT INTO #tmpBettrans(transid, bac)
 			SELECT transid,
-				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 			FROM 
 				dbo.rmBettrans WITH (NOLOCK)
 			WHERE custid = @CustID
@@ -211,7 +212,7 @@ BEGIN
 
 			INSERT INTO  #bettrans (transid, matchid, refno, bettype, betteam, oddsspread, custid, IsParlayGenerator)
 			SELECT	    b.transid, b.matchid, b.refno, b.bettype, b.betteam, b.oddsspread, b.custid,
-					CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5 THEN 1 ELSE 0 END
+					CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16 THEN 1 ELSE 0 END
 			FROM		dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
@@ -231,7 +232,7 @@ BEGIN
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-							AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+							AND b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 						)		
@@ -242,9 +243,9 @@ BEGIN
 			DECLARE @min_transid BIGINT
 			SELECT  @min_transid = MIN(transid) FROM dbo.rmBettrans WITH (NOLOCK) WHERE statusID = 0
 
-			INSERT INTO #tmpBettrans(transid, bact)
+			INSERT INTO #tmpBettrans(transid, bac)
 			SELECT transid,
-				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 			FROM 
 				dbo.rmBettrans WITH (NOLOCK)
 			WHERE transid >= @min_transid
@@ -255,7 +256,7 @@ BEGIN
 
 			INSERT INTO #bettrans (transid, matchid, refno, bettype, betteam, oddsspread, custid, IsParlayGenerator)
 			SELECT b.transid, b.matchid, b.refno,b.bettype,  b.betteam, b.oddsspread, b.custid,
-				CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5 THEN 1 ELSE 0 END
+				CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16 THEN 1 ELSE 0 END
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
@@ -274,7 +275,7 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-						AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+						AND b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 					)		

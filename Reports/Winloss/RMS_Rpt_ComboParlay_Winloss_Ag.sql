@@ -32,6 +32,7 @@ AS
 		- 20230830@Cherry: Add TotalBets (#192682)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
+		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -140,7 +141,7 @@ BEGIN
 
 		DECLARE @f_date SMALLDATETIME, @t_date SMALLDATETIME
 
-		CREATE TABLE #tmpGenerator (transid BIGINT, bact INT)
+		CREATE TABLE #tmpGenerator (transid BIGINT, bac INT)
 
 		CREATE TABLE #tmpSum
 		(
@@ -165,9 +166,9 @@ BEGIN
 			SELECT	@f_date = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END
 					,@t_date = @ToDate
 
-			INSERT INTO #tmpGenerator (transid, bact)
+			INSERT INTO #tmpGenerator (transid, bac)
 			SELECT transid,
-				TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT)
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 			FROM dbo.rmBettrans WITH (NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (112, 113)
@@ -223,7 +224,7 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-						AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+						AND b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 				)		

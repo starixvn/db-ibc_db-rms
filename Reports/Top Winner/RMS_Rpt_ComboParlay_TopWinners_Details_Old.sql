@@ -27,6 +27,7 @@ AS
 		- 20210303@Danny: Change on Report Top Winners [RedmineID: #146554]
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
+		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -150,7 +151,7 @@ BEGIN
 		CREATE TABLE #tmpGenerator
 		(
 			transid BIGINT,
-			bact INT
+			bac INT
 		)	
 
 		CREATE TABLE #tmpBettrans
@@ -175,9 +176,9 @@ BEGIN
 			,IsBoostBonus			BIT
 		)
 
-		INSERT INTO #tmpGenerator (transid, bact)
+		INSERT INTO #tmpGenerator (transid, bac)
 		SELECT transid,
-			ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+			ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 		FROM dbo.bettrans_bk WITH (NOLOCK)
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
 			AND statusID IN (112, 113)
@@ -227,7 +228,7 @@ BEGIN
 			,(winlost - actual_stake) * actualrate
 			,(-(winlost - actual_stake) * (1 - tpositiontaking - ISNULL(e.ExtraPT, CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)))) - scomm  + scomm * ISNULL(e.ExtraPT, CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) / (1 - tpositiontaking)) * actualrate	
 			,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
-			,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND t.bact = 5 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
+			,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND t.bac <> 0 AND t.bac|16 = 16 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 			,b.currency
 			,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 		FROM dbo.bettrans_bk b WITH (NOLOCK)
@@ -245,7 +246,7 @@ BEGIN
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+					AND b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 				)		

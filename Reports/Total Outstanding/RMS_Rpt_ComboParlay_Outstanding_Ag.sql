@@ -25,6 +25,7 @@ AS
 		- 20230320@Cherry: Change formula of Stake (#185251)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
+		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 	
 	Parameter's Explanation:
 		- @selection:
@@ -127,10 +128,10 @@ BEGIN
 			VALUES (376)
 	END
 
-	CREATE TABLE #Generator (transid BIGINT, bact INT)
-	INSERT INTO #Generator (transid, bact)
+	CREATE TABLE #Generator (transid BIGINT, bac INT)
+	INSERT INTO #Generator (transid, bac)
 	SELECT transid,
-		TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT)
+		ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 	FROM rmBettrans WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND statusid = 0
@@ -181,7 +182,7 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-						AND rb.bettype = 29 AND rb.betteam = N'1' AND o.bact = 5)
+						AND rb.bettype = 29 AND rb.betteam = N'1' AND o.bac <> 0 AND o.bac|16 = 16)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2)
 					)		
@@ -215,7 +216,7 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-						AND rb.bettype = 29 AND rb.betteam = N'1' AND o.bact = 5)
+						AND rb.bettype = 29 AND rb.betteam = N'1' AND o.bac <> 0 AND o.bac|16 = 16)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2)
 					)		

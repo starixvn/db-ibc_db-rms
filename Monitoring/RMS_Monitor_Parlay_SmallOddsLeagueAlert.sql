@@ -12,6 +12,7 @@ AS
 		- 20200703@Percy: Initialize SP [RedmineID: #137010]
 		- 20230620@Cherry: Manage Alert (#189147)
 		- 20231101@Cherry: Parlay Generator (#195498)
+		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 */
 
 BEGIN
@@ -107,8 +108,9 @@ BEGIN
 		(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END * (1 - b.tpositiontaking) AS CompanyLoseAmount,
 		b.odds2 AS odds,
 		(1 - b.tpositiontaking) AS HousePT,
-		CASE WHEN b.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0) <> 5 THEN 'Mix Parlay' 
-			WHEN b.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0) = 5 THEN 'Parlay Generator' 
+		CASE WHEN b.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0) <> 0
+				AND ISNULL(TRY_CAST(TRY_CAST(b.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = 16 THEN 'Parlay Generator' 
+			WHEN b.betteam = N'1' THEN 'Mix Parlay' 
 			ELSE 'Combo Parlay' END AS ParlayType,
 		b.hdp2 AS TotalSelection,
 		b.TotalBet,

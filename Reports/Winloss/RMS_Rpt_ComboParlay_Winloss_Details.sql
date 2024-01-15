@@ -19,6 +19,7 @@ AS
 		- 20230906@Cherry: Add Bet details (#192682)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
+		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -144,7 +145,7 @@ BEGIN
 			,IsBoostBonus			BIT
 		)
 
-		CREATE TABLE #tmpGenerator (transid BIGINT, bact INT)
+		CREATE TABLE #tmpGenerator (transid BIGINT, bac INT)
 
 		-- rmBettrans
 		IF @ToDate > @MoveBetsDay
@@ -152,9 +153,9 @@ BEGIN
 			SELECT	@f_date = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END
 					,@t_date = @ToDate
 
-			INSERT INTO #tmpGenerator (transid, bact)
+			INSERT INTO #tmpGenerator (transid, bac)
 			SELECT transid,
-				TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT)
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 			FROM dbo.rmBettrans WITH (NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND custid = @custid
@@ -181,7 +182,7 @@ BEGIN
 				,(winlost - actual_stake) * actualrate
 				,CASE WHEN 1 - tpositiontaking = 0 THEN 0 ELSE (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate END
 				,CAST(CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
-				,CAST(CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
+				,CAST(CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 				,CAST(CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
@@ -200,7 +201,7 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-						AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+						AND b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 				)		
@@ -213,9 +214,9 @@ BEGIN
 			SELECT	@f_date = @FromDate
 					,@t_date = CASE WHEN @ToDate > @MoveBetsDay THEN @MoveBetsDay ELSE @ToDate END
 
-			INSERT INTO #tmpGenerator (transid, bact)
+			INSERT INTO #tmpGenerator (transid, bac)
 			SELECT transid,
-				TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT)
+				TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT)
 			FROM dbo.rmBettrans_old WITH (NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND custid = @custid
@@ -242,7 +243,7 @@ BEGIN
 				,(winlost - actual_stake) * actualrate
 				,(-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate
 				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
-				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND t.bact = 5 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
+				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND t.bac <> 0 AND t.bac|16 = 16 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 			FROM dbo.rmBettrans_old b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
@@ -261,7 +262,7 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-						AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+						AND b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 					)		
