@@ -236,7 +236,7 @@ BEGIN
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 				AND rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 1)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-				AND rm.bettype = 29 AND rm.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
+				AND rm.bettype = 29 AND rm.betteam = N'1' AND t.bac|16 = t.bac)
 			)		
 	END
 

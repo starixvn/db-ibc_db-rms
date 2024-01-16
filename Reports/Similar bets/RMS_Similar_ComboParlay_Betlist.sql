@@ -314,8 +314,9 @@ BEGIN
 			,p.TotalBet	AS TotalBet
 			,@cnt_bets	AS cnt_bets
 			,CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
-			,CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0) <> 0
-					AND ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = 16 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
+			,CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' 
+					AND ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0) 
+					THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 			,CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 			,p.statusID as statusID
 			,(p.odds2 - 1) * p.stake * p.actualrate AS potentialWinningAmt
@@ -369,8 +370,9 @@ BEGIN
 			,p.TotalBet	AS TotalBet
 			,@cnt_bets	AS cnt_bets
 			,CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
-			,CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0) <> 0 
-					AND ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = 16 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
+			,CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' 
+					AND ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0) 
+					THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 			,CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 			,p.statusID as statusID
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate  AS houseLoseAmt
@@ -402,8 +404,9 @@ BEGIN
 			,p.TotalBet	AS TotalBet
 			,@cnt_bets	AS cnt_bets
 			,CAST(CASE WHEN p.bettype = 29 AND p.betteam= N'1' AND p.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
-			,CAST(CASE WHEN p.bettype = 29 AND p.betteam= N'1' AND ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0) <> 0 
-					AND ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = 16 THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
+			,CAST(CASE WHEN p.bettype = 29 AND p.betteam= N'1' 
+					AND ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0) 
+					THEN 1 ELSE 0 END AS BIT) AS IsParlayGenerator
 			,CAST(CASE WHEN p.bettype = 29 AND p.betteam= N'1' AND p.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 			,p.statusID as statusID
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate  AS houseLoseAmt

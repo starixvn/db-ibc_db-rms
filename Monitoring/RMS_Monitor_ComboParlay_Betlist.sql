@@ -301,7 +301,7 @@ BEGIN
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 					AND b.betteam = N'1' AND b.oddsspread = 1)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
+					AND b.betteam = N'1' AND t.bac|16 = t.bac)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 					AND b.betteam = N'1' AND b.oddsspread = 2)
 				)		
@@ -480,7 +480,7 @@ BEGIN
 			,rb.betteam
 			,rb.oddsspread
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END
-			,CASE WHEN t.bac <> 0 AND t.bac|16 = 16 THEN 1 ELSE 0 END
+			,CASE WHEN t.bac|16 = t.bac THEN 1 ELSE 0 END
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate
 			,ci.CustomerClass
 			,l.username AS TrackingUser

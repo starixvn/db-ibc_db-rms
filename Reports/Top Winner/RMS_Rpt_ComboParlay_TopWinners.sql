@@ -184,7 +184,7 @@ BEGIN
 
 			INSERT INTO #tmpBettrans (transid, bac)
 			SELECT transid,
-				TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT)
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 			FROM dbo.rmBettrans WITH (NOLOCK)
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (112, 113)
@@ -219,7 +219,7 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-						AND b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
+						AND b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 					)		

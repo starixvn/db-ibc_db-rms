@@ -237,7 +237,7 @@ BEGIN
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 				AND rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 1)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-				AND rm.bettype = 29 AND rm.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
+				AND rm.bettype = 29 AND rm.betteam = N'1' AND t.bac|16 = t.bac)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 				AND rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 2)
 			)			
@@ -282,7 +282,7 @@ BEGIN
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt
 			,ci.CustomerClass
 			,rb.CurrencyName Currency
-			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND b.bac <> 0 AND b.bac|16 = 16 THEN 1 ELSE 0 END IsParlayGenerator
+			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND b.bac|16 = b.bac THEN 1 ELSE 0 END IsParlayGenerator
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
 		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN trans t ON rb.transid = t.transid

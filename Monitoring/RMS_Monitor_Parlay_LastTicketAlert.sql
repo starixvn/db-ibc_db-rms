@@ -158,8 +158,8 @@ BEGIN
             FROM rmLastTicketAlert l WITH(NOLOCK)
 			WHERE ISNULL(JobType, 1) = 1;
      -- SELECT 
-     SELECT CASE WHEN s.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0) <> 0
-							AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = 16
+     SELECT CASE WHEN s.betteam = N'1' 
+					AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 					THEN 'Parlay Generator'
 				WHEN s.betteam = N'1' THEN 'Mix Parlay'
                 ELSE 'Combo Parlay'
@@ -174,8 +174,8 @@ BEGIN
             s.housept AS HousePt, 
             ISNULL(p.AlertAmount, 0) AS AlertAmount,
 			COMPRESS((SELECT CAST(t.TransId AS VARCHAR) AS 'tl',
-					CASE WHEN s.betteam = N'1' AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0) <> 0 
-								AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = 16
+					CASE WHEN s.betteam = N'1' 
+							AND ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = ISNULL(TRY_CAST(TRY_CAST(s.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 							THEN 'Parlay Generator'
 						WHEN s.betteam = N'1' THEN 'Mix Parlay'
 						ELSE 'Combo Parlay'

@@ -254,8 +254,9 @@ BEGIN
 			hdp2 AS TotalSelection,
 			transid2 AS Sporttype,
 			status,
-			CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT) <> 0
-					AND TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT)|16 = 16 THEN 1 ELSE 0 END AS BIT),
+			CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' 
+					AND ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0) 
+					THEN 1 ELSE 0 END AS BIT),
 			CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 2 THEN 1 ELSE 0 END AS BIT)
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
@@ -309,8 +310,9 @@ BEGIN
 			hdp2 AS TotalSelection,
 			transid2 AS Sporttype,
 			status,
-			CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT) <> 0
-					AND TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT)|16 = 16 THEN 1 ELSE 0 END AS BIT),
+			CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' 
+					AND ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)|16 = ISNULL(TRY_CAST(TRY_CAST(p.ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0) 
+					THEN 1 ELSE 0 END AS BIT),
 			CAST(CASE WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 2 THEN 1 ELSE 0 END AS BIT)
 		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid

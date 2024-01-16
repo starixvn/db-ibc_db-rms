@@ -71,7 +71,7 @@ BEGIN
 	)
 	SELECT
 		b.TransId,
-		CASE WHEN b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16 THEN 'Parlay Generator'
+		CASE WHEN b.betteam = N'1' AND t.bac|16 = t.bac THEN 'Parlay Generator'
 			WHEN b.betteam = N'1' THEN 'Mix Parlay' 
 			ELSE 'Combo Parlay' END AS ParlayType,
 		b.Username,

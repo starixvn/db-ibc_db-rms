@@ -168,7 +168,7 @@ BEGIN
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
+					AND b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 				)		
@@ -234,7 +234,7 @@ BEGIN
 			,rb.TotalBet AS TotalBet
 			,CASE WHEN rb.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE rb.transid2 END AS Sporttype
 			,CAST(CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
-			,CASE WHEN b.bac <> 0 AND b.bac|16 = 16 THEN 1 ELSE 0 END AS IsParlayGenerator
+			,CASE WHEN b.bac|16 = b.bac THEN 1 ELSE 0 END AS IsParlayGenerator
 			,CAST(CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt
 			,ci.CustomerClass

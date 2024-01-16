@@ -212,7 +212,7 @@ BEGIN
 
 			INSERT INTO  #bettrans (transid, matchid, refno, bettype, betteam, oddsspread, custid, IsParlayGenerator)
 			SELECT	    b.transid, b.matchid, b.refno, b.bettype, b.betteam, b.oddsspread, b.custid,
-					CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16 THEN 1 ELSE 0 END
+					CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 1 ELSE 0 END
 			FROM		dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
@@ -232,7 +232,7 @@ BEGIN
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-							AND b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
+							AND b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 						)		
@@ -256,7 +256,7 @@ BEGIN
 
 			INSERT INTO #bettrans (transid, matchid, refno, bettype, betteam, oddsspread, custid, IsParlayGenerator)
 			SELECT b.transid, b.matchid, b.refno,b.bettype,  b.betteam, b.oddsspread, b.custid,
-				CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16 THEN 1 ELSE 0 END
+				CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 1 ELSE 0 END
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
@@ -275,7 +275,7 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-						AND b.bettype = 29 AND b.betteam = N'1' AND t.bac <> 0 AND t.bac|16 = 16)
+						AND b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 					)		
