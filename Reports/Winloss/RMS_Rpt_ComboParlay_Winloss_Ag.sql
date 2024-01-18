@@ -7,7 +7,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss_Ag]
 	@balanceUpday	DATETIME = NULL,
 	@sporttype		VARCHAR(100) = '',
 	@selection		VARCHAR(MAX) = '',
-	@ParlayType		VARCHAR(10) = '',
+	@ParlayType		VARCHAR(100) = '',
 	@LiveStatus		TINYINT = 3
 AS
 
@@ -32,6 +32,7 @@ AS
 		- 20230830@Cherry: Add TotalBets (#192682)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
+		- 20240118@Cherry: Extend @ParlayType (#199927)
 	
 	Parameter's Explanation:
 		- @sporttype:

@@ -6,7 +6,7 @@ CREATE PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details]
 	@sporttype		VARCHAR(100) = '',
 	@MoveBetsDay	DATETIME,
 	@selection		VARCHAR(MAX) = '',
-	@ParlayType		VARCHAR(10) = '',
+	@ParlayType		VARCHAR(100) = '',
 	@currency		VARCHAR(MAX) = '',
 	@LiveStatus		TINYINT = 3
 AS
@@ -30,6 +30,7 @@ AS
 		- 20220519@Danny: add filter by Live Status [RedmineID: #172691]
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
+		- 20240118@Cherry: Extend @ParlayType (#199927)
 	
 	Parameter's Explanation:
 		- @ParlayType:
