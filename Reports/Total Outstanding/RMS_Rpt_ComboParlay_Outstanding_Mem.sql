@@ -3,7 +3,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Outstanding_Mem]
 	@custid		INT,	
 	@selection	VARCHAR(MAX) = '',
 	@sporttype	VARCHAR(100) = '',
-	@ParlayType	VARCHAR(10)='',
+	@ParlayType	VARCHAR(100)='',
 	@IsCornerParlay BIT = 0
 AS
 
