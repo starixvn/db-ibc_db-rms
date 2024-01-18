@@ -5,7 +5,7 @@
 	@todate			DATETIME,
 	@sporttype		VARCHAR(100) = '',
 	@selection		VARCHAR(MAX) = '',
-	@ParlayType		VARCHAR(10) = '',
+	@ParlayType		VARCHAR(100) = '',
 	@currency		VARCHAR(MAX) = ''
 AS
 

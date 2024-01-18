@@ -7,7 +7,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners]
 	@limitedRow		INT = 20,
 	@sporttype		VARCHAR(100) = '',
 	@selection		VARCHAR(MAX) = '',
-	@ParlayType		VARCHAR(20) = '',
+	@ParlayType		VARCHAR(100) = '',
 	@currency		VARCHAR(MAX) = '',
 	@Site			TINYINT = 2,
 	@CustomerClass	SMALLINT = NULL,

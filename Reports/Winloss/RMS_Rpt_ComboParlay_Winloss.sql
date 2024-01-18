@@ -6,7 +6,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss]
 	@balanceUpday	DATETIME = NULL,
 	@sporttype		VARCHAR(100) = '',
 	@selection		VARCHAR(MAX) = '',
-	@ParlayType		VARCHAR(20) = '',
+	@ParlayType		VARCHAR(100) = '',
 	@ReportType		TINYINT = 1,
 	@Site			TINYINT = 2,
 	@LiveStatus		TINYINT = 3
