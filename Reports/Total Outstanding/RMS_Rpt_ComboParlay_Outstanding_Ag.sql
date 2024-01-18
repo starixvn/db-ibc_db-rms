@@ -152,6 +152,7 @@ BEGIN
 				SUM((rb.odds2 - 1) * rb.stake * rb.actualrate)  AS potentialWinningAmt,
 				ci.CustomerClass
 			FROM rmBettrans rb WITH (NOLOCK)
+				INNER JOIN #bettype bt ON rb.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
 				INNER JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custID = rb.custid
@@ -201,7 +202,8 @@ BEGIN
 				COUNT(1) AS betcount,
 				SUM((rb.odds2 - 1) * rb.stake * rb.actualrate)  AS potentialWinningAmt,
 				ci.CustomerClass
-		FROM rmBettrans rb WITH (NOLOCK)
+			FROM rmBettrans rb WITH (NOLOCK)
+				INNER JOIN #bettype bt ON rb.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
 				INNER JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custID = rb.custid
