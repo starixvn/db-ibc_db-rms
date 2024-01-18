@@ -5,7 +5,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_PotentialWinning]
 	@level			VARCHAR(100) = '',
 	@WinningAmount	MONEY = 0,
 	@limitRowCount	INT = 100,
-	@ParlayType		VARCHAR(10)  = '',
+	@ParlayType		VARCHAR(100)  = '',
 	@IsCornerParlay BIT = 0,
 	@IsAgentView	BIT = 0,
 	@Recommend		INT = NULL,
@@ -34,6 +34,7 @@ AS
 		- 20230420@Cherry: Add Site column (#186735)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
+		- 20240118@Cherry: Extend @ParlayType (#199927)
 
 	Parameter's Explanation:
 		- @selection:
