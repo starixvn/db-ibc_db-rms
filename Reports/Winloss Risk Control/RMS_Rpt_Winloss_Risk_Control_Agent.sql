@@ -4,7 +4,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_Winloss_Risk_Control_Agent]
 	@todate			SMALLDATETIME,
 	@custID			INT,
 	@roleID			TINYINT,
-	@ParlayType		VARCHAR(20) = '',
+	@ParlayType		VARCHAR(100) = '',
 	@sporttype		VARCHAR(100) = '',
 	@ReportBy		TINYINT = 1,
 	@PageSize		INT = 0,

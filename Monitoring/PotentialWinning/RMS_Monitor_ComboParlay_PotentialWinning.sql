@@ -5,7 +5,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_PotentialWinning]
 	@level			VARCHAR(100) = '',
 	@WinningAmount	MONEY = 0,
 	@limitRowCount	INT = 100,
-	@ParlayType		VARCHAR(10)  = '',
+	@ParlayType		VARCHAR(100)  = '',
 	@IsCornerParlay BIT = 0,
 	@IsAgentView	BIT = 0,
 	@Recommend		INT = NULL,

@@ -2,7 +2,7 @@
 ALTER PROCEDURE [dbo].[RMS_Monitor_EventPerformance_Detail]
 	@selection		VARCHAR(MAX) = '',
 	@leagueIDs		VARCHAR(MAX) = '',
-	@ParlayType		VARCHAR(10)  = '',
+	@ParlayType		VARCHAR(100)  = '',
 	@level			VARCHAR(100) = '',
 	@CustomerClass	SMALLINT = NULL,
 	@SportType 		TINYINT = 43,

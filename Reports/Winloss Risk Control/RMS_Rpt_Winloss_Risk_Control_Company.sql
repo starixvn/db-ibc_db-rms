@@ -4,7 +4,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_Winloss_Risk_Control_Company]
 	@todate			SMALLDATETIME,
 	@company		NVARCHAR(50),
 	@isDeposit		BIT,
-	@ParlayType		VARCHAR(20) = '',
+	@ParlayType		VARCHAR(100) = '',
 	@sporttype		VARCHAR(100) = '',
 	@ReportBy		TINYINT = 1,
 	@Selection		VARCHAR(MAX) = '',

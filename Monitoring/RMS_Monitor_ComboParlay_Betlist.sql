@@ -9,7 +9,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_Betlist]
 	,@ReportType	TINYINT = 1
 	,@max_transid	BIGINT = 0
 	,@limitRowCount	INT = 2000
-	,@ParlayType	VARCHAR(20) = ''
+	,@ParlayType	VARCHAR(100) = ''
 	,@IsCornerParlay BIT = 0
 	,@Odds			SMALLMONEY = NULL
 	,@CustomerClass	SMALLINT = NULL

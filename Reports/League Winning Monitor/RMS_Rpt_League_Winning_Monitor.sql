@@ -1,7 +1,7 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[RMS_Rpt_League_Winning_Monitor]
 	@selection		VARCHAR(MAX) = '0'
-	,@ParlayType	VARCHAR(20) = ''
+	,@ParlayType	VARCHAR(100) = ''
 	,@sporttype		VARCHAR(100) = ''
 	,@level			VARCHAR(100) = ''
 	,@limitRowCount	INT = 100

@@ -3,7 +3,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_Winloss_Risk_Control]
 	@fromdate		SMALLDATETIME,
 	@todate			SMALLDATETIME,
 	@company		VARCHAR(MAX) = '', -- '' Get All Company else get exactly company
-	@ParlayType		VARCHAR(20) = '',
+	@ParlayType		VARCHAR(100) = '',
 	@sporttype		VARCHAR(100) = '',
 	@ReportBy		TINYINT = 1,
 	@Selection		VARCHAR(MAX) = '',
