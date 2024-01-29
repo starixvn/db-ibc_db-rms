@@ -213,6 +213,7 @@ BEGIN
 				  WHEN s.Bettype = 611 AND s.Betteam = 'a' AND @SportType = 2 THEN 'Even'
 				  ELSE '-'
 			END AS BetChoice,
+			s.TransList,
 			SUM(BetCount)			AS TotalTickets,
 			SUM(WonCount)			AS WonTickets,
 			SUM(DrawCount)			AS DrawTickets,
@@ -253,7 +254,8 @@ BEGIN
 				  WHEN s.Bettype = 611 AND s.Betteam = 'h' AND @SportType = 2 THEN 'Odd'
 				  WHEN s.Bettype = 611 AND s.Betteam = 'a' AND @SportType = 2 THEN 'Even'
 				  ELSE '-'
-			END
+			END,
+			s.TransList
 		HAVING SUM(MainHouseWinloss) <= @HouseWL
 		ORDER BY TotalTickets DESC
 	END
@@ -263,6 +265,7 @@ BEGIN
 			l.leaguename LeagueName,
 			m.MatchID MatchId,
 			m.HomeName + ' -vs- ' + m.AwayName AS [Event],
+			s.TransList,
 			SUM(BetCount)			AS TotalTickets,
 			SUM(WonCount)			AS WonTickets,
 			SUM(DrawCount)			AS DrawTickets,
@@ -284,7 +287,8 @@ BEGIN
 			m.HomeName,
 			m.AwayName,
 			a.GroupName,
-			l.leaguename
+			l.leaguename,
+			s.TransList
 		HAVING SUM(MainHouseWinloss) <= @HouseWL
 		ORDER BY TotalTickets DESC
 	END
