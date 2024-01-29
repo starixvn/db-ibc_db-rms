@@ -1,15 +1,6 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Rpt_LeagueBettype_Detail]
-	@FromDate		DATE
-	,@ToDate		DATE
-	,@ParlayType	VARCHAR(100) = '1,2'
-	,@LeagueGroups	VARCHAR(MAX) = ''
-	,@Leagues		VARCHAR(MAX) = ''
-	,@Site			TINYINT = 2
-	,@Ratio			FLOAT = 0
-	,@SportType		SMALLINT = 1
-	,@BetType		INT
-	,@BetTeam		NVARCHAR(10) = ''
+	@TransList		NVARCHAR(MAX) = ''
 AS
 
 /*
@@ -21,14 +12,7 @@ AS
 		- 20240115@Cherry: Initialize SP [RedmineID: #197684]
 
 	Param's Explanation:
-		. @ParlayType: '1,2'
-					. 1 = Mix Parlay
-					. 2 = Combo Parlay
-		. @Site:
-					. 0 = Credit sites
-					. 1 = Deposit sites
-					. 2 = All sites
-		. @Ratio: Won tickets / Total tickets
+
 
 */
 
