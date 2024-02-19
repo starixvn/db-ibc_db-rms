@@ -9,8 +9,8 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_LeagueBettype_Analysis]
 	,@Ratio			FLOAT = 0
 	,@ReportBy		TINYINT = 1
 	,@SportType		SMALLINT = 1
-	,@BetType		INT
-	,@HouseWL		MONEY 
+	,@BetType		INT = 0
+	,@HouseWL		MONEY = 0
 AS
 
 /*
