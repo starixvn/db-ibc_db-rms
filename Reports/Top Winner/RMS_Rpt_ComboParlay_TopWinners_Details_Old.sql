@@ -5,7 +5,7 @@
 	@todate			DATETIME,
 	@sporttype		VARCHAR(100) = '',
 	@selection		VARCHAR(MAX) = '',
-	@ParlayType		VARCHAR(10) = '',
+	@ParlayType		VARCHAR(100) = '',
 	@currency		VARCHAR(MAX) = ''
 AS
 
@@ -27,6 +27,7 @@ AS
 		- 20210303@Danny: Change on Report Top Winners [RedmineID: #146554]
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
+		- 20240118@Cherry: Extend @ParlayType (#199927)
 	
 	Parameter's Explanation:
 		- @ParlayType:

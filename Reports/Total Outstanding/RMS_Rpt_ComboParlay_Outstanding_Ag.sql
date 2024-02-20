@@ -3,7 +3,7 @@
 	@custid		INT,	
 	@selection	VARCHAR(MAX) = '',
 	@sporttype	VARCHAR(100) = '',
-	@ParlayType	VARCHAR(10)='',
+	@ParlayType	VARCHAR(100)='',
 	@IsCornerParlay BIT = 0
 AS
 
@@ -25,6 +25,7 @@ AS
 		- 20230320@Cherry: Change formula of Stake (#185251)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
+		- 20240118@Cherry: Extend @ParlayType (#199927)
 	
 	Parameter's Explanation:
 		- @selection:
@@ -151,6 +152,7 @@ BEGIN
 				SUM((rb.odds2 - 1) * rb.stake * rb.actualrate)  AS potentialWinningAmt,
 				ci.CustomerClass
 			FROM rmBettrans rb WITH (NOLOCK)
+				INNER JOIN #bettype bt ON rb.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
 				INNER JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custID = rb.custid
@@ -200,7 +202,8 @@ BEGIN
 				COUNT(1) AS betcount,
 				SUM((rb.odds2 - 1) * rb.stake * rb.actualrate)  AS potentialWinningAmt,
 				ci.CustomerClass
-		FROM rmBettrans rb WITH (NOLOCK)
+			FROM rmBettrans rb WITH (NOLOCK)
+				INNER JOIN #bettype bt ON rb.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON rb.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON rb.transid2 = sp.sporttype
 				INNER JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custID = rb.custid

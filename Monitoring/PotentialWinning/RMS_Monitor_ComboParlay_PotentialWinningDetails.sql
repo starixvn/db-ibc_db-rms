@@ -3,7 +3,7 @@
 	@CustID		INT,
 	@selection	VARCHAR(MAX) = '',
 	@sporttype	VARCHAR(100) = '',
-	@ParlayType	VARCHAR(10)  = '',
+	@ParlayType	VARCHAR(100)  = '',
 	@IsCornerParlay BIT = 0
 AS
 
@@ -25,6 +25,7 @@ AS
 		- 20230320@Cherry: Change formula of Stake (#185251)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
+		- 20240118@Cherry: Extend @ParlayType (#199927)
 
 	Parameter's Explanation:
 		- @selection:

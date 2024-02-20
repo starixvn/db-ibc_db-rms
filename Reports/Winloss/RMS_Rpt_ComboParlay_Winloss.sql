@@ -6,7 +6,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss]
 	@balanceUpday	DATETIME = NULL,
 	@sporttype		VARCHAR(100) = '',
 	@selection		VARCHAR(MAX) = '',
-	@ParlayType		VARCHAR(20) = '',
+	@ParlayType		VARCHAR(100) = '',
 	@ReportType		TINYINT = 1,
 	@Site			TINYINT = 2,
 	@LiveStatus		TINYINT = 3
@@ -31,6 +31,7 @@ AS
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20231206@Cherry: Tuning performance (#196605)
 		- 20231215@Cherry: Parlay Type for Parlay Boost (#197680)
+		- 20240118@Cherry: Extend @ParlayType (#199927)
 	
 	Parameter's Explanation:
 		- @sporttype:

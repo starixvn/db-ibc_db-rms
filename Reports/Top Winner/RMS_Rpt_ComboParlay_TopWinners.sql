@@ -7,7 +7,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners]
 	@limitedRow		INT = 20,
 	@sporttype		VARCHAR(100) = '',
 	@selection		VARCHAR(MAX) = '',
-	@ParlayType		VARCHAR(20) = '',
+	@ParlayType		VARCHAR(100) = '',
 	@currency		VARCHAR(MAX) = '',
 	@Site			TINYINT = 2,
 	@CustomerClass	SMALLINT = NULL,
@@ -34,6 +34,7 @@ AS
 		- 20230420@Cherry: Add Site column (#186735)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
+		- 20240118@Cherry: Extend @ParlayType (#199927)
 	
 	Parameter's Explanation:
 		- @ParlayType:
