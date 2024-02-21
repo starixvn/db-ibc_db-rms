@@ -23,6 +23,7 @@ AS
 		- 20230130@Danny: Monitor detail Performance for Event/Bettype/BetChoice Soccer [RedmineID: #182724]
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
+		- 20240221@Cherry: Fix Stake as main report (#201133)
 
 	Parameter's Explanation:
 		- @selection:
@@ -273,7 +274,7 @@ BEGIN
 			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype
 			,rb.odds2 * rb.TotalBet AS odds
 			,rb.statusID
-			,rb.stake * rb.actualrate * (1 - rb.tpositiontaking) / rb.TotalBet AS stake
+			,rb.stake * rb.actualrate AS stake
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate * (1 - rb.tpositiontaking) AS maxpayout
 			,rb.hdp2 AS TotalSelection
 			,rb.TotalBet AS TotalBet
