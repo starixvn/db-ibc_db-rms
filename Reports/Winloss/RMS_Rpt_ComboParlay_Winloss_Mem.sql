@@ -8,7 +8,8 @@
 	@sporttype		VARCHAR(100)='',
 	@selection		VARCHAR(MAX) = '',
 	@ParlayType		VARCHAR(100)='',
-	@LiveStatus		TINYINT = 3
+	@LiveStatus		TINYINT = 3,
+	@ReportBy		TINYINT = 1
 AS
 
 /*
@@ -30,7 +31,7 @@ AS
 			- 20230830@Cherry: Add TotalBets (#192682)
 			- 20231020@Cherry: Parlay Generator (#195498)
 			- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
-			- 20240118@Cherry: Extend @ParlayType (#199927)
+			- 20240115@Cherry: Report by Date (#199665)
 
 	Parameter's Explanation:
 		- @sporttype:
@@ -49,6 +50,10 @@ AS
 					. 5: GOF
 					. 6: Parlay Generator
 					. 7: Parlay Boost
+
+		- @ReportBy:
+					. 1: Report by Month
+					. 2: Report by Date
 */
 
 BEGIN
@@ -146,7 +151,7 @@ BEGIN
 
 		CREATE TABLE #tmpSum
 		(
-			month			VARCHAR(7)
+			winlostdate		DATETIME
 			,tickets_won	INT
 			,tickets_lose	INT
 			,stake_won		MONEY
@@ -176,7 +181,7 @@ BEGIN
 
 			INSERT INTO #tmpSum
 			(
-				month 
+				winlostdate 
 				,tickets_won
 				,tickets_lose 
 				,stake_won 
@@ -188,7 +193,7 @@ BEGIN
 				,betcount
 			)
 			SELECT
-				CONVERT(VARCHAR(7), winlostdate, 120)
+				winlostdate
 				,SUM(CASE WHEN statusID = 112 THEN 1 ELSE 0 END) AS tickets_won
 				,SUM(CASE WHEN statusID = 113 THEN 1 ELSE 0 END) AS tickets_lose
 				,SUM(CASE WHEN statusID = 112 THEN stake * actualrate * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) ELSE 0 END) AS stake_won
@@ -220,7 +225,7 @@ BEGIN
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 					)		
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120)
+			GROUP BY winlostdate
 		END
 
 		-- rmSumWinloss
@@ -231,7 +236,7 @@ BEGIN
 
 			INSERT INTO #tmpSum
 			(
-				month 
+				winlostdate 
 				,tickets_won
 				,tickets_lose 
 				,stake_won 
@@ -243,7 +248,7 @@ BEGIN
 				,betcount
 			)
 			SELECT 
-				CONVERT(VARCHAR(7), winlostdate, 120)
+				winlostdate
 				,SUM(CASE WHEN statusID = 112 THEN betcount ELSE 0 END) AS tickets_won
 				,SUM(CASE WHEN statusID = 113 THEN betcount ELSE 0 END) AS tickets_lose
 				,SUM(CASE WHEN statusID = 112 THEN company_stake*actualrate - ISNULL(a.Extra_stake, 0) * actualrate ELSE 0 END) AS stake_won
@@ -262,7 +267,7 @@ BEGIN
 				AND currency <> 20
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120)
+			GROUP BY winlostdate
 		END
 
 		-- rmSumWinloss_Old
@@ -273,7 +278,7 @@ BEGIN
 
 			INSERT INTO #tmpSum
 			(
-				month 
+				winlostdate 
 				,tickets_won
 				,tickets_lose 
 				,stake_won 
@@ -285,7 +290,7 @@ BEGIN
 				,betcount
 			)
 			SELECT 
-				CONVERT(VARCHAR(7), winlostdate, 120)
+				winlostdate
 				,SUM(CASE WHEN statusID = 112 THEN betcount ELSE 0 END) AS tickets_won
 				,SUM(CASE WHEN statusID = 113 THEN betcount ELSE 0 END) AS tickets_lose
 				,SUM(CASE WHEN statusID = 112 THEN company_stake*actualrate - ISNULL(a.Extra_stake, 0) * actualrate ELSE 0 END) AS stake_won
@@ -304,26 +309,49 @@ BEGIN
 				AND currency <> 20
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY CONVERT(VARCHAR(7), winlostdate, 120)
+			GROUP BY winlostdate
 		END
 	END
 	
-	SELECT
-		month 
-		,sum(tickets_won) as tickets_won
-		,sum(tickets_lose) as tickets_lose 
-		,sum(stake_won) as stake_won  
-		,sum(stake_lose) as stake_lose
-		,sum(member_won) as member_won  
-		,sum(member_lose) as member_lose
-		,sum(ourPT_won) as ourPT_won  
-		,sum(ourPT_lose) as ourPT_lose
-		,@CustomerClass as CustomerClass
-		,@SiteGroup as SiteGroup
-		,sum(betcount) as TotalBets
-	FROM #tmpSum
-	GROUP BY month		
-	ORDER BY month
+	IF @ReportBy = 1
+	BEGIN
+		SELECT
+			CONVERT(VARCHAR(7), winlostdate, 120) [Month]
+			,sum(tickets_won) as tickets_won
+			,sum(tickets_lose) as tickets_lose 
+			,sum(stake_won) as stake_won  
+			,sum(stake_lose) as stake_lose
+			,sum(member_won) as member_won  
+			,sum(member_lose) as member_lose
+			,sum(ourPT_won) as ourPT_won  
+			,sum(ourPT_lose) as ourPT_lose
+			,@CustomerClass as CustomerClass
+			,@SiteGroup as SiteGroup
+			,sum(betcount) as TotalBets
+		FROM #tmpSum
+		GROUP BY CONVERT(VARCHAR(7), winlostdate, 120)		
+		ORDER BY CONVERT(VARCHAR(7), winlostdate, 120)
+	END
+
+	IF @ReportBy = 2 
+	BEGIN
+		SELECT
+			winlostdate [Date]
+			,sum(tickets_won) as tickets_won
+			,sum(tickets_lose) as tickets_lose 
+			,sum(stake_won) as stake_won  
+			,sum(stake_lose) as stake_lose
+			,sum(member_won) as member_won  
+			,sum(member_lose) as member_lose
+			,sum(ourPT_won) as ourPT_won  
+			,sum(ourPT_lose) as ourPT_lose
+			,@CustomerClass as CustomerClass
+			,@SiteGroup as SiteGroup
+			,sum(betcount) as TotalBets
+		FROM #tmpSum
+		GROUP BY winlostdate		
+		ORDER BY winlostdate
+	END
 
 	DROP TABLE #bettype
 	DROP TABLE #tmpSelection
