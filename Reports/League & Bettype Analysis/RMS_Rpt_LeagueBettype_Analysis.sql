@@ -167,7 +167,7 @@ BEGIN
 		END 
 
 		SELECT
-			s.Bettype
+			s.Bettype				AS BetTypeId
 			,SUM(BetCount)			AS TotalTickets
 			,SUM(WonCount)			AS WonTickets
 			,SUM(DrawCount)			AS DrawTickets
