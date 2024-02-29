@@ -148,7 +148,7 @@ BEGIN
 
 		DECLARE @f_date SMALLDATETIME, @t_date SMALLDATETIME
 
-		CREATE TABLE #tmpGenerator (transid BIGINT, bact INT)
+		CREATE TABLE #tmpGenerator (transid BIGINT, bac INT)
 
 		CREATE TABLE #tmpSum
 		(
@@ -173,7 +173,7 @@ BEGIN
 			SELECT	@f_date = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END
 					,@t_date = @ToDate
 
-			INSERT INTO #tmpGenerator (transid, bact)
+			INSERT INTO #tmpGenerator (transid, bac)
 			SELECT transid,
 				TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT)
 			FROM dbo.rmBettrans WITH (NOLOCK)
