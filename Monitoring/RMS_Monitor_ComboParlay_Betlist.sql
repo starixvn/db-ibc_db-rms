@@ -9,7 +9,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_Betlist]
 	,@ReportType	TINYINT = 1
 	,@max_transid	BIGINT = 0
 	,@limitRowCount	INT = 2000
-	,@ParlayType	VARCHAR(20) = ''
+	,@ParlayType	VARCHAR(100) = ''
 	,@IsCornerParlay BIT = 0
 	,@Odds			SMALLMONEY = NULL
 	,@CustomerClass	SMALLINT = NULL
@@ -49,6 +49,7 @@ AS
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20231115@Cherry: Add param IP, LiveStatus (#196550)
 		- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
+		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 
 	Parameter's Explanation:
 		- @selection:
@@ -226,7 +227,7 @@ BEGIN
 			,isSelected			BIT DEFAULT(0)
 		)
 
-		CREATE TABLE #tmpBettrans (transid BIGINT, bact INT)
+		CREATE TABLE #tmpBettrans (transid BIGINT, bac INT)
 		
 		CREATE TABLE #bettype (bettype SMALLINT)
 
@@ -266,9 +267,9 @@ BEGIN
 		-- Get main ticket
 		IF EXISTS (SELECT 1 FROM #bettype WHERE bettype = 29) 
 		BEGIN
-			INSERT INTO #tmpBettrans(transid, bact)
+			INSERT INTO #tmpBettrans(transid, bac)
 			SELECT transid,
-				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 			FROM 
 				dbo.rmBettrans WITH (NOLOCK)
 			WHERE winlostdate >= @today
@@ -300,7 +301,7 @@ BEGIN
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 					AND b.betteam = N'1' AND b.oddsspread = 1)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-					AND b.betteam = N'1' AND t.bact = 5)
+					AND b.betteam = N'1' AND t.bac|16 = t.bac)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 					AND b.betteam = N'1' AND b.oddsspread = 2)
 				)		
@@ -479,7 +480,7 @@ BEGIN
 			,rb.betteam
 			,rb.oddsspread
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END
-			,CASE WHEN t.bact = 5 THEN 1 ELSE 0 END
+			,CASE WHEN t.bac|16 = t.bac THEN 1 ELSE 0 END
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate
 			,ci.CustomerClass
 			,l.username AS TrackingUser

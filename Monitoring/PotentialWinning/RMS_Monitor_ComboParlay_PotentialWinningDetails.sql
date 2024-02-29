@@ -25,7 +25,7 @@ AS
 		- 20230320@Cherry: Change formula of Stake (#185251)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
-		- 20240118@Cherry: Extend @ParlayType (#199927)
+		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 
 	Parameter's Explanation:
 		- @selection:
@@ -144,10 +144,10 @@ BEGIN
 			VALUES (376)
 	END
 
-	CREATE TABLE #Generator (transid BIGINT, bact INT)
-	INSERT INTO #Generator(transid, bact)
+	CREATE TABLE #Generator (transid BIGINT, bac INT)
+	INSERT INTO #Generator(transid, bac)
 	SELECT transid,
-		TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT) 
+		TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT) 
 	FROM dbo.rmBettrans WITH (NOLOCK)
 	WHERE custid = @CustID
 		AND statusID = 0
@@ -157,7 +157,7 @@ BEGIN
 
 	INSERT INTO #bettrans (transid, bettype, refno, betteam, oddsspread, IsParlayGenerator)
 	SELECT b.transid, b.bettype, b.refno, b.betteam, b.oddsspread,
-		CAST(CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5 THEN 1 ELSE 0 END AS BIT)
+		CAST(CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 1 ELSE 0 END AS BIT)
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN #bettype bt ON b.bettype = bt.bettype
 		INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
@@ -174,7 +174,7 @@ BEGIN
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 				AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-				AND b.bettype = 29 AND b.betteam = N'1' AND t.bact = 5)
+				AND b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 				AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 			)		
