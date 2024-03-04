@@ -2,7 +2,7 @@
 ALTER PROCEDURE [dbo].[RMS_Monitor_EventPerformance_Detail]
 	@selection		VARCHAR(MAX) = '',
 	@leagueIDs		VARCHAR(MAX) = '',
-	@ParlayType		VARCHAR(10)  = '',
+	@ParlayType		VARCHAR(100)  = '',
 	@level			VARCHAR(100) = '',
 	@CustomerClass	SMALLINT = NULL,
 	@SportType 		TINYINT = 43,
@@ -24,6 +24,7 @@ AS
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
 		- 20240221@Cherry: Fix Stake as main report (#201133)
+		- 20240229@Cherry: Change attribute for Parlay Generator (#199766)
 
 	Parameter's Explanation:
 		- @selection:
@@ -197,10 +198,10 @@ BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (376)
 
-	CREATE TABLE #tmpBettrans (transid BIGINT, bact INT)
-	INSERT INTO #tmpBettrans (transid, bact)
+	CREATE TABLE #tmpBettrans (transid BIGINT, bac INT)
+	INSERT INTO #tmpBettrans (transid, bac)
 	SELECT transid,
-		ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+		ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 	FROM rmBettrans WITH(NOLOCK)
 	WHERE winlostdate >= @yesterday AND custID > 0 AND matchid IN (29,38,376) AND statusID = 0 AND currency <> 20
 		AND bettype IN (SELECT bettype FROM #bettype)
@@ -237,7 +238,7 @@ BEGIN
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 				AND rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 1)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-				AND rm.bettype = 29 AND rm.betteam = N'1' AND t.bact = 5)
+				AND rm.bettype = 29 AND rm.betteam = N'1' AND t.bac|16 = t.bac)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 				AND rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 2)
 			)			
@@ -282,7 +283,7 @@ BEGIN
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt
 			,ci.CustomerClass
 			,rb.CurrencyName Currency
-			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND b.bact = 5 THEN 1 ELSE 0 END IsParlayGenerator
+			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND b.bac|16 = b.bac THEN 1 ELSE 0 END IsParlayGenerator
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
 		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN trans t ON rb.transid = t.transid

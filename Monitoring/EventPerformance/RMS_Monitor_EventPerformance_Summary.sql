@@ -2,7 +2,7 @@
 ALTER PROCEDURE [dbo].[RMS_Monitor_EventPerformance_Summary]
 	@selection		VARCHAR(MAX) = '',
 	@leagueIDs		VARCHAR(MAX) = '',
-	@ParlayType		VARCHAR(10)  = '',
+	@ParlayType		VARCHAR(100)  = '',
 	@level			VARCHAR(100) = '',
 	@limitRowCount	INT = 100,
 	@CustomerClass	SMALLINT = NULL,
@@ -26,6 +26,7 @@ AS
 		- 20230130@Danny: Monitor detail Performance for Event/Bettype/BetChoice Soccer [RedmineID: #182724]
 		- 20230815@Cherry: Add Total Stake column (#192680)
 		- 20231020@Cherry: Parlay Generator (#195498)
+		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 	
 	Parameter's Explanation:
 		- @selection:
@@ -206,10 +207,10 @@ BEGIN
 	FROM	bodb02.dbo.bettransm WITH(NOLOCK)
 	WHERE	matchid IN (SELECT x.matchID FROM #match x) AND statusID = 0
 
-	CREATE TABLE #tmpBettrans (transid BIGINT, bact INT)
-	INSERT INTO #tmpBettrans (transid, bact)
+	CREATE TABLE #tmpBettrans (transid BIGINT, bac INT)
+	INSERT INTO #tmpBettrans (transid, bac)
 	SELECT transid,
-		ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+		ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 	FROM rmBettrans WITH(NOLOCK)
 	WHERE winlostdate >= @yesterday AND custID > 0 AND matchid = 29 AND statusID = 0 AND currency <> 20
 		AND bettype IN (SELECT bettype FROM #bettype)
@@ -235,7 +236,7 @@ BEGIN
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 				AND rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 1)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
-				AND rm.bettype = 29 AND rm.betteam = N'1' AND t.bact = 5)
+				AND rm.bettype = 29 AND rm.betteam = N'1' AND t.bac|16 = t.bac)
 			)		
 	END
 

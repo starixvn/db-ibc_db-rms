@@ -12,6 +12,7 @@ AS
 		- 20200703@Percy: Initialize SP [RedmineID: #137010]
 		- 20230620@Cherry: Manage Alert (#189147)
 		- 20231101@Cherry: Parlay Generator (#195498)
+		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 */
 
 BEGIN
@@ -41,11 +42,11 @@ BEGIN
 		TotalBets INT
 	)
 
-	CREATE TABLE #tmpBettrans (transid BIGINT, bact INT)
+	CREATE TABLE #tmpBettrans (transid BIGINT, bac INT)
 
-	INSERT INTO #tmpBettrans (transid, bact)
+	INSERT INTO #tmpBettrans (transid, bac)
 	SELECT transid,
-		ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bact)[1]', 'VARCHAR(50)') AS INT),0)
+		ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
 	FROM dbo.rmBettrans WITH (NOLOCK)
 	WHERE TransDate > @LastTransDate
 		AND matchid = 29
@@ -70,8 +71,8 @@ BEGIN
 	)
 	SELECT
 		b.TransId,
-		CASE WHEN b.betteam = N'1' AND t.bact <> 5 THEN 'Mix Parlay' 
-			WHEN b.betteam = N'1' AND t.bact = 5 THEN 'Parlay Generator'
+		CASE WHEN b.betteam = N'1' AND t.bac|16 = t.bac THEN 'Parlay Generator'
+			WHEN b.betteam = N'1' THEN 'Mix Parlay' 
 			ELSE 'Combo Parlay' END AS ParlayType,
 		b.Username,
 		e.currency,
