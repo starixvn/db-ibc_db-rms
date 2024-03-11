@@ -9,7 +9,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_LeagueBettype_Analysis]
 	,@Ratio			FLOAT = 0
 	,@ReportBy		TINYINT = 1
 	,@SportType		SMALLINT = 1
-	,@BetType		INT = 0
+	,@BetType		VARCHAR(MAX) = ''
 	,@HouseWL		MONEY = 0
 AS
 
@@ -45,6 +45,11 @@ BEGIN
 
 	CREATE TABLE #Leagues (LeagueId INT, GroupName VARCHAR(30))
 	CREATE TABLE #Match (MatchID INT, HomeName NVARCHAR(100), AwayName NVARCHAR(100))
+	CREATE TABLE #tmpBettype (Bettype INT)
+	
+	INSERT INTO #tmpBettype (Bettype)
+		SELECT val
+		FROM dbo.f_RMS_strSplit (@BetType, ',')
 	
 	-- League Group
 	BEGIN
@@ -213,7 +218,7 @@ BEGIN
 				  WHEN s.Bettype = 611 AND s.Betteam = 'a' AND @SportType = 2 THEN 'Even'
 				  ELSE '-'
 			END AS BetChoice,
-			s.TransList,
+			tl TransList,
 			SUM(BetCount)			AS TotalTickets,
 			SUM(WonCount)			AS WonTickets,
 			SUM(DrawCount)			AS DrawTickets,
@@ -224,6 +229,7 @@ BEGIN
 		FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
 			INNER JOIN #Match m ON s.MatchId = m.MatchID
 			INNER JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON s.Bettype = b.typeid
+			CROSS APPLY OPENJSON (CAST(DECOMPRESS(s.TransList) AS NVARCHAR(MAX))) WITH (tl VARCHAR(MAX)) 
 		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
 			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
 			AND (@Site = 2 OR s.IsDeposit = @Site) 
@@ -255,7 +261,7 @@ BEGIN
 				  WHEN s.Bettype = 611 AND s.Betteam = 'a' AND @SportType = 2 THEN 'Even'
 				  ELSE '-'
 			END,
-			s.TransList
+			tl
 		HAVING SUM(MainHouseWinloss) <= @HouseWL
 		ORDER BY TotalTickets DESC
 	END
@@ -265,7 +271,7 @@ BEGIN
 			l.leaguename LeagueName,
 			m.MatchID MatchId,
 			m.HomeName + ' -vs- ' + m.AwayName AS [Event],
-			s.TransList,
+			tl TransList,
 			SUM(BetCount)			AS TotalTickets,
 			SUM(WonCount)			AS WonTickets,
 			SUM(DrawCount)			AS DrawTickets,
@@ -277,23 +283,26 @@ BEGIN
 			INNER JOIN #Leagues a ON s.LeagueId = a.LeagueId
 			INNER JOIN bodb02.dbo.League l WITH(NOLOCK) ON s.LeagueId = l.leagueid
 			INNER JOIN #Match m ON s.MatchId = m.MatchID
+			CROSS APPLY OPENJSON (CAST(DECOMPRESS(s.TransList) AS NVARCHAR(MAX))) WITH (tl VARCHAR(MAX)) 
 		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
 			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
 			AND (@Site = 2 OR s.IsDeposit = @Site) 
 			AND s.leagueId IN (SELECT LeagueId FROM #Leagues)
-			AND s.Bettype = @BetType
+			AND s.Bettype IN (SELECT Bettype FROM #tmpBettype)
 		GROUP BY
 			m.MatchID,
 			m.HomeName,
 			m.AwayName,
 			a.GroupName,
 			l.leaguename,
-			s.TransList
+			tl
 		HAVING SUM(MainHouseWinloss) <= @HouseWL
 		ORDER BY TotalTickets DESC
 	END
 
 	DROP TABLE #Leagues
 	DROP TABLE #Match
+	DROP TABLE #tmpBettype
+	
 END
 GO

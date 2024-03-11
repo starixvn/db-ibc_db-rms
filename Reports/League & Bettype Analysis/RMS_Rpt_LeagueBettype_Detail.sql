@@ -1,6 +1,6 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Rpt_LeagueBettype_Detail]
-	@TransList		VARBINARY(MAX) 
+	@TransList		NVARCHAR(MAX) 
 AS
 
 /*
@@ -24,25 +24,13 @@ BEGIN
 	EXEC bodb02.dbo.Age_SelBalanceUpDay
 
 	DECLARE @MoveBetsDay DATETIME
-	SELECT @MoveBetsDay = MoveBetsDay FROM @MBU
-	
-	DECLARE @TransIDs NVARCHAR(MAX)
-	BEGIN TRY
-		SELECT @TransIDs = tl
-		FROM  OPENJSON (CAST( DECOMPRESS(@TransList) AS NVARCHAR(MAX)))
-		WITH (
-			tl VARCHAR(MAX)
-			)
-	END TRY
-	BEGIN CATCH
-		RETURN
-	END CATCH
+	SELECT @MoveBetsDay = MoveBetsDay FROM @MBU		
 
 	CREATE TABLE #tmpTransID (TransID BIGINT)
 
 	INSERT INTO #tmpTransID (TransID)
 	SELECT val
-	FROM bodb02.dbo.strSplit(@TransIDs, ',')
+	FROM bodb02.dbo.strSplit(@TransList, ',')
 
 	CREATE TABLE #tmpBettrans
 	(
