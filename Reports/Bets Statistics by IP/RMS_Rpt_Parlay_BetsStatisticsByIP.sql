@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_BetsStatisticsByIP]
 	@IP			VARCHAR(45)
 	,@fromdate	DATETIME
@@ -15,6 +15,7 @@ AS
 		- 20211001@Danny: Change dataType to support IPv6 [RedmineID: #162348]
 		- 20230420@Cherry: Add Site column (#186735)
 		- 20231115@Cherry: Add param TicketStatus, output column (#196550)
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 	
 	Parameter's Explanation:
 		@TicketStatus: 

@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Similar_ComboParlay_Betlist]
 	@transid BIGINT,
 	@isSimilar BIT = 0 --100%
@@ -29,6 +29,7 @@ AS
 		- 20231115@Cherry: Add IP column (#196550)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 */
 
 BEGIN

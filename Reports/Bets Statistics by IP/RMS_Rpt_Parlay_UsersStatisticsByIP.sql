@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_UsersStatisticsByIP]
 	@fromdate		DATETIME
@@ -17,6 +17,7 @@ AS
 	Revisions:
 		- 20200510@Percy: Change condition of transdate [RedmineID: #133961]
 		- 20231115@Cherry: Add param TicketStatus, output column (#196550)
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 
 	Param:
 		- @TicketStatus: 

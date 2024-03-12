@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners_Details]
 	@custid			INT,
 	@fromdate		DATETIME,
@@ -31,6 +31,7 @@ AS
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 	
 	Parameter's Explanation:
 		- @ParlayType:
