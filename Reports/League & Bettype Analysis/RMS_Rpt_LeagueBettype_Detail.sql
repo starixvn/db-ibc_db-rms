@@ -15,12 +15,12 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_LeagueBettype_Detail]
 AS
 
 /*
-	Created: 20240115@Cherry
+	Created: 20240315@Cherry
 	DB: DBRMS-bodb_RMS
 	Task: League & Bettype Data Analysis
 
 	Revisions:
-		- 20240115@Cherry: Initialize SP [RedmineID: #197684]
+		- 20240315@Cherry: Initialize SP [RedmineID: #197684]
 
 	Param's Explanation:
 		. @ParlayType: '1,2'
@@ -297,9 +297,7 @@ BEGIN
 		,ci.CustomerClass
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
-	WHERE b.statusID = 112
-		AND b.currency <> 20		
-		AND b.transid IN (SELECT TransID FROM #tmpTransList)
+	WHERE b.transid IN (SELECT TransID FROM #tmpTransList)
 
 	INSERT INTO #tmpBettrans
 	(
@@ -333,9 +331,7 @@ BEGIN
 		,ci.CustomerClass
 	FROM dbo.rmBettrans_Old b WITH (NOLOCK)
 		INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
-	WHERE b.statusID = 112
-		AND b.currency <> 20		
-		AND b.transid IN (SELECT TransID FROM #tmpTransList)
+	WHERE b.transid IN (SELECT TransID FROM #tmpTransList)
 		AND b.transid NOT IN (SELECT TransID FROM #tmpBettrans)
 
 	SELECT
