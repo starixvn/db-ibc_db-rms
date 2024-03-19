@@ -20,6 +20,7 @@ AS
 		- 20200619@Percy: Initialize SP [RedmineID: #135326]
 		- 20220301@Danny: Support basketball Sport type data [RedmineID: #169072]
 		- 20220719@Danny: Fix issue Show result of Basketball when selecting Sport is Soccer [RedmineID: #175613]
+		- 20240315@Cherry: Enhancement (#197684)
 
 	Param's Explanation:
 		. @ParlayType: '1,2'
@@ -126,7 +127,7 @@ BEGIN
 		END 
 
 		SELECT
-			s.Bettype
+			s.Bettype				AS BettypeId
 			,SUM(BetCount)			AS TotalTickets
 			,SUM(WonCount)			AS WonTickets
 			,SUM(DrawCount)			AS DrawTickets

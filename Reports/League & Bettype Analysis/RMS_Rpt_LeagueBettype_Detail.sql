@@ -12,6 +12,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_LeagueBettype_Detail]
 	,@BetType		INT = 0
 	,@ReportBy		TINYINT = 1
 	,@HouseWL		MONEY = 0
+
 AS
 
 /*
@@ -188,7 +189,7 @@ BEGIN
 				  WHEN s.Bettype = 611 AND s.Betteam = 'a' AND @SportType = 2 THEN 'Even'
 				  ELSE '-'
 			END
-		HAVING SUM(MainHouseWinloss) <= @HouseWL
+		HAVING SUM(MainHouseWinloss) <= @HouseWL			
 		ORDER BY TotalTickets DESC
 	END
 	
@@ -219,7 +220,7 @@ BEGIN
 			m.AwayName,
 			a.GroupName,
 			l.leaguename
-		HAVING SUM(MainHouseWinloss) <= @HouseWL
+		HAVING SUM(MainHouseWinloss) <= @HouseWL			
 		ORDER BY TotalTickets DESC
 	END
 
