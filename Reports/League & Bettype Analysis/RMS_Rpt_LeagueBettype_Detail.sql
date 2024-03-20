@@ -268,7 +268,8 @@ BEGIN
 			AND (@Site = 2 OR s.IsDeposit = @Site) 
 			AND s.Bettype = @BetType
 			AND s.matchid = @Match
-			AND ((@BetTeam = '-' AND s.Betteam NOT IN ('a','h','1','2','x'))
+			AND (@BetTeam = ''
+				OR (@BetTeam = '-' AND s.Betteam NOT IN ('a','h','1','2','x'))
 				OR s.Betteam = @BetTeam)		
 		
 	INSERT INTO #tmpBettrans
