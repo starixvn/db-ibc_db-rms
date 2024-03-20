@@ -41,7 +41,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	CREATE TABLE #Leagues (LeagueId INT, GroupName VARCHAR(30))
+	CREATE TABLE #Leagues (LeagueId INT, GroupName VARCHAR(30), LeagueName NVARCHAR(500))
 	CREATE TABLE #Match (MatchID INT, HomeName NVARCHAR(100), AwayName NVARCHAR(100))
 	
 	-- League Group
@@ -54,24 +54,26 @@ BEGIN
 		BEGIN
 
 			UPDATE t
-			SET t.GroupName	= lg.GroupName
+			SET t.GroupName	= lg.GroupName,
+				t.LeagueName = a.leaguename
 			FROM #Leagues t
 				INNER JOIN dbo.rmLeague l WITH (NOLOCK) ON t.LeagueId = l.LeagueId
 				INNER JOIN dbo.rmLeagueGroup lg WITH (NOLOCK) ON l.GroupId = lg.GroupId
+				INNER JOIN	bodb02.dbo.League a WITH(NOLOCK) ON t.leagueId = a.leagueid
 			WHERE ',' + @LeagueGroups + ',' LIKE '%,' + CONVERT(VARCHAR(5), lg.GroupId)+ ',%'
 		
 			IF ',' + @LeagueGroups + ',' LIKE '%,-1,%' -- None
 				AND ',' + @Leagues + ',' LIKE '%,-1,%' -- None
-				INSERT INTO #Leagues (LeagueId, GroupName)
-				SELECT s.leagueId, 'None'
+				INSERT INTO #Leagues (LeagueId, GroupName, LeagueName)
+				SELECT s.leagueId, 'None', l.leaguename
 				FROM dbo.rmSumByLeague s WITH (NOLOCK)
-				INNER JOIN	bodb02.dbo.League l WITH(NOLOCK) ON s.leagueId = l.leagueid
+					INNER JOIN	bodb02.dbo.League l WITH(NOLOCK) ON s.leagueId = l.leagueid
 				WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
 					AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
 					AND (@Site = 2 OR s.IsDeposit = @Site)
 					AND NOT EXISTS (SELECT 1 FROM dbo.rmLeague l WITH (NOLOCK) WHERE s.leagueId = l.LeagueId)
 					AND l.sporttype = 1
-				GROUP BY s.leagueId
+				GROUP BY s.leagueId, l.leaguename
 		END
 
 		
@@ -123,6 +125,8 @@ BEGIN
 	IF @ReportBy = 1 -- view by league detail
 	BEGIN		
 		SELECT
+			l.GroupName,
+			l.LeagueName,
 			m.MatchID MatchId,
 			m.HomeName + ' -vs- ' + m.AwayName AS [Event],
 			b.typeid BetTypeId,
@@ -158,11 +162,13 @@ BEGIN
 		FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
 			INNER JOIN #Match m ON s.MatchId = m.MatchID
 			INNER JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON s.Bettype = b.typeid
+			INNER JOIN #Leagues l ON s.leagueid = l.leagueid
 		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
 			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
-			AND (@Site = 2 OR s.IsDeposit = @Site) 
-			AND s.leagueId IN (SELECT LeagueId FROM #Leagues)
+			AND (@Site = 2 OR s.IsDeposit = @Site) 		
 		GROUP BY
+			l.GroupName,
+			l.LeagueName,
 			m.MatchID,
 			m.HomeName,
 			m.AwayName,
@@ -190,13 +196,13 @@ BEGIN
 				  ELSE '-'
 			END
 		HAVING SUM(MainHouseWinloss) <= @HouseWL			
-		ORDER BY TotalTickets DESC
+		ORDER BY MainHouseWinloss DESC
 	END
 	
 	IF @ReportBy = 2 -- view by bettype detail
 	BEGIN
-		SELECT a.GroupName,
-			l.leaguename LeagueName,
+		SELECT l.GroupName,
+			l.LeagueName,
 			m.MatchID MatchId,
 			m.HomeName + ' -vs- ' + m.AwayName AS [Event],
 			SUM(BetCount)			AS TotalTickets,
@@ -207,8 +213,7 @@ BEGIN
 			SUM(MainMemberWinloss)	AS MemberWinloss,
 			SUM(MainHouseWinloss)	AS MainHouseWinloss
 		FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
-			INNER JOIN #Leagues a ON s.LeagueId = a.LeagueId
-			INNER JOIN bodb02.dbo.League l WITH(NOLOCK) ON s.LeagueId = l.leagueid
+			INNER JOIN #Leagues l ON s.LeagueId = l.LeagueId
 			INNER JOIN #Match m ON s.MatchId = m.MatchID
 		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
 			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
@@ -218,10 +223,10 @@ BEGIN
 			m.MatchID,
 			m.HomeName,
 			m.AwayName,
-			a.GroupName,
+			l.GroupName,
 			l.leaguename
 		HAVING SUM(MainHouseWinloss) <= @HouseWL			
-		ORDER BY TotalTickets DESC
+		ORDER BY MainHouseWinloss DESC
 	END
 
 	DECLARE @MBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
