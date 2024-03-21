@@ -249,7 +249,7 @@ BEGIN
 		WinningAmount		MONEY,
 		NetWinAfterPT		MONEY,
 		TotalBet			INT,
-		TotalSelection		INT,
+		TotalSelection		SMALLMONEY,
 		SportType			SMALLINT,
 		IP					VARCHAR(45),
 		CurrencyName		NVARCHAR(50),
