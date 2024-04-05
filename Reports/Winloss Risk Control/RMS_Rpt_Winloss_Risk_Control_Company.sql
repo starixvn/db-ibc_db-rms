@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Rpt_Winloss_Risk_Control_Company]
 	@fromdate		SMALLDATETIME,
 	@todate			SMALLDATETIME,
@@ -23,6 +23,7 @@ AS
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		
 	Parameter's Explanation:
 		- @company  :  Only Site

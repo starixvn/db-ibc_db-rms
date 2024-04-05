@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_EventPerformance_Summary]
 	@selection		VARCHAR(MAX) = '',
 	@leagueIDs		VARCHAR(MAX) = '',
@@ -27,6 +27,7 @@ AS
 		- 20230815@Cherry: Add Total Stake column (#192680)
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 	
 	Parameter's Explanation:
 		- @selection:

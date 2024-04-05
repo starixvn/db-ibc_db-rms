@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[RMS_ManageAlert_TakeAction]
 	@AlertID BIGINT,
@@ -14,6 +14,7 @@ AS
 	
 	Revisions:		
 		20230620@Cherry: Initial (#189147)
+		20240312@Cherry: Change SQL account in metadata (#202012)
 
 	Param:
 		@IsChecked = 1: Checked By

@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_AbnormalBetAlert]
 AS
 
@@ -10,6 +10,7 @@ AS
 	Revisions:
 		- 20200306@Percy: Initialize SP [RedmineID: #129944]
 		- 20201110@Percy: Return sub tickets info to support write log on web [RedmineID: #145069]
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 */
 
 BEGIN

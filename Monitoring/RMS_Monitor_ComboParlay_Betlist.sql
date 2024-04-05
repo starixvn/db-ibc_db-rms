@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_ComboParlay_Betlist]
 	@selection		VARCHAR(MAX) = '0'
 	,@sporttype		VARCHAR(100) = ''
@@ -50,6 +50,7 @@ AS
 		- 20231115@Cherry: Add param IP, LiveStatus (#196550)
 		- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 
 	Parameter's Explanation:
 		- @selection:

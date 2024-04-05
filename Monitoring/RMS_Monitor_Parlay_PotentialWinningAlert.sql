@@ -1,5 +1,5 @@
 
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" viewers="" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_PotentialWinningAlert] @IsTest              BIT            = 0, 
                                                                  @IsSMP       BIT            = 0, 
@@ -18,6 +18,7 @@ Revisions:
 	- 20230620@Cherry: Manage Alert (#189147)
 	- 20230809@Cherry: Duplicate data
 	- 20230830@Cherry: Enhance (#192682)
+	- 20240312@Cherry: Change SQL account in metadata (#202012)
 */
 
      SET NOCOUNT ON;

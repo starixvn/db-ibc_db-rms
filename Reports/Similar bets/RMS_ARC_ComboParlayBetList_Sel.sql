@@ -1,4 +1,4 @@
-/*<info serverAlias="DBARC-bodb_Archive" executers="bodbRMSNet" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBARC-bodb_Archive" executers="wsv_rms" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE RMS_ARC_ComboParlayBetList_Sel @winlostdate SMALLDATETIME, @refno BIGINT, @combo INT, @statusID TINYINT,  @cnt_bets INT OUTPUT,  @NumberWon INT OUTPUT
 AS
 /*
@@ -8,6 +8,7 @@ AS
 
 	Revisions:   
 		- 20201221@danny: create SP  [RedmineID: #148137]
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 */
 SET NOCOUNT ON 
 BEGIN

@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[RMS_SystemParlay_CombinationDetails] 
 	@refno	BIGINT = 0,
@@ -12,6 +12,7 @@ AS
 		Revision:
 			- 20231020@Cherry: Parlay Boost Bonus (#192681)
 			- 20240109@Cherry: Change Original Odds from ExtraInfo
+			- 20240312@Cherry: Change SQL account in metadata (#202012)
 		
 	*/ 
 BEGIN

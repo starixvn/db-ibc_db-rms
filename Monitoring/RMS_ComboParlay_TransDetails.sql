@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_ComboParlay_TransDetails]
 	@transid		BIGINT
 	,@refno			BIGINT
@@ -19,6 +19,7 @@ AS
 		- 20210324@Danny: Get data from backup range  [RedmineID: #148137]
 		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
 		- 20230320@Cherry: Change formula of Stake (#185251)
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 */
 
 BEGIN

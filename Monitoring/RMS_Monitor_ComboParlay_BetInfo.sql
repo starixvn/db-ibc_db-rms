@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[RMS_Monitor_ComboParlay_BetInfo]
 	@TransID		BIGINT	
  AS
@@ -9,6 +9,7 @@ CREATE PROCEDURE [dbo].[RMS_Monitor_ComboParlay_BetInfo]
 		DB: DBRMS/bodb_RMS		
 		Revisions:		
 			- 20210303@Danny: Get BetInfo from trans_bk and bettrans14  [RedmineID: #148137]
+			- 20240312@Cherry: Change SQL account in metadata (#202012)
 
 	*/
 SET NOCOUNT ON 

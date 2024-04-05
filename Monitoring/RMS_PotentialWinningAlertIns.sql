@@ -1,5 +1,5 @@
 
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0"></info>*/
 
 ALTER PROCEDURE [dbo].[RMS_PotentialWinningAlertIns] @CustId      INT, 
                                                      @AlertAmount MONEY, 
@@ -14,7 +14,8 @@ ALTER PROCEDURE [dbo].[RMS_PotentialWinningAlertIns] @CustId      INT,
 
 
 Revisions:
-- 20200207@Jacob: Notify/Alert by Winning Amount #128093
+	- 20200207@Jacob: Notify/Alert by Winning Amount #128093
+	- 20240312@Cherry: Change SQL account in metadata (#202012)
 */
 
 AS

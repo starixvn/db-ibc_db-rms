@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_TopWinners_Bet_Details]
 	@transid	BIGINT
 	,@refno		BIGINT
@@ -17,6 +17,7 @@ AS
 		- 20200510@Percy: Add Black League [RedmineID: #133961]
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 */
 
 BEGIN

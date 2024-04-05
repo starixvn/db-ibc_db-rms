@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_BetsStatisticsByIP_Sporttype]
 	@fromdate  DATETIME,
 	@IP        VARCHAR(45),
@@ -21,6 +21,7 @@ AS
 		- 20231020@Cherry: Parlay Boost Bonus (#192681)
 		- 20231115@Cherry: Add param TicketStatus (#196550)
 		- 20240109@Cherry: Change Original Odds from ExtraInfo
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 
 	Parameter's Explanation:
 		@sporttype = '1': soccer only
