@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_BigWinningAlert]
 	@IsTest BIT = 0,
 	@WinningAmount INT 
@@ -13,6 +13,7 @@ AS
 	Revisions:
 		- 20230404@Cherry: Initialize SP [RedmineID: #186037]
 		- 20231101@Cherry: Parlay Generator (#195498)
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 */
 
 BEGIN

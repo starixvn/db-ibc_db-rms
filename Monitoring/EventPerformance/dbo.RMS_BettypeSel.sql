@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_BettypeSel] 
 	@SportType SMALLINT = 43
 											
@@ -11,8 +11,9 @@ DB: DBRMS/bodb_RMS
 		
 Revisions:
 
-- 20220301@Danny: Get data bettype by Sport [RedmineID: #169072]
-- 20230130@Danny: Monitor detail Performance for Event/Bettype/BetChoice Soccer [RedmineID: #182724]
+	- 20220301@Danny: Get data bettype by Sport [RedmineID: #169072]
+	- 20230130@Danny: Monitor detail Performance for Event/Bettype/BetChoice Soccer [RedmineID: #182724]
+	- 20240312@Cherry: Change SQL account in metadata (#202012)
 
 Parameter's Explanation:
 	 EXEC dbo.RMS_BettypeSel 1

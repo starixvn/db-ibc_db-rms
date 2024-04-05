@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_LastTicketAlertIns]
 	@TransId		BIGINT
 	,@AlertAmount	MONEY = 0
@@ -15,6 +15,7 @@ AS
 	Revisions:
 		- 20200226@Franklin: Notify/Alert by Winning Amount #129275
 		- 20200703@Percy: Add jobtype to support many jobs [RedmineID: #137010]
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 */
 
 BEGIN

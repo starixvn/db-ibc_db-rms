@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_EventStakeAlert]
 	@IsTest BIT = 0,
 	@Stake INT = 100000
@@ -12,6 +12,7 @@ AS
 
 	Revisions:
 		- 20230520@Cherry: Initialize SP [RedmineID: #187967]
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 */
 
 BEGIN

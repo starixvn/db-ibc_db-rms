@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_SmallOddsAlert]
 	@IsTest BIT = 0
 AS
@@ -13,6 +13,7 @@ AS
 		- 20230620@Cherry: Manage Alert (#189147)
 		- 20231101@Cherry: Parlay Generator (#195498)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 */
 
 BEGIN

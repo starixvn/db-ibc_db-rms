@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_SiteByGroupSel]
 	@IsDeposit BIT = ''
 AS
@@ -10,7 +10,7 @@ AS
 		
 	Revisions:	
 		- 20201030@Danny: Initialize SP [RedmineID: #144471]		
-	
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 
 */
 

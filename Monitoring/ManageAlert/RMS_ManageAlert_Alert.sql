@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[RMS_ManageAlert_Alert]
 	@FromDate DATE,
@@ -24,6 +24,7 @@ AS
 	Revisions:		
 		20230620@Cherry: Initial (#189147)
 		20230830@Cherry: Enhance (#192682)
+		20240312@Cherry: Change SQL account in metadata (#202012)
 
 	Param:
 		@AlertType = 1: Similar Bet

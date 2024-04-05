@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0"></info>*/
 CREATE PROCEDURE [dbo].[RMS_ComboParlay_PotentialWinning_UserTracking]
 	@userid			INT,
 	@username		NVARCHAR(50),
@@ -16,6 +16,7 @@ AS
 	Revisions:
 		- 20210701@Danny: Track User Monitoring [RedmineID: #153875]
 		- 20211007@Danny: Track User Monitoring on ComboParlay_Betlist Report [RedmineID: #162872]
+		- 20240312@Cherry: Change SQL account in metadata (#202012)
 
 	Parameter's Explanation:
 */
