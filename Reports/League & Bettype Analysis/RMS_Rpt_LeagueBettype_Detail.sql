@@ -63,7 +63,7 @@ BEGIN
 			WHERE ',' + @LeagueGroups + ',' LIKE '%,' + CONVERT(VARCHAR(5), lg.GroupId)+ ',%'
 		
 			IF ',' + @LeagueGroups + ',' LIKE '%,-1,%' -- None
-				OR ',' + @Leagues + ',' LIKE '%,-1,%' -- None
+				AND ',' + @Leagues + ',' LIKE '%,-1,%' -- None
 				INSERT INTO #Leagues (LeagueId, GroupName, LeagueName)
 				SELECT s.leagueId, 'None', l.leaguename
 				FROM dbo.rmSumByLeague s WITH (NOLOCK)
