@@ -80,7 +80,8 @@ BEGIN
 		IF @SportType = 2
 		BEGIN
 			UPDATE t
-			SET t.GroupName	= lg.GroupName
+			SET t.GroupName	= lg.GroupName,
+				t.LeagueName = l.leaguename
 			FROM #Leagues t
 				INNER JOIN bodb02.dbo.League l WITH(NOLOCK) ON t.LeagueId = l.leagueid
 				INNER JOIN bodb02.dbo.LeagueGroup lg WITH (NOLOCK) ON l.LeagueGroupID = lg.GroupID
