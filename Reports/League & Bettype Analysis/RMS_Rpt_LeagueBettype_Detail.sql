@@ -67,7 +67,7 @@ BEGIN
 				t.LeagueName = l.leaguename
 			FROM #Leagues t
 				INNER JOIN bodb02.dbo.League l WITH(NOLOCK) ON t.LeagueId = l.leagueid
-			WHERE ',' + @LeagueGroups + ',' LIKE '%,-1,%'
+			WHERE t.LeagueId NOT IN (SELECT LeagueId FROM dbo.rmLeague WITH(NOLOCK))
 		
 			IF ',' + @LeagueGroups + ',' LIKE '%,-1,%' -- None
 				AND ',' + @Leagues + ',' LIKE '%,-1,%' -- None
