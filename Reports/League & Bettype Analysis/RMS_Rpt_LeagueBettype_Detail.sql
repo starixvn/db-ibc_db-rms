@@ -61,6 +61,13 @@ BEGIN
 				INNER JOIN dbo.rmLeagueGroup lg WITH (NOLOCK) ON l.GroupId = lg.GroupId
 				INNER JOIN	bodb02.dbo.League a WITH(NOLOCK) ON t.leagueId = a.leagueid
 			WHERE ',' + @LeagueGroups + ',' LIKE '%,' + CONVERT(VARCHAR(5), lg.GroupId)+ ',%'
+
+			UPDATE t
+			SET t.GroupName	= 'None',
+				t.LeagueName = l.leaguename
+			FROM #Leagues t
+				INNER JOIN bodb02.dbo.League l WITH(NOLOCK) ON t.LeagueId = l.leagueid
+			WHERE ',' + @LeagueGroups + ',' LIKE '%,-1,%'
 		
 			IF ',' + @LeagueGroups + ',' LIKE '%,-1,%' -- None
 				AND ',' + @Leagues + ',' LIKE '%,-1,%' -- None
