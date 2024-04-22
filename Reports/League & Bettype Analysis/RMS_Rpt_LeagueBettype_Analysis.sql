@@ -39,7 +39,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	CREATE TABLE #Leagues (LeagueId INT, GroupName VARCHAR(30))
+	CREATE TABLE #Leagues (LeagueId INT, GroupId INT, GroupName VARCHAR(30))
 	
 	-- League Group
 	BEGIN
@@ -51,7 +51,8 @@ BEGIN
 		BEGIN
 
 			UPDATE t
-			SET t.GroupName	= lg.GroupName
+			SET t.GroupName	= lg.GroupName,
+				t.GroupId = lg.GroupId
 			FROM #Leagues t
 				INNER JOIN dbo.rmLeague l WITH (NOLOCK) ON t.LeagueId = l.LeagueId
 				INNER JOIN dbo.rmLeagueGroup lg WITH (NOLOCK) ON l.GroupId = lg.GroupId
@@ -61,8 +62,8 @@ BEGIN
 		
 			IF ',' + @LeagueGroups + ',' LIKE '%,-1,%' -- None
 				AND ',' + @Leagues + ',' LIKE '%,-1,%' -- None
-				INSERT INTO #Leagues (LeagueId, GroupName)
-				SELECT s.leagueId, 'None'
+				INSERT INTO #Leagues (LeagueId, GroupId, GroupName)
+				SELECT s.leagueId, -1, 'None'
 				FROM dbo.rmSumByLeague s WITH (NOLOCK)
 				INNER JOIN	bodb02.dbo.League l WITH(NOLOCK) ON s.leagueId = l.leagueid
 				WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
@@ -77,7 +78,8 @@ BEGIN
 		IF @SportType = 2
 		BEGIN
 			UPDATE t
-			SET t.GroupName	= lg.GroupName
+			SET t.GroupName	= lg.GroupName,
+				t.GroupId = lg.GroupID
 			FROM #Leagues t
 				INNER JOIN bodb02.dbo.League l WITH(NOLOCK) ON t.LeagueId = l.leagueid
 				INNER JOIN bodb02.dbo.LeagueGroup lg WITH (NOLOCK) ON l.LeagueGroupID = lg.GroupID
@@ -90,7 +92,8 @@ BEGIN
 	IF @ReportBy = 1 -- view by league
 	BEGIN
 		SELECT
-			l.GroupName
+			l.GroupId
+			,l.GroupName
 			,l.leagueId
 			,SUM(BetCount)			AS TotalTickets
 			,SUM(WonCount)			AS WonTickets
@@ -105,7 +108,8 @@ BEGIN
 			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
 			AND (@Site = 2 OR s.IsDeposit = @Site)
 		GROUP BY
-			l.GroupName
+			l.GroupId
+			,l.GroupName
 			,l.leagueId
 		HAVING CASE WHEN SUM(BetCount) = 0 THEN 0 ELSE 1.0 * SUM(WonCount)/SUM(BetCount) END >= @Ratio
 		ORDER BY TotalTickets DESC
