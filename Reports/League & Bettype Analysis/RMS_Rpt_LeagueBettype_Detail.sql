@@ -140,7 +140,7 @@ BEGIN
 			b.typeid BetTypeId,
 			b.typenamee AS BetType,
 			CASE WHEN s.Bettype IN (1,2,3,5,7,8,12,15) AND s.Betteam IN ('a','h','1','2','x') THEN s.Betteam
-				 WHEN s.Bettype IN (20,21,609,610,611,612) AND s.Betteam IN ('a','h') AND @SportType = 2 THEN s.Betteam
+				 WHEN s.Bettype IN (20,21,609,610,611,612) AND s.Betteam IN ('a','h','o','u','e') AND @SportType = 2 THEN s.Betteam				
 				 ELSE '-'
 			END BetTeam,
 			CASE WHEN s.Bettype IN (1, 7) AND s.Betteam = 'h' THEN m.HomeName
@@ -154,10 +154,10 @@ BEGIN
 				  WHEN s.Bettype IN (5, 15) AND s.Betteam = 'x' THEN 'Draw'
 				  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'h' AND @SportType = 2 THEN m.HomeName
 				  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'a' AND @SportType = 2 THEN m.AwayName
-				  WHEN s.Bettype = 610 AND s.Betteam = 'h' AND @SportType = 2 THEN 'Over'
-				  WHEN s.Bettype = 610 AND s.Betteam = 'a' AND @SportType = 2 THEN 'Under'
-				  WHEN s.Bettype = 611 AND s.Betteam = 'h' AND @SportType = 2 THEN 'Odd'
-				  WHEN s.Bettype = 611 AND s.Betteam = 'a' AND @SportType = 2 THEN 'Even'
+				  WHEN s.Bettype = 610 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Over'
+				  WHEN s.Bettype = 610 AND s.Betteam = 'u' AND @SportType = 2 THEN 'Under'
+				  WHEN s.Bettype = 611 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Odd'
+				  WHEN s.Bettype = 611 AND s.Betteam = 'e' AND @SportType = 2 THEN 'Even'
 				  ELSE '-'
 			END AS BetChoice,
 			SUM(BetCount)			AS TotalTickets,
@@ -183,7 +183,7 @@ BEGIN
 			b.typeid,
 			b.typenamee,
 			CASE WHEN s.Bettype IN (1,2,3,5,7,8,12,15) AND s.Betteam IN ('a','h','1','2','x') THEN s.Betteam
-				 WHEN s.Bettype IN (20,21,609,610,611,612) AND s.Betteam IN ('a','h') AND @SportType = 2 THEN s.Betteam
+				 WHEN s.Bettype IN (20,21,609,610,611,612) AND s.Betteam IN ('a','h','o','u','e') AND @SportType = 2 THEN s.Betteam
 				 ELSE '-'
 			END,
 			CASE WHEN s.Bettype IN (1, 7) AND s.Betteam = 'h' THEN m.HomeName
@@ -197,10 +197,10 @@ BEGIN
 				  WHEN s.Bettype IN (5, 15) AND s.Betteam = 'x' THEN 'Draw'
 				  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'h' AND @SportType = 2 THEN m.HomeName
 				  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'a' AND @SportType = 2 THEN m.AwayName
-				  WHEN s.Bettype = 610 AND s.Betteam = 'h' AND @SportType = 2 THEN 'Over'
-				  WHEN s.Bettype = 610 AND s.Betteam = 'a' AND @SportType = 2 THEN 'Under'
-				  WHEN s.Bettype = 611 AND s.Betteam = 'h' AND @SportType = 2 THEN 'Odd'
-				  WHEN s.Bettype = 611 AND s.Betteam = 'a' AND @SportType = 2 THEN 'Even'
+				  WHEN s.Bettype = 610 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Over'
+				  WHEN s.Bettype = 610 AND s.Betteam = 'u' AND @SportType = 2 THEN 'Under'
+				  WHEN s.Bettype = 611 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Odd'
+				  WHEN s.Bettype = 611 AND s.Betteam = 'e' AND @SportType = 2 THEN 'Even'
 				  ELSE '-'
 			END
 		HAVING SUM(MainHouseWinloss) <= @HouseWL			
@@ -277,7 +277,7 @@ BEGIN
 			AND s.Bettype = @BetType
 			AND s.matchid = @Match
 			AND (@BetTeam = ''
-				OR (@BetTeam = '-' AND s.Betteam NOT IN ('a','h','1','2','x'))
+				OR (@BetTeam = '-' AND s.Betteam NOT IN ('a','h','1','2','x','o','u','e'))
 				OR s.Betteam = @BetTeam)		
 		
 	INSERT INTO #tmpBettrans
