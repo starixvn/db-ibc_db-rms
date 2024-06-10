@@ -18,9 +18,7 @@ AS
 BEGIN
 	SET NOCOUNT ON	
 
-	DECLARE @yesterday DATE = DATEADD(DAY,-1, GETDATE())
-
-	CREATE TABLE #tmpBettrans(Refno BIGINT, Stake MONEY, Bettype INT, Betteam NVARCHAR(10))
+	CREATE TABLE #tmpBettrans(Refno BIGINT, Stake MONEY, hdp2 SMALLMONEY)
 	CREATE CLUSTERED INDEX cix_#tmpBettrans ON #tmpBettrans(Refno)
 
 	CREATE TABLE #tmpMatch(MatchID INT, HomeID INT, AwayID INT, LeagueID INT, Sporttype INT, Maxbet FLOAT)
@@ -59,7 +57,7 @@ BEGIN
 	INSERT INTO #tmpMatch(MatchID, HomeID, AwayID, LeagueID, Sporttype)
 	SELECT  matchid, homeid, awayid, leagueID, sporttype
 	FROM	bodb02.dbo.match WITH(NOLOCK)
-	WHERE	eventdate >= @yesterday AND sporttype IN (1, 2, 43) AND eventstatus = 'running'	
+	WHERE	sporttype IN (1, 2) AND eventstatus = 'running'	
 
 	UPDATE a
 	SET a.Maxbet = CASE WHEN t.Maxbet * 10 < @Stake THEN @Stake ELSE t.Maxbet * 10 END
