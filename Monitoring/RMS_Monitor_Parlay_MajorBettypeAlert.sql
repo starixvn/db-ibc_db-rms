@@ -21,7 +21,7 @@ BEGIN
 	CREATE TABLE #tmpBettrans(Refno BIGINT, Stake MONEY, hdp2 SMALLMONEY)
 	CREATE CLUSTERED INDEX cix_#tmpBettrans ON #tmpBettrans(Refno)
 
-	CREATE TABLE #tmpMatch(MatchID INT, HomeID INT, AwayID INT, LeagueID INT, Sporttype INT, Maxbet FLOAT)
+	CREATE TABLE #tmpMatch(MatchID INT, HomeID INT, AwayID INT, LeagueID INT, Sporttype INT, Bettype INT, Maxbet FLOAT)
 
 	CREATE TABLE #tmpBettype (Bettype SMALLINT, BettypeName NVARCHAR(128), IsMajor BIT)
 
@@ -39,44 +39,47 @@ BEGIN
 		AwayTotalStake MONEY,
 		OtherTotalStake MONEY)
 
-	INSERT INTO #tmpBettype 
-	(	Bettype,
-		BettypeName,
-		IsMajor
-	)
-	SELECT	DISTINCT bettype, 
-			bt.typenamee, 
-			CASE WHEN SportType = 43 THEN CASE WHEN bettype IN (1,2,3,7,8,12,20,21) THEN 1 ELSE 0 END
-					WHEN SportType = 2 THEN CASE WHEN bettype IN (1,2,3,7,8,12,20,21,609,610,611,612) THEN 1 ELSE 0 END
-					WHEN SportType = 1 THEN CASE WHEN bettype IN (1,2,3,7,8,12,5,15) THEN 1 ELSE 0 END
-					ELSE 0 END AS IsMajor  -- 1 Major, 2 Minor
-	FROM bodb02.dbo.SportBettypeMatrix m WITH(NOLOCK)
-		INNER JOIN bodb02.dbo.bettype bt WITH(NOLOCK) ON m.BetType = bt.typeid
-	WHERE SportType IN (1, 2, 43)
+	--INSERT INTO #tmpBettype 
+	--(	Bettype,
+	--	BettypeName,
+	--	IsMajor
+	--)
+	--SELECT	DISTINCT bettype, 
+	--		bt.typenamee, 
+	--		CASE WHEN SportType = 43 THEN CASE WHEN bettype IN (1,2,3,7,8,12,20,21) THEN 1 ELSE 0 END
+	--				WHEN SportType = 2 THEN CASE WHEN bettype IN (1,2,3,7,8,12,20,21,609,610,611,612) THEN 1 ELSE 0 END
+	--				WHEN SportType = 1 THEN CASE WHEN bettype IN (1,2,3,7,8,12,5,15) THEN 1 ELSE 0 END
+	--				ELSE 0 END AS IsMajor  -- 1 Major, 2 Minor
+	--FROM bodb02.dbo.SportBettypeMatrix m WITH(NOLOCK)
+	--	INNER JOIN bodb02.dbo.bettype bt WITH(NOLOCK) ON m.BetType = bt.typeid
+	--WHERE SportType IN (1, 2, 43)
 	
-	INSERT INTO #tmpMatch(MatchID, HomeID, AwayID, LeagueID, Sporttype)
-	SELECT  matchid, homeid, awayid, leagueID, sporttype
-	FROM	bodb02.dbo.match WITH(NOLOCK)
-	WHERE	sporttype IN (1, 2) AND eventstatus = 'running'	
+	INSERT INTO #tmpMatch(MatchID, HomeID, AwayID, LeagueID, Sporttype, Bettype, Maxbet)
+	SELECT  DISTINCT m.matchid, m.homeid, m.awayid, m.leagueID, m.sporttype, s.bettype, s.maxbet
+	FROM	bodb02.dbo.match m WITH(NOLOCK)
+		INNER JOIN bodb02.dbo.odds s WITH(NOLOCK) ON m.matchID = s.matchid
+	WHERE	m.sporttype IN (1, 2) AND m.eventstatus = 'running'	
+		AND s.bettype IN (1,2,3,7,8,12,5,15,20,21,609,610,611,612)
 
-	UPDATE a
-	SET a.Maxbet = CASE WHEN t.Maxbet * 10 < @Stake THEN @Stake ELSE t.Maxbet * 10 END
-	FROM #tmpMatch a 
-		INNER JOIN (SELECT m.Matchid, MAX(s.maxbet) Maxbet
-			FROM #tmpmatch m
-				INNER JOIN bodb02.dbo.odds s WITH(NOLOCK) ON m.matchID = s.matchid
-			WHERE s.bettype = 1 AND m.Sporttype IN (1, 2)
-			GROUP BY m.matchid
-			) t ON a.matchID = t.matchID
+	--UPDATE a
+	--SET a.Maxbet = CASE WHEN t.Maxbet * 10 < @Stake THEN @Stake ELSE t.Maxbet * 10 END
+	--FROM #tmpMatch a 
+	--	INNER JOIN (SELECT m.Matchid, MAX(s.maxbet) Maxbet
+	--		FROM #tmpmatch m
+	--			INNER JOIN bodb02.dbo.odds s WITH(NOLOCK) ON m.matchID = s.matchid
+	--		WHERE s.bettype = 1 AND m.Sporttype IN (1, 2)
+	--		GROUP BY m.matchid
+	--		) t ON a.matchID = t.matchID
 
-	UPDATE #tmpMatch
-	SET Maxbet = @Stake
-	WHERE Sporttype = 43 OR Maxbet IS NULL
+	--UPDATE #tmpMatch
+	--SET Maxbet = @Stake
+	--WHERE Sporttype = 43 OR Maxbet IS NULL
 
 	INSERT INTO #tmpBettransm(Refno, Bettype, Betteam, MatchID)
 	SELECT  refno, bettype, betteam, matchid
 	FROM	bodb02.dbo.bettransm WITH(NOLOCK)
 	WHERE	matchid IN (SELECT MatchID FROM #tmpMatch) AND statusID = 0
+		AND bettype IN (1,2,3,7,8,12,5,15,20,21,609,610,611,612)
 
 	INSERT INTO #tmpBettrans
 	(
