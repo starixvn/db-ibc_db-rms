@@ -20,12 +20,8 @@ BEGIN
 
 	CREATE TABLE #tmpBettrans(Refno BIGINT, Stake MONEY, hdp2 SMALLMONEY)
 	CREATE CLUSTERED INDEX cix_#tmpBettrans ON #tmpBettrans(Refno)
-
 	CREATE TABLE #tmpMatch(MatchID INT, HomeID INT, AwayID INT, LeagueID INT, Sporttype INT, Bettype INT, Maxbet FLOAT)
-
-	CREATE TABLE #tmpBettype (Bettype SMALLINT, BettypeName NVARCHAR(128), IsMajor BIT)
-
-	CREATE TABLE #tmpBettransm (Refno BIGINT, Bettype INT, Betteam NVARCHAR(10), MatchID INT)
+	CREATE TABLE #tmpBettransm (Refno BIGINT, Bettype INT, Betteam NVARCHAR(10), MatchID INT, Stake MONEY)
 	CREATE CLUSTERED INDEX cix_#tmpBettransm ON #tmpBettransm(Refno)
 
 	CREATE TABLE #tmpData(
@@ -38,6 +34,13 @@ BEGIN
 		HomeTotalStake MONEY,
 		AwayTotalStake MONEY,
 		OtherTotalStake MONEY)
+
+	DECLARE @MBBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+	INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	DECLARE @BalanceUpDay SMALLDATETIME, @MoveBetsDay SMALLDATETIME
+	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBBU
 
 	--INSERT INTO #tmpBettype 
 	--(	Bettype,
@@ -54,12 +57,7 @@ BEGIN
 	--	INNER JOIN bodb02.dbo.bettype bt WITH(NOLOCK) ON m.BetType = bt.typeid
 	--WHERE SportType IN (1, 2, 43)
 	
-	INSERT INTO #tmpMatch(MatchID, HomeID, AwayID, LeagueID, Sporttype, Bettype, Maxbet)
-	SELECT  DISTINCT m.matchid, m.homeid, m.awayid, m.leagueID, m.sporttype, s.bettype, s.maxbet
-	FROM	bodb02.dbo.match m WITH(NOLOCK)
-		INNER JOIN bodb02.dbo.odds s WITH(NOLOCK) ON m.matchID = s.matchid
-	WHERE	m.sporttype IN (1, 2) AND m.eventstatus = 'running'	
-		AND s.bettype IN (1,2,3,7,8,12,5,15,20,21,609,610,611,612)
+	
 
 	--UPDATE a
 	--SET a.Maxbet = CASE WHEN t.Maxbet * 10 < @Stake THEN @Stake ELSE t.Maxbet * 10 END
@@ -75,31 +73,43 @@ BEGIN
 	--SET Maxbet = @Stake
 	--WHERE Sporttype = 43 OR Maxbet IS NULL
 
-	INSERT INTO #tmpBettransm(Refno, Bettype, Betteam, MatchID)
-	SELECT  refno, bettype, betteam, matchid
-	FROM	bodb02.dbo.bettransm WITH(NOLOCK)
-	WHERE	matchid IN (SELECT MatchID FROM #tmpMatch) AND statusID = 0
-		AND bettype IN (1,2,3,7,8,12,5,15,20,21,609,610,611,612)
+	INSERT INTO #tmpBettrans(Refno, Stake, hdp2)
+	SELECT refno, stake, hdp2
+	FROM dbo.rmBettrans WITH (NOLOCK)
+	WHERE bettype = 29
+		AND statusID = 0
+		AND currency <> 20
+		AND hdp2 IN (2,3)
 
-	INSERT INTO #tmpBettrans
-	(
-		Refno,
-		Stake,
-		Bettype,
-		Betteam
-	)
-	SELECT
-		b.refno,
-		b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END,
-		b.bettype,
-		b.betteam	
-	FROM bodb02.dbo.bettrans b WITH (NOLOCK)
-	WHERE b.winlostdate >= @yesterday
-		AND b.bettype IN (29, 38, 376)
-		AND b.statusID = 0
-		 AND ((@IsTest = 1 AND b.currency = 20)
-              OR (@IsTest = 0 AND b.currency <> 20)
-			  )	
+	INSERT INTO #tmpBettransm(Refno, Bettype, Betteam, MatchID, Stake)
+	SELECT  bm.refno, bm.bettype, bm.betteam, bm.matchid, b.Stake/b.hdp2
+	FROM	bodb02.dbo.bettransm bm WITH(NOLOCK)
+		INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
+		INNER JOIN #tmpBettrans b ON bm.refno = b.refno
+	WHERE bm.statusID = 0
+		AND bm.bettype IN (1,2,3,7,8,12,5,15,20,21,609,610,611,612)
+		AND (bm.winlostdate > @MoveBetsDay OR bm.winlostdate IS NULL)
+		AND m.sporttype IN (1, 2) 
+		AND m.eventstatus = 'running'	
+	UNION
+	SELECT  bm.refno, bm.bettype, bm.betteam, bm.matchid, b.Stake/b.hdp2
+	FROM	bodb02.dbo.bettransm14 bm WITH(NOLOCK)
+		INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
+		INNER JOIN #tmpBettrans b ON bm.refno = b.refno
+	WHERE bm.statusID = 0
+		AND bm.bettype IN (1,2,3,7,8,12,5,15,20,21,609,610,611,612)
+		AND (bm.winlostdate > @MoveBetsDay OR bm.winlostdate IS NULL)
+		AND m.sporttype IN (1, 2) 
+		AND m.eventstatus = 'running'	
+
+	INSERT INTO #tmpMatch(MatchID, HomeID, AwayID, LeagueID, Sporttype, Bettype, Maxbet)
+	SELECT  DISTINCT m.matchid, m.homeid, m.awayid, m.leagueID, m.sporttype, s.bettype, s.maxbet
+	FROM	bodb02.dbo.match m WITH(NOLOCK)
+		INNER JOIN bodb02.dbo.odds s WITH(NOLOCK) ON m.matchID = s.matchid
+	WHERE	m.sporttype IN (1, 2) AND m.eventstatus = 'running'	
+		AND s.bettype IN (1,2,3,7,8,12,5,15,20,21,609,610,611,612)
+		AND m.matchid IN (SELECT matchid FROM #tmpBettransm)
+	
 
 	INSERT INTO #tmpData(
 		Sport,
