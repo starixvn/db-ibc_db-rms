@@ -25,6 +25,7 @@ AS
 		20230620@Cherry: Initial (#189147)
 		20230830@Cherry: Enhance (#192682)
 		20240312@Cherry: Change SQL account in metadata (#202012)
+		20240625@Cherry: Enhancement (#207024)
 
 	Param:
 		@AlertType = 1: Similar Bet
@@ -97,6 +98,27 @@ BEGIN
 	CREATE TABLE #tmpAlertType (AlertTypeID SMALLINT)
 	CREATE TABLE #tmpAlertAction (AlertActionID SMALLINT)
 	CREATE TABLE #tmpStatusID(StatusID TINYINT)
+	CREATE TABLE #tmprmAlertDetail (AlertID BIGINT, RefValInt BIGINT)
+
+	CREATE TABLE #tmprmBettrans
+	(
+		refno BIGINT,
+		bettype INT,
+		statusID TINYINT,
+		hdp2 SMALLMONEY,
+		transid BIGINT,
+		transid2 BIGINT
+	)
+
+	CREATE TABLE #tmprmBettrans_old
+	(
+		refno BIGINT,
+		bettype INT,
+		statusID TINYINT,
+		hdp2 SMALLMONEY,
+		transid BIGINT,
+		transid2 BIGINT
+	)
 
 	CREATE TABLE #tmpAlert
 	(
@@ -194,29 +216,34 @@ BEGIN
 		WHERE c.CustID IS NULL
 	END
 
-	INSERT INTO #tmpDetail
-	(	
-		AlertID,
-		TransID,
-		RefNo,
-		BetType,
-		StatusID
+	DECLARE @fAlertID BIGINT,@tAlertID BIGINT
+
+	SELECT @fAlertID=MIN(AlertID),@tAlertID=MAX(AlertID)
+	FROM #tmpAlert
+
+	INSERT INTO #tmprmAlertDetail(AlertID, RefValInt)
+	SELECT AlertID, RefValInt
+	FROM dbo.rmAlertDetail d WITH(NOLOCK) 
+	WHERE AlertID BETWEEN @fAlertID AND @tAlertID
+	
+	INSERT INTO #tmprmBettrans
+	(
+		refno,
+		bettype,
+		statusID, 
+		hdp2,
+		transid,
+		transid2
 	)
-	SELECT DISTINCT
-		d.AlertID,
-		d.RefValInt,
-		b.refno,
+	SELECT b.refno,
 		b.bettype,
-		b.statusID
-	FROM dbo.rmAlertDetail d WITH(NOLOCK)
-		INNER JOIN #tmpAlert a ON d.AlertID = a.AlertID
-		INNER JOIN dbo.rmBettrans b WITH(NOLOCK) ON d.RefValInt = b.transid
-	WHERE d.RefType = 1
-		AND (a.AlertType <> 1
-			OR @SportType = ''
-			OR EXISTS(SELECT TOP 1 1 FROM #tmpSport sp WHERE b.transid2 = sp.sporttype)
-			)
-		AND (@TicketStatus = '-1'
+		b.statusID, 
+		b.hdp2,
+		b.transid,
+		b.transid2
+	FROM dbo.rmBettrans b WITH(NOLOCK)
+	WHERE transid in (select RefValInt from #tmprmAlertDetail)
+	AND (@TicketStatus = '-1'
 			OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE b.StatusID = t.StatusID))
 		AND EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection)
 
@@ -236,7 +263,54 @@ BEGIN
 		b.statusID
 	FROM dbo.rmAlertDetail d WITH(NOLOCK)
 		INNER JOIN #tmpAlert a ON d.AlertID = a.AlertID
-		INNER JOIN dbo.rmBettrans_Old b WITH(NOLOCK) ON d.RefValInt = b.transid
+		INNER JOIN #tmprmBettrans b ON d.RefValInt = b.transid
+	WHERE d.RefType = 1
+		AND (a.AlertType <> 1
+			OR @SportType = ''
+			OR EXISTS(SELECT TOP 1 1 FROM #tmpSport sp WHERE b.transid2 = sp.sporttype)
+			)
+		AND (@TicketStatus = '-1'
+			OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE b.StatusID = t.StatusID))
+		AND EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection)
+	
+	INSERT INTO #tmprmBettrans_old
+	(
+		refno,
+		bettype,
+		statusID, 
+		hdp2,
+		transid,
+		transid2
+	)
+	SELECT b.refno,
+		b.bettype,
+		b.statusID, 
+		b.hdp2,
+		b.transid,
+		b.transid2
+	FROM dbo.rmBettrans_Old b WITH(NOLOCK)
+	WHERE transid in (select RefValInt from #tmprmAlertDetail)
+	AND (@TicketStatus = '-1'
+			OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE b.StatusID = t.StatusID))
+		AND EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection)
+
+	INSERT INTO #tmpDetail
+	(	
+		AlertID,
+		TransID,
+		RefNo,
+		BetType,
+		StatusID
+	)
+	SELECT DISTINCT
+		d.AlertID,
+		d.RefValInt,
+		b.refno,
+		b.bettype,
+		b.statusID
+	FROM dbo.rmAlertDetail d WITH(NOLOCK)
+		INNER JOIN #tmpAlert a ON d.AlertID = a.AlertID
+		INNER JOIN #tmprmBettrans_old b ON d.RefValInt = b.transid
 	WHERE d.RefType = 1
 		AND (a.AlertType <> 1
 			OR @SportType = ''
