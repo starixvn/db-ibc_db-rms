@@ -20,20 +20,19 @@ BEGIN
 
 	CREATE TABLE #tmpBettrans(Refno BIGINT, Stake MONEY, hdp2 SMALLMONEY)
 	CREATE CLUSTERED INDEX cix_#tmpBettrans ON #tmpBettrans(Refno)
-	CREATE TABLE #tmpMatch(MatchID INT, HomeID INT, AwayID INT, LeagueID INT, Sporttype INT, Bettype INT, Maxbet FLOAT)
-	CREATE TABLE #tmpBettransm (Refno BIGINT, Bettype INT, Betteam NVARCHAR(10), Betcheck NVARCHAR(50), MatchID INT, Stake MONEY)
-	CREATE CLUSTERED INDEX cix_#tmpBettransm ON #tmpBettransm(Refno)
+	CREATE TABLE #tmpMatch(MatchID INT, LeagueID INT, HomeID INT, AwayID INT, Sporttype INT, Bettype INT, Maxbet FLOAT)
+	CREATE TABLE #tmpBettransm (MatchID INT, Bettype INT, Betteam NVARCHAR(10), Betcheck NVARCHAR(50), Stake MONEY)
 
 	CREATE TABLE #tmpData(
-		Sport NVARCHAR(50),
+		Sporttype INT,
 		LeagueID INT, 
 		MatchID INT,
 		HomeID INT,
 		AwayID INT,
 		Maxbet FLOAT,
+		Bettype INT,
 		HomeTotalStake MONEY,
-		AwayTotalStake MONEY,
-		OtherTotalStake MONEY)
+		AwayTotalStake MONEY)
 
 	DECLARE @MBBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 	INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
@@ -51,17 +50,8 @@ BEGIN
 			OR (@IsTest = 0 AND currency <> 20))
 		AND hdp2 IN (2,3)
 
-	INSERT INTO #tmpBettrans(Refno, Stake, hdp2)
-	SELECT refno, stake, hdp2
-	FROM dbo.rmBettrans_old WITH (NOLOCK)
-	WHERE bettype = 29
-		AND statusID = 0
-		AND (@IsTest = 1
-			OR (@IsTest = 0 AND currency <> 20))
-		AND hdp2 IN (2,3)
-
-	INSERT INTO #tmpBettransm(Refno, Bettype, Betteam, Betcheck, MatchID, Stake)
-	SELECT  bm.refno, bm.bettype, bm.betteam, bm.betcheck, bm.matchid, b.Stake/b.hdp2
+	INSERT INTO #tmpBettransm(MatchID, Bettype, Betteam, Betcheck, Stake)
+	SELECT  bm.matchid, bm.bettype, bm.betteam, bm.betcheck, SUM(b.Stake/b.hdp2)
 	FROM	bodb02.dbo.bettransm bm WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 		INNER JOIN #tmpBettrans b ON bm.refno = b.refno
@@ -70,8 +60,9 @@ BEGIN
 		AND (bm.winlostdate > @MoveBetsDay OR bm.winlostdate IS NULL)
 		AND m.sporttype IN (1, 2) 
 		AND m.eventstatus = 'running'	
+	GROUP BY bm.matchid, bm.bettype, bm.betteam, bm.betcheck
 	UNION
-	SELECT  bm.refno, bm.bettype, bm.betteam, bm.betcheck, bm.matchid, b.Stake/b.hdp2
+	SELECT  bm.matchid, bm.bettype, bm.betteam, bm.betcheck, SUM(b.Stake/b.hdp2)
 	FROM	bodb02.dbo.bettransm14 bm WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
 		INNER JOIN #tmpBettrans b ON bm.refno = b.refno
@@ -80,46 +71,75 @@ BEGIN
 		AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 		AND m.sporttype IN (1, 2) 
 		AND m.eventstatus = 'running'	
+	GROUP BY bm.matchid, bm.bettype, bm.betteam, bm.betcheck
 
-	INSERT INTO #tmpMatch(MatchID, HomeID, AwayID, LeagueID, Sporttype, Bettype, Maxbet)
-	SELECT  DISTINCT m.matchid, m.homeid, m.awayid, m.leagueID, m.sporttype, s.bettype, MAX(s.maxbet)
+	INSERT INTO #tmpMatch(MatchID, LeagueID, HomeID, AwayID, Sporttype, Bettype, Maxbet)
+	SELECT  m.matchid, m.leagueid, m.homeid, m.awayid, m.sporttype, s.bettype, MAX(s.maxbet)
 	FROM	bodb02.dbo.match m WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.odds s WITH(NOLOCK) ON m.matchID = s.matchid
 	WHERE	m.sporttype IN (1, 2) AND m.eventstatus = 'running'	
 		AND s.bettype IN (1,2,3,7,8,12,5,15,20,21,609,610,611,612)
 		AND m.matchid IN (SELECT matchid FROM #tmpBettransm)
-	GROUP BY m.matchid, m.homeid, m.awayid, m.leagueID, m.sporttype, s.bettype
+	GROUP BY m.matchid, m.leagueid, m.homeid, m.awayid, m.sporttype, s.bettype
+	UNION
+	SELECT  m.matchid, m.leagueid, m.homeid, m.awayid, m.sporttype, s.bettype, MAX(s.maxbet)
+	FROM	bodb02.dbo.match14 m WITH(NOLOCK)
+		INNER JOIN bodb02.dbo.odds s WITH(NOLOCK) ON m.matchID = s.matchid
+	WHERE	m.sporttype IN (1, 2) AND m.eventstatus = 'running'	
+		AND s.bettype IN (1,2,3,7,8,12,5,15,20,21,609,610,611,612)
+		AND m.matchid IN (SELECT matchid FROM #tmpBettransm)
+	GROUP BY m.matchid, m.leagueid, m.homeid, m.awayid, m.sporttype, s.bettype
+
+	-- bettype, betteam
+	-- 1, a, h
+	-- 2, a, h
+	-- 3, a, h
+	-- 5, 1, 2, x
+	-- 7, a, h
+	-- 8, a, h
+	-- 12, a, h
+	-- 15, 1, 2, x
+	-- 20, a, h
+	-- 21, a, h
+	-- 609, a, h
+	-- 610, o, u
+	-- 611, e, o
+	-- 612, a, h
 
 	INSERT INTO #tmpData(
-		Sport,
+		Sporttype,
 		LeagueID, 
 		MatchID,
 		HomeID,
 		AwayID,
 		Maxbet,
+		Bettype,
 		HomeTotalStake,
-		AwayTotalStake,
-		OtherTotalStake)
-	SELECT	s.SportName,
+		AwayTotalStake)
+	SELECT	m.Sporttype,
 			m.leagueID, 
 			m.matchID,
 			m.homeID,
 			m.awayID,
 			m.maxbet,
-			SUM (CASE WHEN sub.betteam IN ('h','o','y','1') AND z.bettype IS NOT NULL AND z.IsMajor = 1 THEN main.stake ELSE 0 END)		HomeTotalStake,
-			SUM (CASE WHEN sub.betteam IN ('e','a','u','n','2') AND z.bettype IS NOT NULL AND z.IsMajor = 1  THEN main.stake ELSE 0 END) AwayTotalStake,
-			SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n','1','2')  OR z.bettype IS NULL OR z.IsMajor = 0 THEN main.stake ELSE 0 END) OtherTotalStake
-	FROM #tmpBettrans main 
-		INNER JOIN	#tmpBettransm sub ON main.refno = sub.refno
-		INNER JOIN	#tmpMatch m ON sub.matchID = m.matchID
-		INNER JOIN	bodb02.dbo.Sports s WITH(NOLOCK) ON m.sporttype = s.SportType
-		LEFT JOIN   #tmpBettype z ON sub.bettype = z.bettype
-	GROUP BY s.SportName,
-			m.leagueID,
+			b.Bettype,
+			SUM (CASE WHEN b.Bettype IN (1, 2, 3, 7, 8, 12, 20, 21, 609, 612) AND b.Betteam = 'h' THEN b.Stake 
+					WHEN b.Bettype IN (5, 15) AND b.Betteam = '1' THEN b.Stake 
+					WHEN b.Bettype IN (610, 611) AND b.betteam = 'o' THEN b.Stake 
+				ELSE 0 END)	HomeTotalStake,
+			SUM (CASE WHEN b.Bettype IN (1, 2, 3, 7, 8, 12, 20, 21, 609, 612) AND b.Betteam = 'a' THEN b.Stake 
+					WHEN b.Bettype IN (5, 15) AND b.Betteam = '2' THEN b.Stake 
+					WHEN b.Bettype IN (610, 611) AND b.betteam IN ('u', 'e') THEN b.Stake 
+				ELSE 0 END) AwayTotalStake
+	FROM #tmpBettransm b 
+		INNER JOIN #tmpMatch m ON b.matchID = m.matchID AND b.bettype = m.bettype
+	GROUP BY m.Sporttype,
+			m.leagueID, 
 			m.matchID,
 			m.homeID,
 			m.awayID,
-			m.maxbet
+			m.maxbet,
+			b.Bettype
 
 	SELECT d.Sport Sport,
 		l.leaguename League,
