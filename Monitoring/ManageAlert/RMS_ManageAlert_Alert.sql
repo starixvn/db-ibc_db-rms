@@ -98,27 +98,17 @@ BEGIN
 	CREATE TABLE #tmpAlertType (AlertTypeID SMALLINT)
 	CREATE TABLE #tmpAlertAction (AlertActionID SMALLINT)
 	CREATE TABLE #tmpStatusID(StatusID TINYINT)
-	CREATE TABLE #tmprmAlertDetail (AlertID BIGINT, RefValInt BIGINT)
+	CREATE TABLE #tmpListTransID (TransID BIGINT)
 
 	CREATE TABLE #tmprmBettrans
 	(
+		transid BIGINT,
 		refno BIGINT,
 		bettype INT,
 		statusID TINYINT,
-		hdp2 SMALLMONEY,
-		transid BIGINT,
+		hdp2 SMALLMONEY,		
 		transid2 BIGINT
-	)
-
-	CREATE TABLE #tmprmBettrans_old
-	(
-		refno BIGINT,
-		bettype INT,
-		statusID TINYINT,
-		hdp2 SMALLMONEY,
-		transid BIGINT,
-		transid2 BIGINT
-	)
+	)	
 
 	CREATE TABLE #tmpAlert
 	(
@@ -164,6 +154,10 @@ BEGIN
 		SELECT val
         FROM bodb02.dbo.strSplit(@TicketStatus, ',')
 	END
+
+	CREATE UNIQUE CLUSTERED INDEX CX_selection ON #tmpSelection(selection)
+    CREATE UNIQUE CLUSTERED INDEX CX_sporttype ON #tmpSport(sporttype)
+    CREATE UNIQUE CLUSTERED INDEX CX_StatusID ON #tmpStatusID(StatusID)
 
 	DECLARE @IsTest BIT = 0
 
@@ -216,36 +210,38 @@ BEGIN
 		WHERE c.CustID IS NULL
 	END
 
+	INSERT INTO #tmpListTransID (TransID)
+	SELECT d.RefValInt TransID
+    FROM dbo.rmAlertDetail d WITH(NOLOCK)
+        INNER JOIN #tmpAlert a ON d.AlertID = a.AlertID
+    GROUP BY d.RefValInt
+
+	CREATE UNIQUE CLUSTERED INDEX CX_TransID ON #tmpListTransID(TransID)
+
 	DECLARE @fAlertID BIGINT,@tAlertID BIGINT
 
-	SELECT @fAlertID=MIN(AlertID),@tAlertID=MAX(AlertID)
+	SELECT @fAlertID = MIN(AlertID),@tAlertID = MAX(AlertID)
 	FROM #tmpAlert
-
-	INSERT INTO #tmprmAlertDetail(AlertID, RefValInt)
-	SELECT AlertID, RefValInt
-	FROM dbo.rmAlertDetail d WITH(NOLOCK) 
-	WHERE AlertID BETWEEN @fAlertID AND @tAlertID
 	
 	INSERT INTO #tmprmBettrans
 	(
+		transid,
 		refno,
 		bettype,
 		statusID, 
-		hdp2,
-		transid,
+		hdp2,		
 		transid2
 	)
-	SELECT b.refno,
+	SELECT b.transid,
+		b.refno,
 		b.bettype,
 		b.statusID, 
-		b.hdp2,
-		b.transid,
+		b.hdp2,		
 		b.transid2
 	FROM dbo.rmBettrans b WITH(NOLOCK)
-	WHERE transid in (select RefValInt from #tmprmAlertDetail)
-	AND (@TicketStatus = '-1'
-			OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE b.StatusID = t.StatusID))
-		AND EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection)
+	WHERE transid in (select TransID from #tmpListTransID)
+
+	CREATE UNIQUE CLUSTERED INDEX CX_TransID ON #tmprmBettrans(transid)
 
 	INSERT INTO #tmpDetail
 	(	
@@ -272,27 +268,11 @@ BEGIN
 		AND (@TicketStatus = '-1'
 			OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE b.StatusID = t.StatusID))
 		AND EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection)
-	
-	INSERT INTO #tmprmBettrans_old
-	(
-		refno,
-		bettype,
-		statusID, 
-		hdp2,
-		transid,
-		transid2
-	)
-	SELECT b.refno,
-		b.bettype,
-		b.statusID, 
-		b.hdp2,
-		b.transid,
-		b.transid2
-	FROM dbo.rmBettrans_Old b WITH(NOLOCK)
-	WHERE transid in (select RefValInt from #tmprmAlertDetail)
-	AND (@TicketStatus = '-1'
-			OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE b.StatusID = t.StatusID))
-		AND EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection)
+		AND d.AlertID BETWEEN @fAlertID AND @tAlertID 
+	OPTION(RECOMPILE)
+
+	DELETE FROM #tmpListTransID
+    WHERE TransID IN (SELECT transid from #tmprmBettrans)	
 
 	INSERT INTO #tmpDetail
 	(	
@@ -310,7 +290,7 @@ BEGIN
 		b.statusID
 	FROM dbo.rmAlertDetail d WITH(NOLOCK)
 		INNER JOIN #tmpAlert a ON d.AlertID = a.AlertID
-		INNER JOIN #tmprmBettrans_old b ON d.RefValInt = b.transid
+		INNER JOIN dbo.rmBettrans_Old b WITH(NOLOCK) ON d.RefValInt = b.transid
 	WHERE d.RefType = 1
 		AND (a.AlertType <> 1
 			OR @SportType = ''
@@ -320,6 +300,9 @@ BEGIN
 			OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE b.StatusID = t.StatusID))
 		AND NOT EXISTS(SELECT TOP 1 1 FROM #tmpDetail a WHERE a.AlertID = d.AlertID AND a.TransID = d.RefValInt)
 		AND EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection)
+		AND b.transid IN (SELECT TransID FROM #tmpListTransID)
+        AND d.AlertID BETWEEN @fAlertID AND @tAlertID 
+	OPTION(RECOMPILE)
 	
 	DELETE a
 	FROM #tmpAlert a			
@@ -435,6 +418,8 @@ BEGIN
 	DROP TABLE #Result
 	DROP TABLE #tmpSelection
 	DROP TABLE #tmpSport
+	DROP TABLE #tmpListTransID
+	DROP TABLE #tmprmBettrans
 
 END 
  
