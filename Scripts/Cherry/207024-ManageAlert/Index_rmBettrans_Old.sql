@@ -1,3 +1,4 @@
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 USE [bodb_RMS]
 GO
 
