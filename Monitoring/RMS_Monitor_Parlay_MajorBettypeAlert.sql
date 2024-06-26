@@ -21,7 +21,7 @@ BEGIN
 	CREATE TABLE #tmpBettrans(Refno BIGINT, Stake MONEY, hdp2 SMALLMONEY)
 	CREATE CLUSTERED INDEX cix_#tmpBettrans ON #tmpBettrans(Refno)
 	CREATE TABLE #tmpMatch(MatchID INT, HomeID INT, AwayID INT, LeagueID INT, Sporttype INT, Bettype INT, Maxbet FLOAT)
-	CREATE TABLE #tmpBettransm (Refno BIGINT, Bettype INT, Betteam NVARCHAR(10), MatchID INT, Stake MONEY)
+	CREATE TABLE #tmpBettransm (Refno BIGINT, Bettype INT, Betteam NVARCHAR(10), Betcheck NVARCHAR(50), MatchID INT, Stake MONEY)
 	CREATE CLUSTERED INDEX cix_#tmpBettransm ON #tmpBettransm(Refno)
 
 	CREATE TABLE #tmpData(
@@ -60,8 +60,8 @@ BEGIN
 			OR (@IsTest = 0 AND currency <> 20))
 		AND hdp2 IN (2,3)
 
-	INSERT INTO #tmpBettransm(Refno, Bettype, Betteam, MatchID, Stake)
-	SELECT  bm.refno, bm.bettype, bm.betteam, bm.matchid, b.Stake/b.hdp2
+	INSERT INTO #tmpBettransm(Refno, Bettype, Betteam, Betcheck, MatchID, Stake)
+	SELECT  bm.refno, bm.bettype, bm.betteam, bm.betcheck, bm.matchid, b.Stake/b.hdp2
 	FROM	bodb02.dbo.bettransm bm WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 		INNER JOIN #tmpBettrans b ON bm.refno = b.refno
@@ -71,7 +71,7 @@ BEGIN
 		AND m.sporttype IN (1, 2) 
 		AND m.eventstatus = 'running'	
 	UNION
-	SELECT  bm.refno, bm.bettype, bm.betteam, bm.matchid, b.Stake/b.hdp2
+	SELECT  bm.refno, bm.bettype, bm.betteam, bm.betcheck, bm.matchid, b.Stake/b.hdp2
 	FROM	bodb02.dbo.bettransm14 bm WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
 		INNER JOIN #tmpBettrans b ON bm.refno = b.refno
@@ -80,16 +80,6 @@ BEGIN
 		AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 		AND m.sporttype IN (1, 2) 
 		AND m.eventstatus = 'running'	
-	UNION
-	SELECT  bm.refno, bm.bettype, bm.betteam, bm.matchid, b.Stake/b.hdp2
-	FROM	dbo.rmBettransm_bk bm WITH(NOLOCK)
-		INNER JOIN dbo.rmMatch_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
-		INNER JOIN #tmpBettrans b ON bm.refno = b.refno
-	WHERE bm.statusID = 0
-		AND bm.bettype IN (1,2,3,7,8,12,5,15,20,21,609,610,611,612)
-		AND bm.winlostdate < @BalanceUpDay
-		AND m.sporttype IN (1, 2) 
-		AND m.eventstatus = 'running'
 
 	INSERT INTO #tmpMatch(MatchID, HomeID, AwayID, LeagueID, Sporttype, Bettype, Maxbet)
 	SELECT  DISTINCT m.matchid, m.homeid, m.awayid, m.leagueID, m.sporttype, s.bettype, MAX(s.maxbet)
@@ -165,7 +155,6 @@ BEGIN
 	 
 	DROP TABLE #tmpBettrans
 	DROP TABLE #tmpBettransm
-	DROP TABLE #tmpBettype
 	DROP TABLE #tmpData
 	DROP TABLE #tmpMatch
 
