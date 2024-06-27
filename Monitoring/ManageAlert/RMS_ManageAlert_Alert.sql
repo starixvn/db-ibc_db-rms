@@ -204,7 +204,6 @@ BEGIN
 		AND ((@IsNoChecked = 1 AND CheckBy IS NULL)
 			OR @IsNoChecked = 0
 			)
-	OPTION(RECOMPILE)
 
 	IF @Member <> ''
 	BEGIN
