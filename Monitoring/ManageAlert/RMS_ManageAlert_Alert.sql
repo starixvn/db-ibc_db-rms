@@ -456,6 +456,7 @@ BEGIN
 	DROP TABLE #tmpListTransID
 	DROP TABLE #tmprmBettrans
 	DROP TABLE #tmprmBettrans_Old
+	DROP TABLE #tmprmAlertDetail
 
 END 
  
