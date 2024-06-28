@@ -230,7 +230,6 @@ BEGIN
     SELECT d.AlertID, d.RefValInt, d.RefType, a.AlertType
     FROM dbo.rmAlertDetail d WITH(NOLOCK)
       INNER JOIN #tmpAlert a WITH(NOLOCK) ON d.AlertID = a.AlertID
-    OPTION(RECOMPILE)
 
     INSERT INTO #tmpListTransID (TransID)
     SELECT DISTINCT d.RefValInt TransID
@@ -256,7 +255,6 @@ BEGIN
 		b.transid2
 	FROM dbo.rmBettrans b WITH(NOLOCK)
 	WHERE transid IN (SELECT TransID FROM #tmpListTransID)
-	OPTION(RECOMPILE)
 
 	CREATE UNIQUE CLUSTERED INDEX CX_TransID ON #tmprmBettrans(transid)
 
@@ -307,7 +305,6 @@ BEGIN
         b.transid2
     FROM dbo.rmBettrans_Old b WITH(NOLOCK)
     WHERE transid IN (SELECT TransID FROM #tmpListTransID)
-	OPTION(RECOMPILE)
 
 	CREATE UNIQUE CLUSTERED INDEX CX_TransID ON #tmprmBettrans_OLD(transid)
 
