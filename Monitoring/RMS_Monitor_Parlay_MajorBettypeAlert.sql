@@ -90,21 +90,10 @@ BEGIN
 		AND m.matchid IN (SELECT matchid FROM #tmpBettransm)
 	GROUP BY m.matchid, m.leagueid, m.homeid, m.awayid, m.sporttype, s.bettype
 
-	-- bettype, betteam
-	-- 1, a, h
-	-- 2, a, h
-	-- 3, a, h
-	-- 5, 1, 2, x
-	-- 7, a, h
-	-- 8, a, h
-	-- 12, a, h
-	-- 15, 1, 2, x
-	-- 20, a, h
-	-- 21, a, h
-	-- 609, a, h
-	-- 610, o, u
-	-- 611, e, o
-	-- 612, a, h
+	UPDATE m
+
+	FROM #tmpMatch m
+		INNER JOIN dbo.rmMajorBettypeAlert a ON m.matchid = a.matchid AND m.bettype = a.bettype
 
 	INSERT INTO #tmpData(
 		Sporttype,

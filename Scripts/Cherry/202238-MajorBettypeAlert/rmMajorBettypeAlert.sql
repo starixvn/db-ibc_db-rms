@@ -43,7 +43,10 @@ GO
 
 CREATE NONCLUSTERED INDEX [IX_AlertID] ON [dbo].[rmMajorBettypeAlert]
 (
-	AlertID ASC
+	AlertID ASC,
+	MatchID ASC,
+	Bettype ASC,
+	NumberTime ASC
 )WITH (DATA_COMPRESSION = PAGE)
  ON [rmMajorBettypeAlert]
 GO
