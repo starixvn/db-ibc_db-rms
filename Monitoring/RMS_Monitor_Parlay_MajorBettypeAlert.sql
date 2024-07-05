@@ -183,7 +183,7 @@ BEGIN
 		NumberTime,
 		HomeTotalStake,
 		AwayTotalStake,
-		@IsTest
+		@IsTest IsTest
 	FROM #tmpResult 	
 	
 	DROP TABLE #tmpBettrans
@@ -191,6 +191,7 @@ BEGIN
 	DROP TABLE #tmpData
 	DROP TABLE #tmpMatch
 	DROP TABLE #rmAlert
+	DROP TABLE #tmpResult
 
 END
 GO
