@@ -32,6 +32,7 @@ CREATE TABLE [dbo].rmMajorBettypeAlert(
 		[AlertTime] [DATETIME] NOT NULL,
 		[MatchID] [INT] NOT NULL,
 		[Bettype] [INT] NOT NULL,
+		[Betcheck] [NVARCHAR](50) NULL,
 		[AlertType] [SMALLINT] NOT NULL,
 		[NumberTime] [INT] NOT NULL,
 		[HomeStake] MONEY NOT NULL,

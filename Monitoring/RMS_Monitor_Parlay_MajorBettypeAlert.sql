@@ -21,20 +21,22 @@ BEGIN
 	CREATE TABLE #tmpBettrans(Refno BIGINT, Stake MONEY, hdp2 SMALLMONEY)	
 	CREATE TABLE #tmpMatch(MatchID INT, LeagueID INT, HomeID INT, AwayID INT, Sporttype INT, Bettype INT, Maxbet FLOAT)
 	CREATE TABLE #tmpBettransm (MatchID INT, Bettype INT, Betteam NVARCHAR(10), Betcheck NVARCHAR(50), Stake MONEY)
-	CREATE TABLE #rmAlert (MatchID INT, Bettype INT, AlertType SMALLINT, NumberTime INT)
+	CREATE TABLE #rmAlert (MatchID INT, Bettype INT, Betcheck NVARCHAR(50), AlertType SMALLINT, NumberTime INT)
 
 	CREATE TABLE #tmpData(
 		MatchID INT,
 		Maxbet FLOAT,
 		Bettype INT,
+		Betcheck NVARCHAR(50),
 		HomeTotalStake MONEY,
 		AwayTotalStake MONEY)
 
 	CREATE TABLE #tmpResult(
 		MatchID INT,
+		Bettype INT,
+		Betcheck NVARCHAR(50),
 		AlertType SMALLINT,
 		NumberTime INT,
-		Bettype INT,
 		HomeTotalStake MONEY,
 		AwayTotalStake MONEY)
 
@@ -79,6 +81,8 @@ BEGIN
 		AND m.eventstatus = 'running'	
 	GROUP BY bm.matchid, bm.bettype, bm.betteam, bm.betcheck
 
+	CREATE NONCLUSTERED INDEX IX_bettransm ON #tmpBettransm (MatchID, Bettype, Betteam, Betcheck)
+
 	INSERT INTO #tmpMatch(MatchID, LeagueID, HomeID, AwayID, Sporttype, Bettype, Maxbet)
 	SELECT  m.matchid, m.leagueid, m.homeid, m.awayid, m.sporttype, s.bettype, MAX(s.maxbet)
 	FROM	bodb02.dbo.match m WITH(NOLOCK)
@@ -96,21 +100,25 @@ BEGIN
 		AND m.matchid IN (SELECT matchid FROM #tmpBettransm)
 	GROUP BY m.matchid, m.leagueid, m.homeid, m.awayid, m.sporttype, s.bettype
 
-	INSERT INTO #rmAlert (MatchID, Bettype, AlertType, NumberTime)
-	SELECT MatchID, Bettype, AlertType, MAX(NumberTime)
+	CREATE NONCLUSTERED INDEX IX_tmpMatch ON #tmpMatch (MatchID, Bettype)
+
+	INSERT INTO #rmAlert (MatchID, Bettype, Betcheck, AlertType, NumberTime)
+	SELECT MatchID, Bettype, Betcheck, AlertType, MAX(NumberTime)
 	FROM dbo.rmMajorBettypeAlert WITH(NOLOCK)
 	WHERE matchid IN (SELECT matchid FROM #tmpMatch)
-	GROUP BY MatchID, Bettype, AlertType
+	GROUP BY MatchID, Bettype, Betcheck, AlertType
 
 	INSERT INTO #tmpData(
 		MatchID,
 		Maxbet,
 		Bettype,
+		Betcheck,
 		HomeTotalStake,
 		AwayTotalStake)
 	SELECT	m.matchID,
 			m.maxbet,
 			b.Bettype,
+			b.Betcheck,
 			SUM (CASE WHEN b.Bettype IN (1, 2, 3, 7, 8, 12, 20, 21, 609, 612) AND b.Betteam = 'h' THEN b.Stake 
 					WHEN b.Bettype IN (5, 15) AND b.Betteam = '1' THEN b.Stake 
 					WHEN b.Bettype IN (610, 611) AND b.betteam = 'o' THEN b.Stake 
@@ -123,43 +131,48 @@ BEGIN
 		INNER JOIN #tmpMatch m ON b.matchID = m.matchID AND b.bettype = m.bettype
 	GROUP BY m.matchID,
 			m.maxbet,
-			b.Bettype
+			b.Bettype,
+			b.Betcheck
 
 	INSERT INTO #tmpResult(
 		MatchID,
+		Bettype,
+		Betcheck,
 		AlertType,
 		NumberTime,
-		Bettype,
 		HomeTotalStake,
 		AwayTotalStake)
 	SELECT 
 		d.MatchID,
-		1 AlertType,
-		ISNULL(t.NumberTime + 1,1),
 		d.Bettype,
+		d.Betcheck,
+		1 AlertType,
+		ISNULL(t.NumberTime + 1,1),		
 		HomeTotalStake,
 		AwayTotalStake
 	FROM #tmpData d		
-		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype
+		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck
 	WHERE ISNULL(t.AlertType,1) = 1
 		AND (HomeTotalStake - AwayTotalStake) >= ISNULL(t.NumberTime + 1,1) * @Stake * d.Maxbet
 
 	INSERT INTO #tmpResult(
 		MatchID,
+		Bettype,
+		Betcheck,
 		AlertType,
 		NumberTime,
-		Bettype,
 		HomeTotalStake,
 		AwayTotalStake)
 	SELECT 
 		d.MatchID,
-		2 AlertType,
-		ISNULL(t.NumberTime + 1,1),
 		d.Bettype,
+		d.Betcheck,
+		2 AlertType,
+		ISNULL(t.NumberTime + 1,1),		
 		HomeTotalStake,
 		AwayTotalStake
 	FROM #tmpData d		
-		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype
+		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck
 	WHERE ISNULL(t.AlertType,2) = 2
 		AND (AwayTotalStake - HomeTotalStake) >= ISNULL(t.NumberTime + 1,1) * @Stake * d.Maxbet
 
@@ -179,6 +192,7 @@ BEGIN
 
 	SELECT MatchID,
 		Bettype,
+		Betcheck,
 		AlertType,
 		NumberTime,
 		HomeTotalStake,
