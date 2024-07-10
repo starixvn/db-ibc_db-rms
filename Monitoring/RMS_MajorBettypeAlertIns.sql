@@ -1,0 +1,48 @@
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[RMS_MajorBettypeAlertIns]
+	@MatchID INT = 0,
+	@Bettype INT = 0,
+	@Betcheck NVARCHAR(50) ='',
+	@AlertType SMALLINT = 0,
+	@NumberTime INT = 0,
+	@HomeTotalStake MONEY = 0,
+	@AwayTotalStake MONEY = 0,
+	@IsTest BIT = 0
+AS
+
+/*
+	Created: Cherry
+	Date: 2024-07-10
+	DB: DBRMS/bodb_RMS
+	Task: Notify/Alert by Major Bettype Amount
+	
+	Revisions:
+		- 20240710@Cherry: Notify/Alert by Major Bettype Amount #202238
+*/
+
+BEGIN
+	SET NOCOUNT ON
+
+	INSERT INTO dbo.rmMajorBettypeAlert (
+		MatchID,
+		Bettype,
+		Betcheck,
+		AlertType,
+		NumberTime,
+		HomeStake,
+		AwayStake,
+		IsTest)
+    VALUES 
+		@MatchID,
+		@Bettype,
+		@Betcheck,
+		@AlertType,
+		@NumberTime,
+		@HomeTotalStake,
+		@AwayTotalStake,
+		@IsTest 
+
+	DELETE rmMajorBettypeAlert WITH (ROWLOCK, UPDLOCK)
+	WHERE AlertTime < DATEADD(MONTH, -3, GETDATE())
+END
+GO

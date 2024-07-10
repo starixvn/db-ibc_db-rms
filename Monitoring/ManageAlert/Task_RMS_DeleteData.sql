@@ -10,7 +10,6 @@ AS
 	
 	Revisions:		
 		20230620@Cherry: Initial (#189147)
-		20240705@Cherry: Add to delete rmMajorBettypeAlert (#202238)
 
 */
 
@@ -34,16 +33,6 @@ BEGIN
 	WHERE AlertID <= @MaxAlertID
 
 	DELETE dbo.rmAlertLog WITH (ROWLOCK, UPDLOCK) 
-	WHERE AlertID <= @MaxAlertID
-
-	SELECT @MaxAlertID = MAX(AlertID)
-	FROM dbo.rmMajorBettypeAlert WITH(NOLOCK)
-	WHERE AlertTime < @ToDate
-
-	IF @MaxAlertID IS NULL
-		RETURN
-
-	DELETE dbo.rmMajorBettypeAlert WITH (ROWLOCK, UPDLOCK) 
 	WHERE AlertID <= @MaxAlertID
 
 END 
