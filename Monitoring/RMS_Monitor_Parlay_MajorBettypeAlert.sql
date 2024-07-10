@@ -6,12 +6,12 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_MajorBettypeAlert]
 AS
 
 /*
-	Created: 20240520@Cherry
+	Created: 20240710@Cherry
 	DB: DBRMS-bodb_RMS
 	Task: Parlay RMS - Major Bettype has big gap between Home and Away for letstalk
 
 	Revisions:
-		- 20240520@Cherry: Initialize SP [RedmineID: #202238]
+		- 20240710@Cherry: Initialize SP [RedmineID: #202238]
 
 */
 

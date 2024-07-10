@@ -32,7 +32,7 @@ BEGIN
 		HomeStake,
 		AwayStake,
 		IsTest)
-    VALUES 
+    VALUES( 
 		@MatchID,
 		@Bettype,
 		@Betcheck,
@@ -40,7 +40,7 @@ BEGIN
 		@NumberTime,
 		@HomeTotalStake,
 		@AwayTotalStake,
-		@IsTest 
+		@IsTest) 
 
 	DELETE rmMajorBettypeAlert WITH (ROWLOCK, UPDLOCK)
 	WHERE AlertTime < DATEADD(MONTH, -3, GETDATE())
