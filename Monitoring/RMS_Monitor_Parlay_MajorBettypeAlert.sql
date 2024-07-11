@@ -28,8 +28,9 @@ BEGIN
 		Maxbet FLOAT,
 		Bettype INT,
 		Betcheck NVARCHAR(50),
-		HomeTotalStake MONEY,
-		AwayTotalStake MONEY)
+		HomeStake MONEY,
+		AwayStake MONEY,
+		DrawStake MONEY)
 
 	CREATE TABLE #tmpResult(
 		MatchID INT,
@@ -37,8 +38,9 @@ BEGIN
 		Betcheck NVARCHAR(50),
 		AlertType SMALLINT,
 		NumberTime INT,
-		HomeTotalStake MONEY,
-		AwayTotalStake MONEY)
+		HomeStake MONEY,
+		AwayStake MONEY,
+		DrawStake MONEY)
 
 	DECLARE @MBBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 	INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
@@ -113,8 +115,9 @@ BEGIN
 		Maxbet,
 		Bettype,
 		Betcheck,
-		HomeTotalStake,
-		AwayTotalStake)
+		HomeStake,
+		AwayStake,
+		DrawStake)
 	SELECT	m.matchID,
 			m.maxbet,
 			b.Bettype,
@@ -122,11 +125,13 @@ BEGIN
 			SUM (CASE WHEN b.Bettype IN (1, 2, 3, 7, 8, 12, 20, 21, 609, 612) AND b.Betteam = 'h' THEN b.Stake 
 					WHEN b.Bettype IN (5, 15) AND b.Betteam = '1' THEN b.Stake 
 					WHEN b.Bettype IN (610, 611) AND b.betteam = 'o' THEN b.Stake 
-				ELSE 0 END)	HomeTotalStake,
+				ELSE 0 END)	HomeStake,
 			SUM (CASE WHEN b.Bettype IN (1, 2, 3, 7, 8, 12, 20, 21, 609, 612) AND b.Betteam = 'a' THEN b.Stake 
 					WHEN b.Bettype IN (5, 15) AND b.Betteam = '2' THEN b.Stake 
 					WHEN b.Bettype IN (610, 611) AND b.betteam IN ('u', 'e') THEN b.Stake 
-				ELSE 0 END) AwayTotalStake
+				ELSE 0 END) AwayStake,
+			SUM (CASE WHEN b.Bettype IN (5, 15) AND b.Betteam = 'x' THEN b.Stake 
+				ELSE 0 END) DrawStake
 	FROM #tmpBettransm b 
 		INNER JOIN #tmpMatch m ON b.matchID = m.matchID AND b.bettype = m.bettype
 	GROUP BY m.matchID,
@@ -140,20 +145,22 @@ BEGIN
 		Betcheck,
 		AlertType,
 		NumberTime,
-		HomeTotalStake,
-		AwayTotalStake)
+		HomeStake,
+		AwayStake,
+		DrawStake)
 	SELECT 
 		d.MatchID,
 		d.Bettype,
 		d.Betcheck,
 		1 AlertType,
 		ISNULL(t.NumberTime + 1,1),		
-		HomeTotalStake,
-		AwayTotalStake
+		HomeStake,
+		AwayStake,
+		DrawStake
 	FROM #tmpData d		
 		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck
 	WHERE ISNULL(t.AlertType,1) = 1
-		AND (HomeTotalStake - AwayTotalStake) >= ISNULL(t.NumberTime + 1,1) * @Stake * d.Maxbet
+		AND (HomeStake - AwayStake) >= ISNULL(t.NumberTime + 1,1) * @Stake * d.Maxbet
 
 	INSERT INTO #tmpResult(
 		MatchID,
@@ -161,27 +168,30 @@ BEGIN
 		Betcheck,
 		AlertType,
 		NumberTime,
-		HomeTotalStake,
-		AwayTotalStake)
+		HomeStake,
+		AwayStake,
+		DrawStake)
 	SELECT 
 		d.MatchID,
 		d.Bettype,
 		d.Betcheck,
 		2 AlertType,
 		ISNULL(t.NumberTime + 1,1),		
-		HomeTotalStake,
-		AwayTotalStake
+		HomeStake,
+		AwayStake,
+		DrawStake
 	FROM #tmpData d		
 		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck
 	WHERE ISNULL(t.AlertType,2) = 2
-		AND (AwayTotalStake - HomeTotalStake) >= ISNULL(t.NumberTime + 1,1) * @Stake * d.Maxbet
+		AND (AwayStake - HomeStake) >= ISNULL(t.NumberTime + 1,1) * @Stake * d.Maxbet
 
 	SELECT m.SportType,
 		b.typenamee,
 		l.leaguename League,
 		h.teamname + ' vs ' + a.teamname [Event],
-		HomeTotalStake,
-		AwayTotalStake
+		HomeStake,
+		AwayStake,
+		DrawStake
 	FROM #tmpResult d		
 		LEFT JOIN #tmpMatch m ON d.MatchID = m.MatchID AND d.Bettype = m.Bettype
 		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype
@@ -195,8 +205,9 @@ BEGIN
 		Betcheck,
 		AlertType,
 		NumberTime,
-		HomeTotalStake,
-		AwayTotalStake,
+		HomeStake,
+		AwayStake,
+		DrawStake,
 		@IsTest IsTest
 	FROM #tmpResult 	
 	
