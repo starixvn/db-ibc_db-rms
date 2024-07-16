@@ -185,7 +185,8 @@ BEGIN
 	WHERE ISNULL(t.AlertType,2) = 2
 		AND (AwayStake - HomeStake) >= ISNULL(t.NumberTime + 1,1) * @Stake * d.Maxbet
 
-	SELECT m.SportType,
+	SELECT CASE WHEN m.SportType = 1 THEN 'Soccer'
+				WHEN m.SportType = 2 THEN 'Basketball' END SportType,
 		b.typenamee,
 		l.leaguename League,
 		h.teamname + ' vs ' + a.teamname [Event],
