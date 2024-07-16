@@ -22,8 +22,9 @@ AS
 
 BEGIN
 	SET NOCOUNT ON
-
+	
 	INSERT INTO dbo.rmMajorBettypeAlert (
+		AlertTime,
 		MatchID,
 		Bettype,
 		Betcheck,
@@ -33,6 +34,7 @@ BEGIN
 		AwayStake,
 		IsTest)
     VALUES( 
+		GETDATE(),
 		@MatchID,
 		@Bettype,
 		@Betcheck,
