@@ -1,7 +1,7 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_MajorBettypeAlert]
 	@IsTest BIT = 0,
-	@Stake INT = 10
+	@Times INT = 10
 
 AS
 
@@ -21,7 +21,7 @@ BEGIN
 	CREATE TABLE #tmpBettrans(Refno BIGINT, Stake MONEY, hdp2 SMALLMONEY)	
 	CREATE TABLE #tmpMatch(MatchID INT, LeagueID INT, HomeID INT, AwayID INT, Sporttype INT, Bettype INT, Maxbet FLOAT)
 	CREATE TABLE #tmpBettransm (MatchID INT, Bettype INT, Betteam NVARCHAR(10), Betcheck NVARCHAR(50), Stake MONEY)
-	CREATE TABLE #rmAlert (MatchID INT, Bettype INT, Betcheck NVARCHAR(50), AlertType SMALLINT, NumberTime INT)
+	CREATE TABLE #rmAlert (MatchID INT, Bettype INT, Betcheck NVARCHAR(50), AlertType SMALLINT, Number INT, Times INT)
 
 	CREATE TABLE #tmpData(
 		MatchID INT,
@@ -37,7 +37,7 @@ BEGIN
 		Bettype INT,
 		Betcheck NVARCHAR(50),
 		AlertType SMALLINT,
-		NumberTime INT,
+		Number INT,
 		HomeStake MONEY,
 		AwayStake MONEY,
 		DrawStake MONEY)
@@ -104,11 +104,10 @@ BEGIN
 
 	CREATE NONCLUSTERED INDEX IX_tmpMatch ON #tmpMatch (MatchID, Bettype)
 
-	INSERT INTO #rmAlert (MatchID, Bettype, Betcheck, AlertType, NumberTime)
-	SELECT MatchID, Bettype, Betcheck, AlertType, MAX(NumberTime)
+	INSERT INTO #rmAlert (MatchID, Bettype, Betcheck, AlertType, Number, Times)
+	SELECT MatchID, Bettype, Betcheck, AlertType, Number, Times
 	FROM dbo.rmMajorBettypeAlert WITH(NOLOCK)
 	WHERE matchid IN (SELECT matchid FROM #tmpMatch)
-	GROUP BY MatchID, Bettype, Betcheck, AlertType
 
 	INSERT INTO #tmpData(
 		MatchID,
@@ -144,7 +143,7 @@ BEGIN
 		Bettype,
 		Betcheck,
 		AlertType,
-		NumberTime,
+		Number,
 		HomeStake,
 		AwayStake,
 		DrawStake)
@@ -153,21 +152,22 @@ BEGIN
 		d.Bettype,
 		d.Betcheck,
 		1 AlertType,
-		ISNULL(t.NumberTime + 1,1),		
+		(HomeStake - AwayStake)/@Times/d.Maxbet,		
 		HomeStake,
 		AwayStake,
 		DrawStake
 	FROM #tmpData d		
 		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck
 	WHERE ISNULL(t.AlertType,1) = 1
-		AND (HomeStake - AwayStake) >= ISNULL(t.NumberTime + 1,1) * @Stake * d.Maxbet
+		AND (HomeStake - AwayStake) >= @Times * d.Maxbet
+		AND d.Maxbet <> 0
 
 	INSERT INTO #tmpResult(
 		MatchID,
 		Bettype,
 		Betcheck,
 		AlertType,
-		NumberTime,
+		Number,
 		HomeStake,
 		AwayStake,
 		DrawStake)
@@ -176,14 +176,15 @@ BEGIN
 		d.Bettype,
 		d.Betcheck,
 		2 AlertType,
-		ISNULL(t.NumberTime + 1,1),		
+		(AwayStake - HomeStake)/@Times/d.Maxbet,		
 		HomeStake,
 		AwayStake,
 		DrawStake
 	FROM #tmpData d		
 		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck
 	WHERE ISNULL(t.AlertType,2) = 2
-		AND (AwayStake - HomeStake) >= ISNULL(t.NumberTime + 1,1) * @Stake * d.Maxbet
+		AND (AwayStake - HomeStake) >= @Times * d.Maxbet
+		AND d.Maxbet <> 0
 
 	SELECT CASE WHEN m.SportType = 1 THEN 'Soccer'
 				WHEN m.SportType = 2 THEN 'Basketball' END SportType,
@@ -194,23 +195,27 @@ BEGIN
 		AwayStake,
 		DrawStake
 	FROM #tmpResult d		
-		LEFT JOIN #tmpMatch m ON d.MatchID = m.MatchID AND d.Bettype = m.Bettype
-		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype
+		LEFT JOIN #tmpMatch m ON d.MatchID = m.MatchID AND d.Bettype = m.Bettype 
+		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck AND d.Number = t.Number AND t.Times = @Times
 		LEFT JOIN bodb02.dbo.League l WITH(NOLOCK) ON m.LeagueID = l.leagueid
 		LEFT JOIN bodb02.dbo.Team h WITH (NOLOCK) ON m.homeID = h.teamid
 		LEFT JOIN bodb02.dbo.Team a WITH (NOLOCK) ON m.awayID = a.teamid
 		LEFT JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON d.Bettype = b.typeid
+	WHERE t.Number IS NULL
 
-	SELECT MatchID,
-		Bettype,
-		Betcheck,
-		AlertType,
-		NumberTime,
-		HomeStake,
-		AwayStake,
-		DrawStake,
+	SELECT d.MatchID,
+		d.Bettype,
+		d.Betcheck,
+		d.AlertType,
+		d.Number,
+		@Times Times,
+		d.HomeStake,
+		d.AwayStake,
+		d.DrawStake,
 		@IsTest IsTest
-	FROM #tmpResult 	
+	FROM #tmpResult d
+		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck AND d.Number = t.Number AND t.Times = @Times
+	WHERE t.Number IS NULL
 	
 	DROP TABLE #tmpBettrans
 	DROP TABLE #tmpBettransm

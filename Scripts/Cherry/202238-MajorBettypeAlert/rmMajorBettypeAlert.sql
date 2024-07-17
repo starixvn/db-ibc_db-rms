@@ -34,9 +34,11 @@ CREATE TABLE [dbo].rmMajorBettypeAlert(
 		[Bettype] [INT] NOT NULL,
 		[Betcheck] [NVARCHAR](50) NULL,
 		[AlertType] [SMALLINT] NOT NULL,
-		[NumberTime] [INT] NOT NULL,
-		[HomeStake] MONEY NOT NULL,
-		[AwayStake] MONEY NOT NULL,
+		[Number] [INT] NOT NULL,
+		[Times] INT NOT NULL,
+		[HomeStake] MONEY NULL,
+		[AwayStake] MONEY NULL,
+		[DrawStake] MONEY NULL,
 		[IsTest] BIT NOT NULL
 ) ON [rmMajorBettypeAlert]
 WITH (DATA_COMPRESSION = PAGE)
@@ -53,7 +55,8 @@ CREATE NONCLUSTERED INDEX [IX_MatchID] ON [dbo].[rmMajorBettypeAlert]
 (
 	MatchID ASC,
 	Bettype ASC,
-	NumberTime ASC
+	Number ASC,
+	Times ASC
 )WITH (DATA_COMPRESSION = PAGE)
  ON [rmMajorBettypeAlert]
 GO

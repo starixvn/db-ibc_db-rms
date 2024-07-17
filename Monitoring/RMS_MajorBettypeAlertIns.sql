@@ -4,9 +4,11 @@ ALTER PROCEDURE [dbo].[RMS_MajorBettypeAlertIns]
 	@Bettype INT = 0,
 	@Betcheck NVARCHAR(50) ='',
 	@AlertType SMALLINT = 0,
-	@NumberTime INT = 0,
+	@Number INT = 0,
+	@Times INT = 0,
 	@HomeTotalStake MONEY = 0,
 	@AwayTotalStake MONEY = 0,
+	@DrawTotalStake MONEY = 0,
 	@IsTest BIT = 0
 AS
 
@@ -29,9 +31,11 @@ BEGIN
 		Bettype,
 		Betcheck,
 		AlertType,
-		NumberTime,
+		Number,
+		Times,
 		HomeStake,
 		AwayStake,
+		DrawStake,
 		IsTest)
     VALUES( 
 		GETDATE(),
@@ -39,9 +43,11 @@ BEGIN
 		@Bettype,
 		@Betcheck,
 		@AlertType,
-		@NumberTime,
+		@Number,
+		@Times,
 		@HomeTotalStake,
 		@AwayTotalStake,
+		@DrawTotalStake,
 		@IsTest) 
 
 	DELETE rmMajorBettypeAlert WITH (ROWLOCK, UPDLOCK)
