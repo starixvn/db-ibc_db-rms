@@ -196,7 +196,7 @@ BEGIN
 		DrawStake
 	FROM #tmpResult d		
 		LEFT JOIN #tmpMatch m ON d.MatchID = m.MatchID AND d.Bettype = m.Bettype 
-		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck AND d.Number = t.Number AND t.Times = @Times
+		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck AND d.Number = t.Number AND t.Times = @Times AND d.AlertType = t.AlertType
 		LEFT JOIN bodb02.dbo.League l WITH(NOLOCK) ON m.LeagueID = l.leagueid
 		LEFT JOIN bodb02.dbo.Team h WITH (NOLOCK) ON m.homeID = h.teamid
 		LEFT JOIN bodb02.dbo.Team a WITH (NOLOCK) ON m.awayID = a.teamid
@@ -214,7 +214,7 @@ BEGIN
 		d.DrawStake,
 		@IsTest IsTest
 	FROM #tmpResult d
-		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck AND d.Number = t.Number AND t.Times = @Times
+		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck AND d.Number = t.Number AND t.Times = @Times AND d.AlertType = t.AlertType
 	WHERE t.Number IS NULL
 	
 	DROP TABLE #tmpBettrans
