@@ -156,9 +156,10 @@ BEGIN
 		HomeStake,
 		AwayStake,
 		DrawStake
-	FROM #tmpData d		
-		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck AND t.AlertType = 1
-	WHERE ISNULL(t.Number,0) <> (HomeStake - AwayStake)/@Times/d.Maxbet
+	FROM #tmpData d				
+	WHERE NOT EXISTS (SELECT TOP 1 1 FROM #rmAlert t 
+					WHERE d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck AND t.AlertType = 1
+						AND t.Number = (HomeStake - AwayStake)/@Times/d.Maxbet)
 		AND (HomeStake - AwayStake) >= @Times * d.Maxbet
 		AND d.Maxbet <> 0
 
@@ -180,9 +181,10 @@ BEGIN
 		HomeStake,
 		AwayStake,
 		DrawStake
-	FROM #tmpData d		
-		LEFT JOIN #rmAlert t ON d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck AND t.AlertType = 2
-	WHERE ISNULL(t.Number,0) <> (AwayStake - HomeStake)/@Times/d.Maxbet
+	FROM #tmpData d				
+	WHERE NOT EXISTS (SELECT TOP 1 1 FROM #rmAlert t 
+					WHERE d.MatchID = t.MatchID AND d.Bettype = t.Bettype AND d.Betcheck = t.Betcheck AND t.AlertType = 2
+						AND t.Number = (AwayStake - HomeStake)/@Times/d.Maxbet)
 		AND (AwayStake - HomeStake) >= @Times * d.Maxbet
 		AND d.Maxbet <> 0
 
