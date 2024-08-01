@@ -190,7 +190,9 @@ BEGIN
 
 	SELECT CASE WHEN m.SportType = 1 THEN 'Soccer'
 				WHEN m.SportType = 2 THEN 'Basketball' END SportType,
-		b.typenamee,
+		CASE WHEN d.Bettype IN (609,610,611,612) 
+			THEN LEFT(b.typenamee,8) + RIGHT(d.Betcheck,1) + SUBSTRING(b.typenamee,10,LEN(b.typenamee)) 
+			ELSE b.typenamee END typenamee,
 		l.leaguename League,
 		h.teamname + ' vs ' + a.teamname [Event],
 		HomeStake,
