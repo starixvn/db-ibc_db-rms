@@ -28,6 +28,7 @@ AS
 		- 20231020@Cherry: Parlay Generator (#195498)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20240802@Cherry: Change formula of stake (#202238)
 	
 	Parameter's Explanation:
 		- @selection:
@@ -64,7 +65,7 @@ BEGIN
 	SET NOCOUNT ON
 	DECLARE @yesterday DATE = DATEADD(DAY,-1, GETDATE())
 
-	CREATE TABLE #tmpMainTicket(refno BIGINT, stake MONEY, bettype INT, betteam NVARCHAR(10), oddsspread MONEY)
+	CREATE TABLE #tmpMainTicket(refno BIGINT, stake MONEY, bettype INT, betteam NVARCHAR(10), oddsspread MONEY, hdp2 SMALLMONEY)
 	CREATE CLUSTERED INDEX cix_#tmpMainTicket ON #tmpMainTicket(refno)
 
 	CREATE TABLE #match(matchID INT, homeID INT, awayID INT, leagueID INT)
@@ -216,8 +217,8 @@ BEGIN
 	WHERE winlostdate >= @yesterday AND custID > 0 AND matchid = 29 AND statusID = 0 AND currency <> 20
 		AND bettype IN (SELECT bettype FROM #bettype)
 
-	INSERT INTO  #tmpMainTicket (refno, stake, bettype, betteam, oddsspread)
-	SELECT  refno, stake * actualrate, bettype, betteam, oddsspread
+	INSERT INTO  #tmpMainTicket (refno, stake, bettype, betteam, oddsspread, hdp2)
+	SELECT  refno, stake * actualrate, bettype, betteam, oddsspread, hdp2
 	FROM	rmBettrans rm WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rm.custid = ci.custid
 		LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rm.custid = mc.custid
@@ -245,11 +246,11 @@ BEGIN
 	BEGIN	 
 		INSERT INTO #Result (leagueID, HomeTotalStake, HomeTotalTicket, AwayTotalStake, AwayTotalTicket, OtherTotalStake, OtherTotalTicket)
 		SELECT		m.leagueID, 
-					SUM (CASE WHEN sub.betteam IN ('h','o','y','1') AND z.bettype IS NOT NULL AND z.GroupID = 1 THEN main.stake ELSE 0 END)		HomeTotalStake,
+					SUM (CASE WHEN sub.betteam IN ('h','o','y','1') AND z.bettype IS NOT NULL AND z.GroupID = 1 THEN main.stake/main.hdp2 ELSE 0 END)		HomeTotalStake,
 					SUM (CASE WHEN sub.betteam IN ('h','o','y','1') AND z.bettype IS NOT NULL AND z.GroupID = 1 THEN 1 ELSE 0 END)				HomeTotalTicket,
-					SUM (CASE WHEN sub.betteam IN ('e','a','u','n','2') AND z.bettype IS NOT NULL AND z.GroupID = 1  THEN main.stake ELSE 0 END) AwayTotalStake,
+					SUM (CASE WHEN sub.betteam IN ('e','a','u','n','2') AND z.bettype IS NOT NULL AND z.GroupID = 1  THEN main.stake/main.hdp2 ELSE 0 END) AwayTotalStake,
 					SUM (CASE WHEN sub.betteam IN ('e','a','u','n','2') AND z.bettype IS NOT NULL AND z.GroupID = 1  THEN 1 ELSE 0 END)			AwayTotalTicket,
-					SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n','1','2')  OR z.bettype IS NULL OR z.GroupID <> 1 THEN main.stake ELSE 0 END) OtherTotalStake,
+					SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n','1','2')  OR z.bettype IS NULL OR z.GroupID <> 1 THEN main.stake/main.hdp2 ELSE 0 END) OtherTotalStake,
 					SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n','1','2')  OR z.bettype IS NULL OR z.GroupID <> 1  THEN 1 ELSE 0 END) OtherTotalTicket
 		FROM		#tmpMainTicket main 
 		INNER JOIN	#bettransm sub ON main.refno = sub.refno
@@ -271,10 +272,10 @@ BEGIN
 	ELSE
 	BEGIN
 		INSERT INTO #Details(matchID, bettype, odds, Stake, Ticket, betteam)
-		SELECT 		sub.matchID, sub.bettype, AVG(sub.odds), SUM(main.stake),  COUNT(1), 
+		SELECT 		sub.matchID, sub.bettype, AVG(sub.odds), SUM(main.stake/main.hdp2),  COUNT(1), 
 					sub.betteam
 		FROM		#tmpMainTicket main 
-		INNER JOIN	#bettransm sub ON main.refno = sub.refno
+			INNER JOIN	#bettransm sub ON main.refno = sub.refno
 		GROUP BY	sub.matchID, sub.bettype, sub.betteam
 
 		;WITH cte_data AS 

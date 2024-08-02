@@ -66,7 +66,9 @@ BEGIN
 		INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 		INNER JOIN #tmpBettrans b ON bm.refno = b.refno
 	WHERE bm.statusID = 0
-		AND bm.bettype IN (1,2,3,7,8,12,5,15,20,21,609,610,611,612)
+		AND (bm.bettype IN (1,2,3,7,8,12,5,15,20,21)
+			OR (bm.bettype IN (609,610,611,612) AND bm.betcheck <> '0')
+			)
 		AND (bm.winlostdate > @MoveBetsDay OR bm.winlostdate IS NULL)
 		AND m.sporttype IN (1, 2) 
 		AND m.eventstatus = 'running'	
@@ -77,7 +79,9 @@ BEGIN
 		INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
 		INNER JOIN #tmpBettrans b ON bm.refno = b.refno
 	WHERE bm.statusID = 0
-		AND bm.bettype IN (1,2,3,7,8,12,5,15,20,21,609,610,611,612)
+		AND (bm.bettype IN (1,2,3,7,8,12,5,15,20,21)
+			OR (bm.bettype IN (609,610,611,612) AND bm.betcheck <> '0')
+			)
 		AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 		AND m.sporttype IN (1, 2) 
 		AND m.eventstatus = 'running'	
