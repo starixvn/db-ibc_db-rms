@@ -219,7 +219,7 @@ BEGIN
 	FROM	bodb02.dbo.bettransm WITH(NOLOCK)
 	WHERE	matchid IN (SELECT x.matchID FROM #match x) AND statusID = 0
 
-	INSERT INTO  #tmpMainTicket (refno, stake, bettype, betteam, oddsspread, transid, hdpw)
+	INSERT INTO  #tmpMainTicket (refno, stake, bettype, betteam, oddsspread, transid, hdp2)
 	SELECT  refno, stake * actualrate, bettype, betteam, oddsspread, rm.transid, rm.hdp2
 	FROM	rmBettrans rm WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rm.custid = ci.custid
