@@ -14,7 +14,7 @@ ALTER DATABASE bodb_RMS
 ADD FILE 
 (
 	NAME = rmMajorBettypeAlert,
-	FILENAME = 'I:\user_db\bodb_RMS\rmMajorBettypeAlert\rmMajorBettypeAlert.ndf',
+	FILENAME = 'I:\user_db\bodb_RMS\rmMajorBettypeAlert.ndf',
 	SIZE = 5MB,
 	MAXSIZE = UNLIMITED,
 	FILEGROWTH = 32MB
