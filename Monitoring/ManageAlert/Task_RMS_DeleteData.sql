@@ -10,6 +10,7 @@ AS
 	
 	Revisions:		
 		20230620@Cherry: Initial (#189147)
+		20240710@Cherry: Add job delete rmMajorBettypeAlert (#202238)
 
 */
 
@@ -18,6 +19,9 @@ BEGIN
 
 	DECLARE @ToDate DATETIME, @MaxAlertID BIGINT
 	SELECT @ToDate = DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 3, 0)
+
+	DELETE dbo.rmMajorBettypeAlert WITH (ROWLOCK, UPDLOCK)
+	WHERE AlertTime < @ToDate
 
 	SELECT @MaxAlertID = MAX(AlertID)
 	FROM dbo.rmAlert WITH(NOLOCK)
@@ -33,7 +37,7 @@ BEGIN
 	WHERE AlertID <= @MaxAlertID
 
 	DELETE dbo.rmAlertLog WITH (ROWLOCK, UPDLOCK) 
-	WHERE AlertID <= @MaxAlertID
+	WHERE AlertID <= @MaxAlertID	
 
 END 
  

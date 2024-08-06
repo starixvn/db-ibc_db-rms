@@ -19,7 +19,7 @@ AS
 	Task: Notify/Alert by Major Bettype Amount
 	
 	Revisions:
-		- 20240710@Cherry: Notify/Alert by Major Bettype Amount #202238
+		- 20240710@Cherry: Notify/Alert by Major Bettype Amount (#202238)
 */
 
 BEGIN
@@ -49,8 +49,6 @@ BEGIN
 		@AwayTotalStake,
 		@DrawTotalStake,
 		@IsTest) 
-
-	DELETE rmMajorBettypeAlert WITH (ROWLOCK, UPDLOCK)
-	WHERE AlertTime < DATEADD(MONTH, -3, GETDATE())
+	
 END
 GO
