@@ -26,6 +26,7 @@ AS
 		- 20240221@Cherry: Fix Stake as main report (#201133)
 		- 20240229@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20240802@Cherry: Change formula of stake (#202238)
 
 	Parameter's Explanation:
 		- @selection:
@@ -63,7 +64,7 @@ BEGIN
 	SET NOCOUNT ON
 	DECLARE @yesterday DATE = DATEADD(DAY,-1, GETDATE())
 
-	CREATE TABLE #tmpMainTicket(refno BIGINT, stake MONEY, bettype INT, betteam NVARCHAR(10), oddsspread MONEY, transid BIGINT)
+	CREATE TABLE #tmpMainTicket(refno BIGINT, stake MONEY, bettype INT, betteam NVARCHAR(10), oddsspread MONEY, transid BIGINT, hdp2 SMALLMONEY)
 	CREATE CLUSTERED INDEX cix_#tmpMainTicket ON #tmpMainTicket(refno)
 
 	CREATE TABLE #match(matchID INT, homeID INT, awayID INT, leagueID INT)
@@ -218,8 +219,8 @@ BEGIN
 	FROM	bodb02.dbo.bettransm WITH(NOLOCK)
 	WHERE	matchid IN (SELECT x.matchID FROM #match x) AND statusID = 0
 
-	INSERT INTO  #tmpMainTicket (refno, stake, bettype, betteam, oddsspread, transid)
-	SELECT  refno, stake * actualrate, bettype, betteam, oddsspread, rm.transid
+	INSERT INTO  #tmpMainTicket (refno, stake, bettype, betteam, oddsspread, transid, hdp2)
+	SELECT  refno, stake * actualrate, bettype, betteam, oddsspread, rm.transid, rm.hdp2
 	FROM	rmBettrans rm WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rm.custid = ci.custid
 		LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rm.custid = mc.custid
@@ -246,7 +247,7 @@ BEGIN
 	END
 
 	INSERT INTO #Details(matchID, bettype, odds, Stake, Ticket, betteam, refno, transid)
-	SELECT 		sub.matchID, sub.bettype, AVG(sub.odds), SUM(main.stake),  COUNT(1), sub.betteam, main.refno, main.transid
+	SELECT 		sub.matchID, sub.bettype, AVG(sub.odds), SUM(main.stake/hdp2),  COUNT(1), sub.betteam, main.refno, main.transid
 	FROM		#tmpMainTicket main 
 	INNER JOIN	#bettransm sub ON main.refno = sub.refno
 	GROUP BY	sub.matchID, sub.bettype, sub.betteam, main.refno,  main.transid
