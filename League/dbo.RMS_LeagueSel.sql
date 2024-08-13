@@ -18,7 +18,7 @@ Revisions:
 
 - 20200120@Jacob: League Management #127381
 - 20220301@Danny: Get league info by Sport And League Group [RedmineID: #169072]
-- 20240715@Cherry: Get None League Group (#204375)
+- 20240815@Cherry: Get None League Group (#204375)
 
 Parameter's Explanation:
 	@GroupId = 0: All Assigned League Group

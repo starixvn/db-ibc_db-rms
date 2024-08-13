@@ -21,6 +21,7 @@ AS
 		- 20220301@Danny: Support basketball Sport type data [RedmineID: #169072]
 		- 20220719@Danny: Fix issue Show result of Basketball when selecting Sport is Soccer [RedmineID: #175613]
 		- 20240315@Cherry: Enhancement (#197684)
+		- 20240815@Cherry: Get None League Group (#204375)
 
 	Param's Explanation:
 		. @ParlayType: '1,2'
@@ -58,22 +59,12 @@ BEGIN
 				INNER JOIN dbo.rmLeagueGroup lg WITH (NOLOCK) ON l.GroupId = lg.GroupId
 			WHERE ',' + @LeagueGroups + ',' LIKE '%,' + CONVERT(VARCHAR(5), lg.GroupId)+ ',%'
 
-			DELETE #Leagues WHERE LeagueId <> -1 AND GroupName IS NULL
-		
-			IF ',' + @LeagueGroups + ',' LIKE '%,-1,%' -- None
-				AND ',' + @Leagues + ',' LIKE '%,-1,%' -- None
-				INSERT INTO #Leagues (LeagueId, GroupId, GroupName)
-				SELECT s.leagueId, -1, 'None'
-				FROM dbo.rmSumByLeague s WITH (NOLOCK)
-				INNER JOIN	bodb02.dbo.League l WITH(NOLOCK) ON s.leagueId = l.leagueid
-				WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
-					AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
-					AND (@Site = 2 OR s.IsDeposit = @Site)
-					AND NOT EXISTS (SELECT 1 FROM dbo.rmLeague l WITH (NOLOCK) WHERE s.leagueId = l.LeagueId)
-					AND l.sporttype = 1
-				GROUP BY s.leagueId
+			UPDATE #Leagues
+			SET GroupName = 'None',
+				GroupId = -1
+			WHERE GroupName IS NULL
+			
 		END
-
 		
 		IF @SportType = 2
 		BEGIN
