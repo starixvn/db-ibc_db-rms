@@ -64,11 +64,10 @@ BEGIN
 		 SELECT DISTINCT 1 OrderId,
 				l.leagueid, 
 				l.leaguename, 
-				lg.GroupId, 
-				lg.GroupName
+				-1 GroupId, 
+				'None' GroupName
 		 FROM bodb_RMS.dbo.rmSumByLeague rm WITH(NOLOCK) 
 			INNER JOIN bodb02.dbo.league l WITH(NOLOCK) ON rm.leagueId = l.leagueid
-			INNER JOIN bodb02.dbo.LeagueGroup lg WITH(NOLOCK) ON lg.GroupID = l.LeagueGroupID
 			LEFT JOIN rmLeague mc WITH(NOLOCK) ON mc.leagueid=rm.leagueid
 		 WHERE   rm.winlostdate BETWEEN @FromDate AND @ToDate 
 				AND l.sporttype = 1
