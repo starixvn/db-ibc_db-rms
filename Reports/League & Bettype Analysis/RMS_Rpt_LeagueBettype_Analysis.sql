@@ -76,8 +76,6 @@ BEGIN
 				INNER JOIN bodb02.dbo.LeagueGroup lg WITH (NOLOCK) ON l.LeagueGroupID = lg.GroupID
 		END
 
-
-
 	END
 
 	IF @ReportBy = 1 -- view by league
