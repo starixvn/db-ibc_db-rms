@@ -97,13 +97,6 @@ BEGIN
 			)
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 6)
 
-	DECLARE @MBBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
-	INSERT INTO @MBBU (BalanceUpDay, MoveBetsDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
-
-	DECLARE @BalanceUpDay SMALLDATETIME, @MoveBetsDay SMALLDATETIME
-	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBBU	
-
 	INSERT INTO #tmpMatch 
 		(matchid, 
 		homeid, 
@@ -118,7 +111,13 @@ BEGIN
 		m.leagueid
 	FROM bodb02.dbo.match m WITH (NOLOCK)		
 	WHERE m.matchid IN (SELECT matchid FROM #tmpBettrans)
-	UNION
+	
+	INSERT INTO #tmpMatch 
+		(matchid, 
+		homeid, 
+		awayid, 
+		sporttype, 
+		leagueid)
 	SELECT 
 		m.matchid,
 		m.homeid,
@@ -127,6 +126,7 @@ BEGIN
 		m.leagueid
 	FROM bodb02.dbo.match14 m WITH (NOLOCK) 
 	WHERE m.matchid IN (SELECT matchid FROM #tmpBettrans)
+		AND m.matchid NOT IN (SELECT matchid FROM #tmpMatch)
 
 	INSERT INTO #Result
 	(
