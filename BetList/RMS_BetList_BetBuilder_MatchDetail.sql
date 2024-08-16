@@ -61,21 +61,21 @@ BEGIN
 	IF @range = 1
 		SELECT homeid, awayid, sporttype, leagueid, GlobalShowTime AS EventDate, 38 AS bettype, @IsBlacklistLeague AS IsBlacklistLeague,
 			CASE WHEN sporttype = 1 THEN '[' + CAST(@livehomescore AS VARCHAR(10)) + '-' + CAST(@liveawayscore AS VARCHAR(10)) + ']'
-				ELSE 'Live'
+				ELSE '[Live]'
 				END AS [Score]
 		FROM bodb02.dbo.match WITH (NOLOCK)
 		WHERE matchid = @matchid
 	ELSE IF @range = 2
 		SELECT homeid, awayid, sporttype, leagueid, GlobalShowTime AS EventDate, 38 AS bettype, @IsBlacklistLeague AS IsBlacklistLeague,
 			CASE WHEN sporttype = 1 THEN '[' + CAST(@livehomescore AS VARCHAR(10)) + '-' + CAST(@liveawayscore AS VARCHAR(10)) + ']'
-				ELSE 'Live'
+				ELSE '[Live]'
 				END AS [Score]
 		FROM bodb02.dbo.match14 WITH (NOLOCK)
 		WHERE matchid = @matchid
 	ELSE IF @range = 3
 		SELECT homeid, awayid, sporttype, leagueid, GlobalShowTime AS EventDate, 38 AS bettype, @IsBlacklistLeague AS IsBlacklistLeague,
 			CASE WHEN sporttype = 1 THEN '[' + CAST(@livehomescore AS VARCHAR(10)) + '-' + CAST(@liveawayscore AS VARCHAR(10)) + ']'
-				ELSE 'Live'
+				ELSE '[Live]'
 				END AS [Score]
 		FROM DBARC.bodb_Archive.dbo.match_bk WITH (NOLOCK)
 		WHERE matchid = @matchid
