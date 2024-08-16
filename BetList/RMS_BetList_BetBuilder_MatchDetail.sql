@@ -1,4 +1,4 @@
-/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_BetList_BetBuilder_MatchDetail]
 	@transid BIGINT
 AS
@@ -11,6 +11,7 @@ AS
 	Revisions:
 		- 20190220@Jacob: Add Bet Builder [RedmineID: #108694]
 		- 20200510@Percy: Add Blacklist league [RedmineID: #133961]
+		- 20240816@Cherry: Add score in ticket details (#209293)
 */
 
 BEGIN
@@ -21,19 +22,36 @@ BEGIN
 	SELECT  @BlacklistLeagueGroupId = GroupId FROM dbo.rmLeagueGroup WITH (NOLOCK) WHERE GroupName = 'Blacklist'
 
 	DECLARE @matchid INT, @leagueid INT, @range TINYINT -- 1: bettrans, 2: bettrans14, 3: bettrans_bk
+	DECLARE @livehomescore INT, @liveawayscore INT
 	
-	SELECT @matchid = matchid, @range = 1 FROM dbo.rmBettrans WITH (NOLOCK) WHERE transid = @transid
+	SELECT @matchid = matchid, 
+			@range = 1,
+			@livehomescore = livehomescore,
+			@liveawayscore = liveawayscore
+	FROM dbo.rmBettrans WITH (NOLOCK) 
+	WHERE transid = @transid
+
 	SELECT @leagueid = leagueid FROM bodb02.dbo.match WITH (NOLOCK) WHERE matchid = @matchid
 
 	IF @matchid IS NULL
 	BEGIN
-		SELECT @matchid = matchid, @range = 2 FROM bodb02.dbo.bettrans14 WITH (NOLOCK) WHERE transid = @transid
+		SELECT @matchid = matchid, @range = 2,
+			@livehomescore = livehomescore,
+			@liveawayscore = liveawayscore
+		FROM bodb02.dbo.bettrans14 WITH (NOLOCK) 
+		WHERE transid = @transid
+
 		SELECT @leagueid = leagueid FROM bodb02.dbo.match14 WITH (NOLOCK) WHERE matchid = @matchid
 	END
 
 	IF @matchid IS NULL
 	BEGIN
-		SELECT @matchid = matchid, @range = 3 FROM DBARC.bodb_Archive.dbo.bettrans_bk WITH (NOLOCK) WHERE transid = @transid
+		SELECT @matchid = matchid, @range = 3,
+			@livehomescore = livehomescore,
+			@liveawayscore = liveawayscore
+		FROM DBARC.bodb_Archive.dbo.bettrans_bk WITH (NOLOCK) 
+		WHERE transid = @transid
+
 		SELECT @leagueid = leagueid FROM DBARC.bodb_Archive.dbo.match_bk WITH (NOLOCK) WHERE matchid = @matchid
 	END
 
@@ -41,15 +59,24 @@ BEGIN
 		SELECT @IsBlacklistLeague = 1
 
 	IF @range = 1
-		SELECT homeid, awayid, sporttype, leagueid, GlobalShowTime AS EventDate, 38 AS bettype, @IsBlacklistLeague AS IsBlacklistLeague
+		SELECT homeid, awayid, sporttype, leagueid, GlobalShowTime AS EventDate, 38 AS bettype, @IsBlacklistLeague AS IsBlacklistLeague,
+			CASE WHEN sporttype = 1 THEN '[' + CAST(@livehomescore AS VARCHAR(10)) + '-' + CAST(@liveawayscore AS VARCHAR(10)) + ']'
+				ELSE 'Live'
+				END AS [Score]
 		FROM bodb02.dbo.match WITH (NOLOCK)
 		WHERE matchid = @matchid
 	ELSE IF @range = 2
-		SELECT homeid, awayid, sporttype, leagueid, GlobalShowTime AS EventDate, 38 AS bettype, @IsBlacklistLeague AS IsBlacklistLeague
+		SELECT homeid, awayid, sporttype, leagueid, GlobalShowTime AS EventDate, 38 AS bettype, @IsBlacklistLeague AS IsBlacklistLeague,
+			CASE WHEN sporttype = 1 THEN '[' + CAST(@livehomescore AS VARCHAR(10)) + '-' + CAST(@liveawayscore AS VARCHAR(10)) + ']'
+				ELSE 'Live'
+				END AS [Score]
 		FROM bodb02.dbo.match14 WITH (NOLOCK)
 		WHERE matchid = @matchid
 	ELSE IF @range = 3
-		SELECT homeid, awayid, sporttype, leagueid, GlobalShowTime AS EventDate, 38 AS bettype, @IsBlacklistLeague AS IsBlacklistLeague
+		SELECT homeid, awayid, sporttype, leagueid, GlobalShowTime AS EventDate, 38 AS bettype, @IsBlacklistLeague AS IsBlacklistLeague,
+			CASE WHEN sporttype = 1 THEN '[' + CAST(@livehomescore AS VARCHAR(10)) + '-' + CAST(@liveawayscore AS VARCHAR(10)) + ']'
+				ELSE 'Live'
+				END AS [Score]
 		FROM DBARC.bodb_Archive.dbo.match_bk WITH (NOLOCK)
 		WHERE matchid = @matchid
 END
