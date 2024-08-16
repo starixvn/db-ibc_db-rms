@@ -175,6 +175,7 @@ BEGIN
 		d.liveawayscore,
 		d.Selection,
 		d.odds,
+		d.ParlayType,
 		d.stake Stake,
 		d.WinningAmount,
 		COMPRESS((SELECT CAST(TransId AS VARCHAR) AS 'tl',
