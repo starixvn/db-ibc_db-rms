@@ -19,6 +19,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ParlayWon]
 	,@LiveStatus	TINYINT = 3
 	,@CustomerClass	SMALLINT = NULL
 	,@IP			VARCHAR(45) = NULL
+	,@LeagueGroups	VARCHAR(MAX) = ''
 AS
 /*
 	Created: 20200512@Percy
@@ -40,6 +41,7 @@ AS
 		- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20240816@Cherry: Add filter @LeagueGroups (#209293)
 
 	Parameter's Explanation:
 		- @selection:
