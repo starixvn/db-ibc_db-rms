@@ -68,8 +68,7 @@ BEGIN
 		matchid,
 		hdp2,
 		odds2,
-		livehomescore,
-		liveawayscore,
+		livehomescore,		
 		Stake,
 		WinningAmount,
 		CompanyLoseAmount,
@@ -78,8 +77,7 @@ BEGIN
 		b.matchid,
 		b.hdp2,
 		b.odds2,
-		b.livehomescore,
-		b.liveawayscore,
+		b.livehomescore,		
 		stake * CASE WHEN @IsTest = 1 THEN 1 ELSE actualrate END Stake,
 		(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END AS WinningAmount,
 		(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END * (1 - b.tpositiontaking) AS CompanyLoseAmount,
@@ -96,6 +94,17 @@ BEGIN
 			OR (hdp2 >= 6 AND odds2 > 100)
 			)
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 6)
+
+	UPDATE t
+	SET t.liveawayscore = b.liveawayscore
+	FROM #tmpBettrans t
+		INNER JOIN bodb02.dbo.bettrans b WITH(NOLOCK) ON t.transid = b.transid
+
+	UPDATE t
+	SET t.liveawayscore = b.liveawayscore
+	FROM #tmpBettrans t
+		INNER JOIN bodb02.dbo.bettrans14 b WITH(NOLOCK) ON t.transid = b.transid
+	WHERE t.liveawayscore IS NULL
 
 	INSERT INTO #tmpMatch 
 		(matchid, 
