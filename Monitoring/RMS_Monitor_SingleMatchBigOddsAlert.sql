@@ -77,7 +77,7 @@ BEGIN
 		b.matchid,
 		b.hdp2,
 		b.odds2,
-		b.livehomescore,		
+		CASE WHEN b.liveindicator = 1 THEN b.livehomescore ELSE NULL END livehomescore,		
 		stake * CASE WHEN @IsTest = 1 THEN 1 ELSE actualrate END Stake,
 		(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END AS WinningAmount,
 		(b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END * (1 - b.tpositiontaking) AS CompanyLoseAmount,
@@ -99,12 +99,14 @@ BEGIN
 	SET t.liveawayscore = b.liveawayscore
 	FROM #tmpBettrans t
 		INNER JOIN bodb02.dbo.bettrans b WITH(NOLOCK) ON t.transid = b.transid
+	WHERE b.liveindicator = 1
 
 	UPDATE t
 	SET t.liveawayscore = b.liveawayscore
 	FROM #tmpBettrans t
 		INNER JOIN bodb02.dbo.bettrans14 b WITH(NOLOCK) ON t.transid = b.transid
 	WHERE t.liveawayscore IS NULL
+		AND b.liveindicator = 1
 
 	INSERT INTO #tmpMatch 
 		(matchid, 
