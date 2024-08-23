@@ -19,6 +19,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ParlayWon]
 	,@LiveStatus	TINYINT = 3
 	,@CustomerClass	SMALLINT = NULL
 	,@IP			VARCHAR(45) = NULL
+	,@LeagueGroup	VARCHAR(MAX) = ''
 AS
 /*
 	Created: 20200512@Percy
@@ -40,6 +41,7 @@ AS
 		- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20240826@Cherry: Add filter @LeagueGroups (#209293)
 
 	Parameter's Explanation:
 		- @selection:
@@ -144,6 +146,26 @@ BEGIN
 			SELECT SportType FROM bodb02.dbo.Sports WITH (NOLOCK)
 			WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
 				AND SportType <= 99
+	END
+
+	-- League Group
+	CREATE TABLE #tmpLeagueGroup (LeagueGroupId INT)
+	INSERT INTO #tmpLeagueGroup
+	SELECT value FROM STRING_SPLIT(@LeagueGroup, ',')
+
+	CREATE TABLE #tmpLeague (LeagueID INT)
+	INSERT INTO #tmpLeague (LeagueID)
+	SELECT LeagueID 
+	FROM  dbo.rmLeague  t WITH(NOLOCK)
+		INNER JOIN #tmpLeagueGroup tb ON t.GroupId = tb.LeagueGroupId
+
+	IF EXISTS (SELECT 1 FROM #tmpLeagueGroup WHERE LeagueGroupId = -1)
+	BEGIN
+		INSERT INTO #tmpLeague (LeagueID)
+		SELECT l.LeagueID 
+		FROM   bodb02.dbo.League  l WITH(NOLOCK)
+			LEFT JOIN dbo.rmLeague  t WITH(NOLOCK) ON l.leagueid = t.LeagueId
+		WHERE t.LeagueId IS NULL
 	END
 
 	-- get data
@@ -266,11 +288,12 @@ BEGIN
 					INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
 					INNER JOIN bodb02.dbo.Site st WITH(NOLOCK) ON ct.site = st.site
 					LEFT JOIN #tmpBettrans t ON b.transid = t.transid
+					LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
 				WHERE b.winlostdate BETWEEN @FDate AND @TDate					
 					AND b.statusID = 112
 					AND b.currency <> 20
 					AND ((winlost - actual_stake) * (1 - b.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate >= @FromHouseAmt
-					AND (b.bettype <> 29
+					AND ((b.bettype <> 29 AND m.leagueid IN (SELECT LeagueID FROM #tmpLeague))
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 							AND b.bettype = 29 AND b.betteam = N'1')
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
