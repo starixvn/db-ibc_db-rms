@@ -217,7 +217,7 @@ BEGIN
 			bac INT
 		)
 
-		CREATE TABLE #bettransm (transid BIGINT, refno BIGINT)
+		CREATE TABLE #bettransm (transid BIGINT)
 
 		CREATE TABLE #rmBettrans
 		(
@@ -427,6 +427,34 @@ BEGIN
 		AND m.leagueid IN (SELECT LeagueID FROM #tmpLeague)
 		AND b.transid NOT IN (SELECT transid FROM #bettransm)
 
+	INSERT INTO #bettransm (transid)
+    SELECT b.transid			
+	FROM #rmBettrans b
+		INNER JOIN bodb02.dbo.bettransm bm WITH (NOLOCK) ON b.refno = bm.refno
+		INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
+	WHERE b.bettype = 29
+		AND (bm.winlostdate > @MoveBetsDay OR bm.winlostdate IS NULL)		
+		AND m.leagueid IN (SELECT LeagueID FROM #tmpLeague)
+	UNION 
+	SELECT b.transid		
+	FROM #rmBettrans b
+		INNER JOIN bodb02.dbo.bettransm14 bm WITH (NOLOCK) ON b.refno = bm.refno
+		INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
+	WHERE b.bettype = 29
+		AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
+		AND m.leagueid IN (SELECT LeagueID FROM #tmpLeague)
+	UNION 
+	SELECT b.transid					
+	FROM #rmBettrans b
+		INNER JOIN dbo.rmBettransm_bk bm WITH (NOLOCK) ON b.refno = bm.refno
+		INNER JOIN dbo.rmMatch_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
+	WHERE b.bettype = 29
+		AND bm.winlostdate < @BalanceUpDay
+		AND m.leagueid IN (SELECT LeagueID FROM #tmpLeague)
+
+	DELETE FROM #rmBettrans
+	WHERE transid NOT IN (SELECT transid FROM #bettransm)
+
 	-- Return data
 	BEGIN
 		CREATE TABLE #level (level INT)
@@ -489,5 +517,9 @@ BEGIN
 	DROP TABLE #ParlayType
 	DROP TABLE #tmpBettrans
 	DROP TABLE #SiteTab
+	DROP TABLE #bettransm
+	DROP TABLE #tmpLeague
+	DROP TABLE #tmpLeagueGroup
+
 END
 GO
