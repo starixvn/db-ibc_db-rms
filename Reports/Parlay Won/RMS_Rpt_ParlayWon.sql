@@ -92,6 +92,13 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
+	DECLARE @MBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+	INSERT INTO @MBU (BalanceUpDay, MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	DECLARE @BalanceUpDay SMALLDATETIME
+	SELECT  @BalanceUpDay = BalanceUpDay FROM @MBU
+
 	--Site
 	BEGIN
 		CREATE TABLE #SiteTab (SiteName NVARCHAR(50), IsDeposit BIT)
@@ -210,6 +217,8 @@ BEGIN
 			bac INT
 		)
 
+		CREATE TABLE #bettransm (transid BIGINT, refno BIGINT)
+
 		CREATE TABLE #rmBettrans
 		(
 			transdate			DATETIME
@@ -232,6 +241,7 @@ BEGIN
 			,CustomerClass		SMALLINT
 			,IsParlayGenerator  BIT
 			,IsBoostBonus		BIT
+			,matchid			INT
 		)
 
 		IF @ToDate > @MoveBetsDay
@@ -255,7 +265,7 @@ BEGIN
 				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus
 			)
 			SELECT
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus,matchid
 			FROM
 			(
 				SELECT
@@ -279,6 +289,7 @@ BEGIN
 					,ci.CustomerClass
 					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 1 ELSE 0 END IsParlayGenerator
 					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
+					,b.matchid
 				FROM dbo.rmBettrans b WITH (NOLOCK)
 					INNER JOIN #bettype bt ON b.bettype = bt.bettype
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
@@ -287,13 +298,12 @@ BEGIN
 					INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
 					INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
 					INNER JOIN bodb02.dbo.Site st WITH(NOLOCK) ON ct.site = st.site
-					LEFT JOIN #tmpBettrans t ON b.transid = t.transid
-					LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
+					LEFT JOIN #tmpBettrans t ON b.transid = t.transid					
 				WHERE b.winlostdate BETWEEN @FDate AND @TDate					
 					AND b.statusID = 112
 					AND b.currency <> 20
 					AND ((winlost - actual_stake) * (1 - b.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate >= @FromHouseAmt
-					AND ((b.bettype <> 29 AND m.leagueid IN (SELECT LeagueID FROM #tmpLeague))
+					AND (b.bettype <> 29
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 							AND b.bettype = 29 AND b.betteam = N'1')
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
@@ -331,7 +341,7 @@ BEGIN
 			
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus
+				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus,matchid
 			)
 			SELECT
 				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus
@@ -358,6 +368,7 @@ BEGIN
 					,ci.CustomerClass
 					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 1 ELSE 0 END IsParlayGenerator
 					,CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
+					,b.matchid
 				FROM dbo.rmBettrans_Old b WITH (NOLOCK)
 					INNER JOIN #bettype bt ON b.bettype = bt.bettype
 					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
@@ -392,6 +403,29 @@ BEGIN
 		END
 
 	END
+
+	INSERT INTO #bettransm (transid)
+	SELECT transid
+	FROM #rmBettrans b
+		INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
+	WHERE b.bettype IN (38, 376)
+		AND m.leagueid IN (SELECT LeagueID FROM #tmpLeague)
+
+	INSERT INTO #bettransm (transid)
+	SELECT transid
+	FROM #rmBettrans b
+		INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON b.matchid = m.matchid
+	WHERE b.bettype IN (38, 376)
+		AND m.leagueid IN (SELECT LeagueID FROM #tmpLeague)
+		AND b.transid NOT IN (SELECT transid FROM #bettransm)
+
+	INSERT INTO #bettransm (transid)
+	SELECT transid
+	FROM #rmBettrans b
+		INNER JOIN dbo.rmMatch_bk m WITH (NOLOCK) ON b.matchid = m.matchid
+	WHERE b.bettype IN (38, 376)
+		AND m.leagueid IN (SELECT LeagueID FROM #tmpLeague)
+		AND b.transid NOT IN (SELECT transid FROM #bettransm)
 
 	-- Return data
 	BEGIN
