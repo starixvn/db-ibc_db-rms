@@ -92,13 +92,6 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @MBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
-	INSERT INTO @MBU (BalanceUpDay, MoveBetsDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
-
-	DECLARE @BalanceUpDay SMALLDATETIME
-	SELECT  @BalanceUpDay = BalanceUpDay FROM @MBU
-
 	--Site
 	BEGIN
 		CREATE TABLE #SiteTab (SiteName NVARCHAR(50), IsDeposit BIT)
@@ -432,8 +425,7 @@ BEGIN
 	FROM #rmBettrans b
 		INNER JOIN bodb02.dbo.bettransm bm WITH (NOLOCK) ON b.refno = bm.refno
 		INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
-	WHERE b.bettype = 29
-		AND (bm.winlostdate > @MoveBetsDay OR bm.winlostdate IS NULL)		
+	WHERE b.bettype = 29		
 		AND m.leagueid IN (SELECT LeagueID FROM #tmpLeague)
 	UNION 
 	SELECT b.transid		
@@ -441,7 +433,6 @@ BEGIN
 		INNER JOIN bodb02.dbo.bettransm14 bm WITH (NOLOCK) ON b.refno = bm.refno
 		INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
 	WHERE b.bettype = 29
-		AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
 		AND m.leagueid IN (SELECT LeagueID FROM #tmpLeague)
 	UNION 
 	SELECT b.transid					
@@ -449,7 +440,6 @@ BEGIN
 		INNER JOIN dbo.rmBettransm_bk bm WITH (NOLOCK) ON b.refno = bm.refno
 		INNER JOIN dbo.rmMatch_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
 	WHERE b.bettype = 29
-		AND bm.winlostdate < @BalanceUpDay
 		AND m.leagueid IN (SELECT LeagueID FROM #tmpLeague)
 
 	DELETE FROM #rmBettrans
