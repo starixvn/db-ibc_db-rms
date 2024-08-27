@@ -40,7 +40,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	CREATE TABLE #Leagues (LeagueId INT, GroupId INT, GroupName VARCHAR(30))
+	CREATE TABLE #Leagues (LeagueId INT, GroupId INT, GroupName VARCHAR(200))
 	
 	-- League Group
 	BEGIN
