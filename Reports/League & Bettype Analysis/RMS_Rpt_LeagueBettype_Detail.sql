@@ -2,7 +2,7 @@
 ALTER PROCEDURE [dbo].[RMS_Rpt_LeagueBettype_Detail]
 	@FromDate		DATE
 	,@ToDate		DATE
-	,@ParlayType	VARCHAR(100) = '1,2'
+	,@ParlayType	VARCHAR(100) = '1,2,3'
 	,@LeagueGroups	VARCHAR(MAX) = ''
 	,@Leagues		VARCHAR(MAX) = ''
 	,@Match			INT = 0
@@ -22,11 +22,13 @@ AS
 
 	Revisions:
 		- 20240315@Cherry: Initialize SP [RedmineID: #197684]
+		- 20240830@Cherry: Add Single Match Parlay (#209293)
 
 	Param's Explanation:
 		. @ParlayType: '1,2'
 					. 1 = Mix Parlay
 					. 2 = Combo Parlay
+					. 3 = Single Match Parlay
 		. @Site:
 					. 0 = Credit sites
 					. 1 = Deposit sites
@@ -41,7 +43,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	CREATE TABLE #Leagues (LeagueId INT, GroupName VARCHAR(30), LeagueName NVARCHAR(500))
+	CREATE TABLE #Leagues (LeagueId INT, GroupName VARCHAR(200), LeagueName NVARCHAR(500))
 	CREATE TABLE #Match (MatchID INT, HomeName NVARCHAR(100), AwayName NVARCHAR(100))
 	
 	-- League Group
