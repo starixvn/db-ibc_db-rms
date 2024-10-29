@@ -22,7 +22,7 @@ AS
 
 	Revisions:
 		- 20240315@Cherry: Initialize SP [RedmineID: #197684]
-		- 20240830@Cherry: Add Single Match Parlay (#209293)
+		- 20241030@Cherry: Add Single Match Parlay (#209293)
 
 	Param's Explanation:
 		. @ParlayType: '1,2'
