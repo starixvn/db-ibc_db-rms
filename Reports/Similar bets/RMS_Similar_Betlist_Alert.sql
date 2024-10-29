@@ -17,6 +17,7 @@ AS
 		- 20230620@Cherry: Manage Alert (#189147)
 		- 20230830@Cherry: Enhance (#192682)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20241024@Cherry: Add Parlay Odds condition (#208395)
 
 	EXEC RMS_Similar_Betlist_Alert
 */
@@ -92,11 +93,12 @@ select  t1.transid,
 		t1.PotentialWinningAnt, 
 		t1.combo,
 		CASE WHEN t1.transid2 = 1  THEN 'Soccer Only'
+			 WHEN t1.transid2 = 2 THEN 'Basketball Only'
 			 WHEN t1.transid2 = -4 THEN 'Virtual Soccer Only'
 			 WHEN t1.transid2 = -5 THEN 'Virtual Basketball Only'
 			 WHEN t1.transid2 = -3 THEN 'Combined Sports'
 			 WHEN t1.transid2 = -1 THEN 'Combined Other Sports'
-			 WHEN t1.transid2 NOT IN (1, -4, -5, -3, -1) THEN s.SportName
+			 WHEN t1.transid2 NOT IN (1, 2, -4, -5, -3, -1) THEN s.SportName
 			END  AS SportType,
 		t1.TotalMemberStake,
 		transid2 AS SportTypeID,
@@ -104,7 +106,6 @@ select  t1.transid,
 		t1.CompanyLoseAmt
 	from #main t1 WITH(NOLOCK) 
 	LEFT JOIN bodb02.dbo.Sports s WITH(NOLOCK) ON t1.transid2 = s.SportType
-
 
 CREATE CLUSTERED INDEX cix_#rmRunningTicketMonitor_selection ON #rmRunningTicketMonitor(selection,sportType)
 
@@ -158,14 +159,27 @@ GROUP BY t.selection, t.NoSelection, t.SportType, t.SportTypeID,
 			WHEN t.SportTypeID IN (2, -5) THEN 'Basketball'
 			ELSE 'Other' END, o.Odds
 HAVING SUM(ISNULL(t.PotentialWinningAnt,0)) >= CASE WHEN @IsTest = 0 THEN
-												   CASE  WHEN SportTypeID = 1 AND NoSelection > 2  THEN 500000
-														 WHEN SportTypeID = -4 AND NoSelection > 2 THEN 50000
-														 WHEN SportTypeID = -5 AND NoSelection > 2 THEN 50000
-														 WHEN SportTypeID NOT IN (1, -4, -5) AND NoSelection > 2 THEN 100000
-														 WHEN SportTypeID = 1 AND NoSelection = 2  THEN 100000
-														 WHEN SportTypeID = -4 AND NoSelection = 2 THEN 30000
-														 WHEN SportTypeID = -5 AND NoSelection = 2 THEN 10000
-														 ELSE 30000 END
+												   CASE  WHEN SportTypeID = 1 AND NoSelection > 2 AND o.Odds < 10 THEN 500000
+														 WHEN SportTypeID = -4 AND NoSelection > 2 AND o.Odds < 10 THEN 50000
+														 WHEN SportTypeID = 2 AND NoSelection > 2 AND o.Odds < 10 THEN 100000
+														 WHEN SportTypeID = -5 AND NoSelection > 2 AND o.Odds < 10 THEN 50000
+														 WHEN SportTypeID NOT IN (1, 2, -4, -5) AND NoSelection > 2 AND o.Odds < 10 THEN 50000
+														 WHEN SportTypeID = 1 AND NoSelection > 2 AND o.Odds BETWEEN 10 AND 100 THEN 500000
+														 WHEN SportTypeID = -4 AND NoSelection > 2 AND o.Odds BETWEEN 10 AND 100 THEN 100000
+														 WHEN SportTypeID = 2 AND NoSelection > 2 AND o.Odds BETWEEN 10 AND 100 THEN 200000
+														 WHEN SportTypeID = -5 AND NoSelection > 2 AND o.Odds BETWEEN 10 AND 100 THEN 100000
+														 WHEN SportTypeID NOT IN (1, 2, -4, -5) AND NoSelection > 2 AND o.Odds BETWEEN 10 AND 100 THEN 100000
+														 WHEN SportTypeID = 1 AND NoSelection = 2 AND o.Odds < 10 THEN 100000
+														 WHEN SportTypeID = -4 AND NoSelection = 2 AND o.Odds < 10 THEN 30000
+														 WHEN SportTypeID = 2 AND NoSelection = 2 AND o.Odds < 10 THEN 30000
+														 WHEN SportTypeID = -5 AND NoSelection = 2 AND o.Odds < 10 THEN 10000
+														 WHEN SportTypeID NOT IN (1, 2, -4, -5) AND NoSelection = 2 AND o.Odds < 10 THEN 30000
+														 WHEN SportTypeID = 1 AND NoSelection = 2 AND o.Odds BETWEEN 10 AND 20 THEN 150000
+														 WHEN SportTypeID = -4 AND NoSelection = 2 AND o.Odds BETWEEN 10 AND 20 THEN 50000
+														 WHEN SportTypeID = 2 AND NoSelection = 2 AND o.Odds BETWEEN 10 AND 20 THEN 50000
+														 WHEN SportTypeID = -5 AND NoSelection = 2 AND o.Odds BETWEEN 10 AND 20 THEN 20000
+														 WHEN SportTypeID NOT IN (1, 2, -4, -5) AND NoSelection = 2 AND o.Odds BETWEEN 10 AND 20 THEN 50000
+														 END
 											   ELSE 30 --@IsTest = 1													
 												END
 )
