@@ -143,6 +143,7 @@ BEGIN
 			b.typenamee AS BetType,
 			CASE WHEN s.Bettype IN (1,2,3,5,7,8,12,15) AND s.Betteam IN ('a','h','1','2','x') THEN s.Betteam
 				 WHEN s.Bettype IN (20,21,609,610,611,612) AND s.Betteam IN ('a','h','o','u','e') AND @SportType = 2 THEN s.Betteam				
+				 WHEN s.Bettype = 38 THEN s.Betteam
 				 ELSE '-'
 			END BetTeam,
 			CASE WHEN s.Bettype IN (1, 7) AND s.Betteam = 'h' THEN m.HomeName
@@ -160,6 +161,7 @@ BEGIN
 				  WHEN s.Bettype = 610 AND s.Betteam = 'u' AND @SportType = 2 THEN 'Under'
 				  WHEN s.Bettype = 611 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Odd'
 				  WHEN s.Bettype = 611 AND s.Betteam = 'e' AND @SportType = 2 THEN 'Even'
+				  WHEN s.Bettype = 38 THEN t.SelectionName
 				  ELSE '-'
 			END AS BetChoice,
 			SUM(BetCount)			AS TotalTickets,
@@ -173,6 +175,7 @@ BEGIN
 			INNER JOIN #Match m ON s.MatchId = m.MatchID
 			INNER JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON s.Bettype = b.typeid
 			INNER JOIN #Leagues l ON s.leagueid = l.leagueid
+			LEFT JOIN bodb02.dbo.SMP_Selection t WITH(NOLOCK) ON s.betteam = t.SelectionType
 		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
 			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
 			AND (@Site = 2 OR s.IsDeposit = @Site) 		
@@ -186,6 +189,7 @@ BEGIN
 			b.typenamee,
 			CASE WHEN s.Bettype IN (1,2,3,5,7,8,12,15) AND s.Betteam IN ('a','h','1','2','x') THEN s.Betteam
 				 WHEN s.Bettype IN (20,21,609,610,611,612) AND s.Betteam IN ('a','h','o','u','e') AND @SportType = 2 THEN s.Betteam
+				 WHEN s.Bettype = 38 THEN s.Betteam
 				 ELSE '-'
 			END,
 			CASE WHEN s.Bettype IN (1, 7) AND s.Betteam = 'h' THEN m.HomeName
@@ -203,6 +207,7 @@ BEGIN
 				  WHEN s.Bettype = 610 AND s.Betteam = 'u' AND @SportType = 2 THEN 'Under'
 				  WHEN s.Bettype = 611 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Odd'
 				  WHEN s.Bettype = 611 AND s.Betteam = 'e' AND @SportType = 2 THEN 'Even'
+				  WHEN s.Bettype = 38 THEN t.SelectionName
 				  ELSE '-'
 			END
 		HAVING SUM(MainHouseWinloss) <= @HouseWL			
