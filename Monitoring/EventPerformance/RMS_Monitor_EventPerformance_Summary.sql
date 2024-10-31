@@ -29,6 +29,7 @@ AS
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20240802@Cherry: Change formula of stake (#202238)
+		- 20241031@Cherry: Add Single Match Parlay (#209293)
 	
 	Parameter's Explanation:
 		- @selection:
@@ -76,6 +77,9 @@ BEGIN
 	CREATE TABLE #bettype (bettype SMALLINT)
 	CREATE TABLE #Result(leagueID INT, HomeTotalStake MONEY, AwayTotalStake MONEY, HomeTotalTicket INT, AwayTotalTicket INT, OtherTotalStake MONEY, OtherTotalTicket INT)
 	CREATE TABLE #Details(teamID INT, matchID INT, bettype INT, odds SMALLMONEY, Stake MONEY, Ticket INT, betteam NVARCHAR(10))
+	
+	CREATE TABLE #tmpSMP (LeagueID INT, MatchID INT, Odds SMALLMONEY, Stake MONEY, Ticket INT)
+
 	-- selections
 	BEGIN
 		CREATE TABLE #tmpSelection (selection INT)
@@ -230,8 +234,7 @@ BEGIN
 		AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 		AND ISNULL(mc.level, 0) IN (SELECT level FROM #level)
 		AND ( rm.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
-		AND (rm.bettype <> 29
-			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
+		AND ((EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 				AND rm.bettype = 29 AND rm.betteam = N'1')
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 				AND rm.bettype = 29 AND rm.betteam <> N'1')
@@ -242,9 +245,41 @@ BEGIN
 			)		
 	END
 
+	IF EXISTS(SELECT 1 FROM #bettype WHERE bettype = 38)
+	BEGIN
+		INSERT INTO #tmpSMP (LeagueID, MatchID, Odds, Stake, Ticket)
+		SELECT  m.leagueID, 
+				m.matchID,
+				AVG(rm.odds),
+				SUM(rm.stake * rm.actualrate),
+				COUNT(1)
+		FROM	rmBettrans rm WITH(NOLOCK)
+			INNER JOIN #match m ON rm.matchid = m.matchID
+			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rm.custid = ci.custid
+			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rm.custid = mc.custid
+		WHERE	rm.winlostdate >= @yesterday 
+			AND rm.custID > 0 
+			AND statusID = 0 
+			AND rm.currency <> 20
+			AND rm.bettype = 38
+			AND rm.hdp2 IN (SELECT z.selection FROM #tmpSelection z)
+			AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
+			AND ISNULL(mc.level, 0) IN (SELECT level FROM #level)
+			AND (rm.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
+		GROUP BY m.leagueID, m.matchID
+	END
+
 	IF @isViewDetail = 0
 	BEGIN	 
 		INSERT INTO #Result (leagueID, HomeTotalStake, HomeTotalTicket, AwayTotalStake, AwayTotalTicket, OtherTotalStake, OtherTotalTicket)
+		SELECT LeagueID, 
+			SUM(HomeTotalStake), 
+			SUM(HomeTotalTicket), 
+			SUM(AwayTotalStake), 
+			SUM(AwayTotalTicket), 
+			SUM(OtherTotalStake), 
+			SUM(OtherTotalTicket)
+		FROM (
 		SELECT		m.leagueID, 
 					SUM (CASE WHEN sub.betteam IN ('h','o','y','1') AND z.bettype IS NOT NULL AND z.GroupID = 1 THEN main.stake/main.hdp2 ELSE 0 END)		HomeTotalStake,
 					SUM (CASE WHEN sub.betteam IN ('h','o','y','1') AND z.bettype IS NOT NULL AND z.GroupID = 1 THEN 1 ELSE 0 END)				HomeTotalTicket,
@@ -253,10 +288,22 @@ BEGIN
 					SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n','1','2')  OR z.bettype IS NULL OR z.GroupID <> 1 THEN main.stake/main.hdp2 ELSE 0 END) OtherTotalStake,
 					SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n','1','2')  OR z.bettype IS NULL OR z.GroupID <> 1  THEN 1 ELSE 0 END) OtherTotalTicket
 		FROM		#tmpMainTicket main 
-		INNER JOIN	#bettransm sub ON main.refno = sub.refno
-		INNER JOIN	#match m ON sub.matchID = m.matchID
-		LEFT JOIN   #bettype_selection z ON sub.bettype = z.bettype
+			INNER JOIN	#bettransm sub ON main.refno = sub.refno
+			INNER JOIN	#match m ON sub.matchID = m.matchID
+			LEFT JOIN   #bettype_selection z ON sub.bettype = z.bettype
 		GROUP BY	m.leagueID
+		UNION ALL 
+		SELECT LeagueID, 
+		0 HomeTotalStake, 
+		0 HomeTotalTicket, 
+		0 AwayTotalStake, 
+		0 AwayTotalTicket, 
+		SUM(Stake) OtherTotalStake, 
+		SUM(Ticket) OtherTotalTicket
+		FROM #tmpSMP
+		GROUP BY LeagueID
+		) t
+		GROUP BY LeagueID		
 
 		;WITH cte AS 
 		(
@@ -272,11 +319,31 @@ BEGIN
 	ELSE
 	BEGIN
 		INSERT INTO #Details(matchID, bettype, odds, Stake, Ticket, betteam)
-		SELECT 		sub.matchID, sub.bettype, AVG(sub.odds), SUM(main.stake/main.hdp2),  COUNT(1), 
-					sub.betteam
+		SELECT MatchID,
+			bettype,
+			Odds,
+			Stake,
+			Ticket,
+			betteam
+		FROM (
+		SELECT 	sub.matchID, 
+				sub.bettype, 
+				AVG(sub.odds) Odds, 
+				SUM(main.stake/main.hdp2) Stake,  
+				COUNT(1) Ticket, 
+				sub.betteam
 		FROM		#tmpMainTicket main 
 			INNER JOIN	#bettransm sub ON main.refno = sub.refno
 		GROUP BY	sub.matchID, sub.bettype, sub.betteam
+		UNION ALL
+		SELECT m.MatchID,
+			38 bettype,
+			m.Odds,
+			m.Stake,
+			m.Ticket,
+			'1' betteam
+		FROM #tmpSMP m
+		) t
 
 		;WITH cte_data AS 
 		(
@@ -293,12 +360,12 @@ BEGIN
 						SUM(CASE WHEN d.betteam IN ('e','a','u','n','2') AND z.GroupID = 1 THEN d.Stake ELSE 0 END) away_total_stake,
 						SUM(CASE WHEN d.betteam IN ('h','o','y','1')  AND z.GroupID = 1 THEN d.Ticket ELSE 0 END) home_total_ticket,
 						SUM(CASE WHEN d.betteam IN ('e','a','u','n','2') AND z.GroupID = 1 THEN d.Ticket ELSE 0 END) away_total_ticket,
-						SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n','1') OR z.GroupID <> 1  OR z.bettype IS NULL THEN d.Stake ELSE 0 END) other_stake,
-						SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n','2') OR z.GroupID <> 1 OR z.bettype IS NULL THEN d.Ticket ELSE 0 END) other_Ticket,
+						SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n','1') OR z.GroupID <> 1 OR z.bettype IS NULL OR d.bettype = 38 THEN d.Stake ELSE 0 END) other_stake,
+						SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n','2') OR z.GroupID <> 1 OR z.bettype IS NULL OR d.bettype = 38 THEN d.Ticket ELSE 0 END) other_Ticket,
 						CASE WHEN SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n','1','2') OR z.GroupID <> 1 OR z.bettype IS NULL THEN 1. ELSE 0 END) = 0 
-							 THEN 0 ELSE SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n','1','2') OR z.GroupID <> 1 OR z.bettype IS NULL THEN d.odds ELSE 0 END) / SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n','1','2') OR z.GroupID <> 1 OR z.bettype IS NULL THEN 1. ELSE 0 END) END other_avg_odds,
+							 THEN 0 ELSE SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n','1','2') OR z.GroupID <> 1 OR z.bettype IS NULL OR d.bettype = 38 THEN d.odds ELSE 0 END) / SUM(CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n','1','2') OR z.GroupID <> 1 OR z.bettype IS NULL OR d.bettype = 38 THEN 1. ELSE 0 END) END other_avg_odds,
 						SUM(d.Stake) AS total_stake,
-						CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n','1','2') OR z.bettype IS NULL OR z.GroupID <> 1 THEN 1 ELSE 0 END isOther
+						CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n','1','2') OR z.bettype IS NULL OR z.GroupID <> 1 OR d.bettype = 38 THEN 1 ELSE 0 END isOther
 			FROM		#Details d
 				INNER JOIN	#match m ON d.matchID = m.matchID
 				INNER JOIN bodb02.dbo.League l WITH(NOLOCK) ON m.leagueID = l.leagueid
@@ -309,6 +376,7 @@ BEGIN
 						m.homeID,
 						m.awayID,
 						CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n','1','2') OR z.bettype IS NULL OR z.GroupID <> 1 THEN 1 ELSE 0 END
+
 		), sort AS
 		(	
 			SELECT x.matchID, ROW_NUMBER() OVER(ORDER BY (x.stake) DESC)  AS rn
@@ -323,8 +391,12 @@ BEGIN
 		SELECT	d.leaguename,				
 				d.matchID,
 				h.teamname AS homeName, 
-				ISNULL(b.typenamee,'Others') market,
-				ISNULL(b.typeid,0) bettype,
+				CASE WHEN d.bettype = 38 THEN 'Single Match Parlay'
+					ELSE ISNULL(b.typenamee,'Others') 
+				END market,
+				CASE WHEN d.bettype = 38 THEN d.bettype
+					ELSE ISNULL(b.typeid,0) 
+				END bettype,
 				SUM(CASE WHEN d.isOther = 1 THEN d.other_avg_odds + d.home_avg_odds ELSE d.home_avg_odds END) AS HomeAvgOdds,
 				SUM(CASE WHEN d.isOther = 1 THEN d.other_stake + d.home_total_stake ELSE d.home_total_stake END) AS HomeTotalStake,
 				SUM(CASE WHEN d.isOther = 1 THEN d.other_ticket + home_total_ticket ELSE d.home_total_ticket END)  AS HomeTotalTicket,
@@ -340,7 +412,13 @@ BEGIN
 			LEFT JOIN #bettype_selection bs ON d.bettype = bs.bettype
 			LEFT JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON bs.bettype = b.typeid
 		WHERE (r.rn <= @limitRowCount OR @limitRowCount = 0)
-		GROUP BY d.leaguename, d.matchID, h.teamname, ISNULL(b.typenamee,'Others'), a.teamname, d.isOther, ISNULL(b.typeid,0)
+		GROUP BY d.leaguename, d.matchID, h.teamname, a.teamname, d.isOther, 
+			CASE WHEN d.bettype = 38 THEN 'Single Match Parlay'
+					ELSE ISNULL(b.typenamee,'Others') 
+				END,
+				CASE WHEN d.bettype = 38 THEN d.bettype
+					ELSE ISNULL(b.typeid,0) 
+				END
 		
 	END
 
@@ -354,5 +432,10 @@ BEGIN
 	DROP TABLE #Result
 	DROP TABLE #ParlayType
 	DROP TABLE #tmpBettrans
+	DROP TABLE #tmpSMP
+	DROP TABLE #bettype_list
+	DROP TABLE #tmpLeague
+	DROP TABLE #tmpSelection
+	DROP TABLE #userList
 END
 GO
