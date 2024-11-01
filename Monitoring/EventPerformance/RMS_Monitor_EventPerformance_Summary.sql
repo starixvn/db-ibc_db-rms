@@ -376,7 +376,7 @@ BEGIN
 						d.bettype,
 						m.homeID,
 						m.awayID,
-						CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n','1','2') OR z.bettype IS NULL OR z.GroupID <> 1 THEN 1 ELSE 0 END
+						CASE WHEN d.betteam NOT IN ('h','o','y','e','a','u','n','1','2') OR z.bettype IS NULL OR z.GroupID <> 1 OR d.bettype = 38 THEN 1 ELSE 0 END
 
 		), sort AS
 		(	

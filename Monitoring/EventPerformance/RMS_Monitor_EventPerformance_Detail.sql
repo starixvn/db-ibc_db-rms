@@ -257,7 +257,7 @@ BEGIN
 	BEGIN
 		INSERT INTO #Details(matchID, bettype, odds, Stake, Ticket, betteam, refno, transid)
 		SELECT  rm.matchid, rm.bettype, rm.odds, rm.stake * rm.actualrate, 
-				COUNT(1), rm.betteam, rm.refno, rm.transid
+				1 Ticket, rm.betteam, rm.refno, rm.transid
 		FROM	rmBettrans rm WITH(NOLOCK)
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rm.custid = ci.custid
 			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rm.custid = mc.custid
