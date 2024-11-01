@@ -321,9 +321,9 @@ BEGIN
 		INSERT INTO #Details(matchID, bettype, odds, Stake, Ticket, betteam)
 		SELECT MatchID,
 			bettype,
-			Odds,
-			Stake,
-			Ticket,
+			AVG(Odds),
+			SUM(Stake),
+			SUM(Ticket),
 			betteam
 		FROM (
 		SELECT 	sub.matchID, 
@@ -344,6 +344,7 @@ BEGIN
 			'1' betteam
 		FROM #tmpSMP m
 		) t
+		GROUP BY MatchID, bettype, betteam
 
 		;WITH cte_data AS 
 		(
