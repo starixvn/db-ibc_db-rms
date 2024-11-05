@@ -391,10 +391,8 @@ BEGIN
 		)
 		SELECT	d.leaguename,				
 				d.matchID,
-				h.teamname AS homeName, 
-				CASE WHEN d.bettype = 38 THEN 'Single Match Parlay'
-					ELSE ISNULL(b.typenamee,'Others') 
-				END market,
+				CASE WHEN d.bettype = 38 THEN 'Single Match Parlay' ELSE h.teamname END AS homeName, 
+				ISNULL(b.typenamee,'Others') market,
 				CASE WHEN d.bettype = 38 THEN d.bettype
 					ELSE ISNULL(b.typeid,0) 
 				END bettype,
@@ -413,10 +411,10 @@ BEGIN
 			LEFT JOIN #bettype_selection bs ON d.bettype = bs.bettype
 			LEFT JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON bs.bettype = b.typeid
 		WHERE (r.rn <= @limitRowCount OR @limitRowCount = 0)
-		GROUP BY d.leaguename, d.matchID, h.teamname, a.teamname, d.isOther, 
-			CASE WHEN d.bettype = 38 THEN 'Single Match Parlay'
-					ELSE ISNULL(b.typenamee,'Others') 
-				END,
+		GROUP BY d.leaguename, d.matchID, 
+				CASE WHEN d.bettype = 38 THEN 'Single Match Parlay' ELSE h.teamname END, 
+				a.teamname, d.isOther, 
+				ISNULL(b.typenamee,'Others'),
 				CASE WHEN d.bettype = 38 THEN d.bettype
 					ELSE ISNULL(b.typeid,0) 
 				END
