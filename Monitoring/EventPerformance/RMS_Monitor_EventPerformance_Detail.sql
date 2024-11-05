@@ -304,6 +304,7 @@ BEGIN
 			,rb.CurrencyName Currency
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND b.bac|16 = b.bac THEN 1 ELSE 0 END IsParlayGenerator
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
+			,CASE WHEN rb.bettype = 38 THEN 1 ELSE 0 END IsSMP
 		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN trans t ON rb.transid = t.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rb.custid = ci.custid
