@@ -26,6 +26,7 @@ AS
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20241106@Cherry: Add Single Match Parlay (#209293)
 		
 	Parameter's Explanation:
 		- @selection:
@@ -284,8 +285,8 @@ BEGIN
 
 		IF EXISTS (SELECT 1 FROM #bettrans WHERE bettype IN (38, 376))
 		BEGIN
-			INSERT INTO #Result(leagueid, transid, bettype, IsParlayGenerator)
-			SELECT m.leagueid, t.transid, t.bettype, t.IsParlayGenerator
+			INSERT INTO #Result(leagueid, custid, transid, bettype, IsParlayGenerator)
+			SELECT m.leagueid, t.custid, t.transid, t.bettype, t.IsParlayGenerator
 			FROM #bettrans t
 				INNER JOIN bodb02.dbo.match m WITH(NOLOCK) ON t.matchid = m.matchid
 			WHERE t.bettype IN (38, 376) AND m.leagueid IN (SELECT x.LeagueId FROM #tmpLeague x)
