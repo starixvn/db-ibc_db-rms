@@ -393,9 +393,7 @@ BEGIN
 				d.matchID,
 				h.teamname AS homeName, 
 				ISNULL(b.typenamee,'Others') market,
-				CASE WHEN d.bettype = 38 THEN d.bettype
-					ELSE ISNULL(b.typeid,0) 
-				END bettype,
+				ISNULL(b.typeid,0) bettype,
 				SUM(CASE WHEN d.isOther = 1 THEN d.other_avg_odds + d.home_avg_odds ELSE d.home_avg_odds END) AS HomeAvgOdds,
 				SUM(CASE WHEN d.isOther = 1 THEN d.other_stake + d.home_total_stake ELSE d.home_total_stake END) AS HomeTotalStake,
 				SUM(CASE WHEN d.isOther = 1 THEN d.other_ticket + home_total_ticket ELSE d.home_total_ticket END)  AS HomeTotalTicket,
@@ -415,9 +413,7 @@ BEGIN
 				h.teamname, 
 				a.teamname, d.isOther, 
 				ISNULL(b.typenamee,'Others'),
-				CASE WHEN d.bettype = 38 THEN d.bettype
-					ELSE ISNULL(b.typeid,0) 
-				END
+				ISNULL(b.typeid,0) 				
 		
 	END
 
