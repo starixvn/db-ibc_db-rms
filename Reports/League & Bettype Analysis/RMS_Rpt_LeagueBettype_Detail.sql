@@ -292,6 +292,7 @@ BEGIN
 		transdate,
 		transid,
 		username,
+		BetType,
 		odds,
 		StakeAfterPT,
 		WinningAmount,
@@ -307,6 +308,7 @@ BEGIN
 		b.transdate
 		,b.transid
 		,b.Username
+		,b.bettype
 		,(b.winlost - b.actual_stake) / b.stake AS odds
 		,b.stake * (1 - b.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0))) * b.actualrate AS StakeAfterPT
 		,(b.winlost - b.actual_stake) * b.actualrate AS WinningAmount
@@ -326,6 +328,7 @@ BEGIN
 		transdate,
 		transid,
 		username,
+		BetType,
 		odds,
 		StakeAfterPT,
 		WinningAmount,
@@ -341,6 +344,7 @@ BEGIN
 		b.transdate
 		,b.transid
 		,b.Username
+		,b.bettype
 		,(b.winlost - b.actual_stake) / b.stake AS odds
 		,b.stake * (1 - b.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0))) * b.actualrate AS StakeAfterPT
 		,(b.winlost - b.actual_stake) * b.actualrate AS WinningAmount
@@ -369,7 +373,8 @@ BEGIN
 		TotalBet,
 		TotalSelection,
 		SportType,
-		IP
+		IP,
+		CASE WHEN BetType = 38 THEN 1 ELSE 0 END IsSMP
 	FROM #tmpBettrans
 	END
 
