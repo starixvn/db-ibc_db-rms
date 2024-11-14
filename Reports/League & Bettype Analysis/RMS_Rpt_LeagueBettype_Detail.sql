@@ -292,6 +292,8 @@ BEGIN
 			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
 			AND (@Site = 2 OR s.IsDeposit = @Site) 
 			AND (@BetType = 0 OR s.Bettype = @BetType)
+			AND (s.bettype <> 38 OR
+				(s.bettype = 38 AND s.Betteam = 0))
 		GROUP BY
 			m.MatchID,
 			m.HomeName,
