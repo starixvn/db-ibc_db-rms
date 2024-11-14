@@ -341,7 +341,8 @@ BEGIN
 		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
 			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
 			AND (@Site = 2 OR s.IsDeposit = @Site) 
-			AND s.Bettype = @BetType
+			AND (s.ParlayType = 4
+				OR s.Bettype = @BetType)
 			AND s.matchid = @Match
 			AND (@BetTeam = ''
 				OR (@BetTeam = '-' AND s.Betteam NOT IN ('a','h','1','2','x','o','u','e'))
