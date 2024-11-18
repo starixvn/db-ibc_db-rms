@@ -17,6 +17,7 @@ AS
 		- 20210701@Danny: Track User Monitoring [RedmineID: #153875]
 		- 20211007@Danny: Track User Monitoring on ComboParlay_Betlist Report [RedmineID: #162872]
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20241120@Cherry: Add user tracking in Similar Bets (#212544)
 
 	Parameter's Explanation:
 */
