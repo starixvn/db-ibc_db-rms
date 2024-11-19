@@ -2,3 +2,6 @@
 
 ALTER TABLE bodb_rms.dbo.rmUserTrackingLog
 ADD LogType INT
+
+UPDATE bodb_rms.dbo.rmUserTrackingLog WITH(ROWLOCK, UPDLOCK)
+SET LogType = 0
