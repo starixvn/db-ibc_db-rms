@@ -3,6 +3,7 @@ CREATE PROCEDURE [dbo].[RMS_ComboParlay_PotentialWinning_UserTracking]
 	@userid			INT,
 	@username		NVARCHAR(50),
 	@transid		VARCHAR(MAX),
+	@LogType		INT = 0,
 	@statusID		SMALLINT OUTPUT,
 	@message		VARCHAR(4000) = '' OUTPUT
 
@@ -20,6 +21,8 @@ AS
 		- 20241120@Cherry: Add user tracking in Similar Bets (#212544)
 
 	Parameter's Explanation:
+		@LogType = 0: Potential Winning, Parlay Monitor
+				 = 1: Similar Bets
 */
 
 BEGIN
@@ -38,14 +41,16 @@ BEGIN
 			INSERT INTO #del_trans (transid)
 			SELECT  t.transid 
 			FROM dbo.rmUserTrackingLog t WITH(NOLOCK)
-			LEFT JOIN dbo.rmBettrans rm WITH(NOLOCK) ON t.transid = rm.transid
+				LEFT JOIN dbo.rmBettrans rm WITH(NOLOCK) ON t.transid = rm.transid
 			WHERE t.userid = @userid AND (rm.statusID <> 0 OR rm.transid IS NULL)
-
+				AND t.LogType = 0
 
 			DELETE t
 			FROM dbo.rmUserTrackingLog t WITH(ROWLOCK, UPDLOCK)
-			INNER JOIN #del_trans d ON t.transid = d.transid
+				INNER JOIN #del_trans d ON t.transid = d.transid
 			WHERE t.userid = @userid
+
+			DELETE #del_trans
 
 			DROP TABLE #del_trans
 		END
