@@ -2,7 +2,7 @@
 ALTER PROCEDURE [dbo].[RMS_Rpt_LeagueBettype_Detail]
 	@FromDate		DATE
 	,@ToDate		DATE
-	,@ParlayType	VARCHAR(100) = '1,2'
+	,@ParlayType	VARCHAR(100) = '1,2,3'
 	,@LeagueGroups	VARCHAR(MAX) = ''
 	,@Leagues		VARCHAR(MAX) = ''
 	,@Match			INT = 0
@@ -22,11 +22,13 @@ AS
 
 	Revisions:
 		- 20240315@Cherry: Initialize SP [RedmineID: #197684]
+		- 20241030@Cherry: Add Single Match Parlay (#209293)
 
 	Param's Explanation:
 		. @ParlayType: '1,2'
 					. 1 = Mix Parlay
 					. 2 = Combo Parlay
+					. 3 = Single Match Parlay
 		. @Site:
 					. 0 = Credit sites
 					. 1 = Deposit sites
@@ -41,7 +43,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	CREATE TABLE #Leagues (LeagueId INT, GroupName VARCHAR(30), LeagueName NVARCHAR(500))
+	CREATE TABLE #Leagues (LeagueId INT, GroupName VARCHAR(200), LeagueName NVARCHAR(500))
 	CREATE TABLE #Match (MatchID INT, HomeName NVARCHAR(100), AwayName NVARCHAR(100))
 	
 	-- League Group
@@ -132,6 +134,22 @@ BEGIN
 	
 	IF @ReportBy = 1 -- view by league detail
 	BEGIN		
+		SELECT GroupName,
+			LeagueName,
+			MatchId,
+			[Event],
+			BetTypeId,
+			BetType,
+			BetTeam,
+			BetChoice,
+			SUM(TotalTickets)		AS TotalTickets,
+			SUM(WonTickets)			AS WonTickets,
+			SUM(DrawTickets)		AS DrawTickets,
+			SUM(ParlayWonTickets)	AS ParlayWonTickets,
+			SUM(Stake)				AS Stake,
+			SUM(MemberWinloss)		AS MemberWinloss,
+			SUM(MainHouseWinloss)	AS MainHouseWinloss
+		FROM (
 		SELECT
 			l.GroupName,
 			l.LeagueName,
@@ -170,10 +188,11 @@ BEGIN
 		FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
 			INNER JOIN #Match m ON s.MatchId = m.MatchID
 			INNER JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON s.Bettype = b.typeid
-			INNER JOIN #Leagues l ON s.leagueid = l.leagueid
+			INNER JOIN #Leagues l ON s.leagueid = l.leagueid			
 		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
 			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
-			AND (@Site = 2 OR s.IsDeposit = @Site) 		
+			AND (@Site = 2 OR s.IsDeposit = @Site) 	
+			AND s.bettype <> 38
 		GROUP BY
 			l.GroupName,
 			l.LeagueName,
@@ -203,7 +222,53 @@ BEGIN
 				  WHEN s.Bettype = 611 AND s.Betteam = 'e' AND @SportType = 2 THEN 'Even'
 				  ELSE '-'
 			END
-		HAVING SUM(MainHouseWinloss) <= @HouseWL			
+		HAVING SUM(MainHouseWinloss) <= @HouseWL
+		UNION ALL
+		SELECT
+			l.GroupName,
+			l.LeagueName,
+			m.MatchID MatchId,
+			m.HomeName + ' -vs- ' + m.AwayName AS [Event],
+			b.typeid BetTypeId,
+			b.typenamee AS BetType,
+			s.Betteam Betteam,
+			t.SelectionName BetChoice,
+			SUM(BetCount)			AS TotalTickets,
+			SUM(WonCount)			AS WonTickets,
+			SUM(DrawCount)			AS DrawTickets,
+			SUM(MainWonCount)		AS ParlayWonTickets,
+			SUM(MainStake)			AS Stake,
+			SUM(MainMemberWinloss)	AS MemberWinloss,
+			SUM(MainHouseWinloss)	AS MainHouseWinloss
+		FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
+			INNER JOIN #Match m ON s.MatchId = m.MatchID
+			INNER JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON s.Bettype = b.typeid
+			INNER JOIN #Leagues l ON s.leagueid = l.leagueid
+			INNER JOIN bodb02.dbo.SMP_Selection t WITH(NOLOCK) ON CAST(s.betteam AS INT) = t.SelectionType 
+		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
+			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
+			AND (@Site = 2 OR s.IsDeposit = @Site) 
+			AND s.bettype = 38
+		GROUP BY
+			l.GroupName,
+			l.LeagueName,
+			m.MatchID,
+			m.HomeName,
+			m.AwayName,
+			b.typeid,
+			b.typenamee,
+			s.Betteam,
+			t.SelectionName
+		HAVING SUM(MainHouseWinloss) <= @HouseWL	
+		) t
+		GROUP BY GroupName,
+			LeagueName,
+			MatchId,
+			[Event],
+			BetTypeId,
+			BetType,
+			BetTeam,
+			BetChoice
 		ORDER BY MainHouseWinloss DESC
 	END
 	
@@ -227,6 +292,8 @@ BEGIN
 			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
 			AND (@Site = 2 OR s.IsDeposit = @Site) 
 			AND (@BetType = 0 OR s.Bettype = @BetType)
+			AND (s.bettype <> 38 OR
+				(s.bettype = 38 AND s.Betteam = '0'))
 		GROUP BY
 			m.MatchID,
 			m.HomeName,
@@ -274,7 +341,7 @@ BEGIN
 		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
 			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
 			AND (@Site = 2 OR s.IsDeposit = @Site) 
-			AND s.Bettype = @BetType
+			AND (@BetType = 0 OR s.Bettype = @BetType)
 			AND s.matchid = @Match
 			AND (@BetTeam = ''
 				OR (@BetTeam = '-' AND s.Betteam NOT IN ('a','h','1','2','x','o','u','e'))
@@ -285,6 +352,7 @@ BEGIN
 		transdate,
 		transid,
 		username,
+		BetType,
 		odds,
 		StakeAfterPT,
 		WinningAmount,
@@ -300,6 +368,7 @@ BEGIN
 		b.transdate
 		,b.transid
 		,b.Username
+		,b.bettype
 		,(b.winlost - b.actual_stake) / b.stake AS odds
 		,b.stake * (1 - b.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0))) * b.actualrate AS StakeAfterPT
 		,(b.winlost - b.actual_stake) * b.actualrate AS WinningAmount
@@ -319,6 +388,7 @@ BEGIN
 		transdate,
 		transid,
 		username,
+		BetType,
 		odds,
 		StakeAfterPT,
 		WinningAmount,
@@ -334,6 +404,7 @@ BEGIN
 		b.transdate
 		,b.transid
 		,b.Username
+		,b.bettype
 		,(b.winlost - b.actual_stake) / b.stake AS odds
 		,b.stake * (1 - b.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0))) * b.actualrate AS StakeAfterPT
 		,(b.winlost - b.actual_stake) * b.actualrate AS WinningAmount
@@ -362,7 +433,8 @@ BEGIN
 		TotalBet,
 		TotalSelection,
 		SportType,
-		IP
+		IP,
+		CASE WHEN BetType = 38 THEN 1 ELSE 0 END IsSMP
 	FROM #tmpBettrans
 	END
 
