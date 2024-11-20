@@ -27,6 +27,7 @@ AS
 		- 20240229@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20240802@Cherry: Change formula of stake (#202238)
+		- 20241031@Cherry: Add Single Match Parlay (#209293)
 
 	Parameter's Explanation:
 		- @selection:
@@ -252,6 +253,22 @@ BEGIN
 	INNER JOIN	#bettransm sub ON main.refno = sub.refno
 	GROUP BY	sub.matchID, sub.bettype, sub.betteam, main.refno,  main.transid
 
+	IF ',' + @ParlayType + ',' LIKE '%,3,%'
+	BEGIN
+		INSERT INTO #Details(matchID, bettype, odds, Stake, Ticket, betteam, refno, transid)
+		SELECT  rm.matchid, rm.bettype, rm.odds, rm.stake * rm.actualrate, 
+				1 Ticket, rm.betteam, rm.refno, rm.transid
+		FROM	rmBettrans rm WITH(NOLOCK)
+			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rm.custid = ci.custid
+			LEFT JOIN rmCustomer mc WITH (NOLOCK) ON rm.custid = mc.custid
+		WHERE	winlostdate >= @yesterday AND rm.custID > 0 AND statusID = 0 AND rm.currency <> 20
+			AND bettype = 38		
+			AND hdp2 IN (SELECT z.selection FROM #tmpSelection z)
+			AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
+			AND ISNULL(mc.level, 0) IN (SELECT level FROM #level)
+			AND (rm.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
+	END
+
 	IF @detailBettype <> 0
 	BEGIN
 		; WITH trans AS
@@ -287,6 +304,7 @@ BEGIN
 			,rb.CurrencyName Currency
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND b.bac|16 = b.bac THEN 1 ELSE 0 END IsParlayGenerator
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
+			,CASE WHEN rb.bettype = 38 THEN 1 ELSE 0 END IsSMP
 		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN trans t ON rb.transid = t.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rb.custid = ci.custid
@@ -298,7 +316,7 @@ BEGIN
 	BEGIN
 		SELECT	 d.bettype,  b.typenamee market,  SUM(d.odds) / SUM(Ticket)  AS AvgOdds  ,SUM(d.Stake) AS Stake, SUM(Ticket) Ticket
 		FROM	#Details d
-		INNER JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON d.bettype = b.typeid
+			INNER JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON d.bettype = b.typeid
 		WHERE	matchID = @matchid AND d.bettype NOT IN (SELECT x.bettype FROM #bettype_selection x)
 		GROUP BY b.typenamee, d.bettype
 	END

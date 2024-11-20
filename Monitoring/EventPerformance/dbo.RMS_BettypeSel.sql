@@ -14,6 +14,7 @@ Revisions:
 	- 20220301@Danny: Get data bettype by Sport [RedmineID: #169072]
 	- 20230130@Danny: Monitor detail Performance for Event/Bettype/BetChoice Soccer [RedmineID: #182724]
 	- 20240312@Cherry: Change SQL account in metadata (#202012)
+	- 20241106@Cherry: Exclude Single Match Parlay (#209293)
 
 Parameter's Explanation:
 	 EXEC dbo.RMS_BettypeSel 1
@@ -30,8 +31,9 @@ SET NOCOUNT ON;
 							 WHEN SportType = 1  THEN CASE WHEN bettype IN (1,2,3,7,8,12,5,15) THEN 1  ELSE 2 END
 							 ELSE 0 END AS GroupID  -- 1 Major, 2 Minor
 		FROM bodb02.dbo.SportBettypeMatrix m WITH(NOLOCK)
-		INNER JOIN bodb02.dbo.bettype bt WITH(NOLOCK) ON m.BetType = bt.typeid
+			INNER JOIN bodb02.dbo.bettype bt WITH(NOLOCK) ON m.BetType = bt.typeid
 		WHERE SportType = @SportType
+			AND bt.typeid <> 38
 	), result_ AS
 	(
 		SELECT	bettype, typenamee, GroupID, ROW_NUMBER() OVER(PARTITION BY GroupID ORDER BY typenamee ASC) AS rn
