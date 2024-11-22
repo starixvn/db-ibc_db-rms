@@ -1,0 +1,2 @@
+Monitoring\EventPerformance\RMS_Monitor_EventPerformance_Summary.sql
+Monitoring\EventPerformance\RMS_Monitor_EventPerformance_Detail.sql
