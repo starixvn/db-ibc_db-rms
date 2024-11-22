@@ -33,7 +33,7 @@ SET NOCOUNT ON;
 					WHEN SportType = 5 THEN CASE WHEN bettype IN (1,3,20,153,154,155,156) THEN 1 END
 					WHEN SportType = 9 THEN CASE WHEN bettype IN (20,701,704,705,706,707,708,709,710) THEN 1 
 												WHEN bettype IN (702,703,711,712,713,714) THEN 2 END
-					ELSE 0 END AS GroupID  -- 1 Major, 2 Minor
+					END AS GroupID  -- 1 Major, 2 Minor
 		FROM bodb02.dbo.SportBettypeMatrix m WITH(NOLOCK)
 			INNER JOIN bodb02.dbo.bettype bt WITH(NOLOCK) ON m.BetType = bt.typeid
 		WHERE SportType = @SportType
@@ -42,6 +42,7 @@ SET NOCOUNT ON;
 	(
 		SELECT	bettype, typenamee, GroupID, ROW_NUMBER() OVER(PARTITION BY GroupID ORDER BY typenamee ASC) AS rn
 		FROM	t
+		WHERE GroupID IN (1,2)
 	)
 	SELECT	bettype, typenamee, GroupID
 	FROM	result_
