@@ -21,7 +21,7 @@ BEGIN
 
 	DECLARE @yesterday DATE = DATEADD(DAY,-1, GETDATE())
 
-	CREATE TABLE #tmpBettrans(Refno BIGINT, Stake MONEY, Bettype INT, Betteam NVARCHAR(10))
+	CREATE TABLE #tmpBettrans(Refno BIGINT, Stake MONEY, Bettype INT, Betteam NVARCHAR(10), hdp2 SMALLMONEY)
 	CREATE CLUSTERED INDEX cix_#tmpBettrans ON #tmpBettrans(Refno)
 
 	CREATE TABLE #tmpMatch(MatchID INT, HomeID INT, AwayID INT, LeagueID INT, Sporttype INT, Maxbet FLOAT)
@@ -120,13 +120,15 @@ BEGIN
 		Refno,
 		Stake,
 		Bettype,
-		Betteam
+		Betteam,
+		hdp2
 	)
 	SELECT
 		CASE WHEN b.bettype = 29 THEN b.refno ELSE b.transid END,
 		b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END,
 		b.bettype,
-		b.betteam	
+		b.betteam,
+		b.hdp2
 	FROM bodb02.dbo.bettrans b WITH (NOLOCK)
 	WHERE b.winlostdate >= @yesterday
 		AND b.bettype IN (29,38)
@@ -151,9 +153,9 @@ BEGIN
 			m.homeID,
 			m.awayID,
 			m.maxbet,
-			SUM (CASE WHEN sub.betteam IN ('h','o','y','1') AND z.bettype IS NOT NULL AND z.IsMajor = 1 THEN main.stake ELSE 0 END)		HomeTotalStake,
-			SUM (CASE WHEN sub.betteam IN ('e','a','u','n','2') AND z.bettype IS NOT NULL AND z.IsMajor = 1  THEN main.stake ELSE 0 END) AwayTotalStake,
-			SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n','1','2')  OR z.bettype IS NULL OR z.IsMajor = 0 THEN main.stake ELSE 0 END) OtherTotalStake
+			SUM (CASE WHEN sub.betteam IN ('h','o','y','1') AND z.bettype IS NOT NULL AND z.IsMajor = 1 THEN main.stake/main.hdp2 ELSE 0 END)		HomeTotalStake,
+			SUM (CASE WHEN sub.betteam IN ('e','a','u','n','2') AND z.bettype IS NOT NULL AND z.IsMajor = 1  THEN main.stake/main.hdp2 ELSE 0 END) AwayTotalStake,
+			SUM (CASE WHEN sub.betteam NOT IN ('h','o','y','e','a','u','n','1','2')  OR z.bettype IS NULL OR z.IsMajor = 0 THEN main.stake/main.hdp2 ELSE 0 END) OtherTotalStake
 	FROM #tmpBettrans main 
 		INNER JOIN	#tmpBettransm sub ON main.refno = sub.refno
 		INNER JOIN	#tmpMatch m ON sub.matchID = m.matchID
