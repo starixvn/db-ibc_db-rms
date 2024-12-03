@@ -11,7 +11,8 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_TopWinners]
 	@currency		VARCHAR(MAX) = '',
 	@Site			TINYINT = 2,
 	@CustomerClass	SMALLINT = NULL,
-	@LiveStatus		TINYINT = 3
+	@LiveStatus		TINYINT = 3,
+	@Level			VARCHAR(100) = ''
 AS
 
 /*
@@ -36,6 +37,7 @@ AS
 		- 20231201@Cherry: Parlay Type for Parlay Boost (#197680)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20241204@Cherry: Add level (#212544)
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -54,12 +56,16 @@ AS
 					. '-3': Combined sports
 					. '-4': Saba soccer
 					. '-5': Saba basketball
-
+		
+		- @level:
+					. '0': none
+					. '1,2,3': level 1,2,3
 		
 		 - @Site:
 					. 0 = Credit sites
 					. 1 = Deposit sites
 					. 2 = All sites
+
 */
 
 BEGIN
@@ -108,6 +114,10 @@ BEGIN
 			SELECT value FROM STRING_SPLIT(@selection, ',')
 		END
 	END
+
+	CREATE TABLE #tmpLevel (level INT)
+	INSERT INTO #tmpLevel (level)
+	SELECT DISTINCT val FROM dbo.f_RMS_strSplit(@Level, ',')
 
 	-- sports
 	BEGIN
@@ -186,7 +196,7 @@ BEGIN
 			INSERT INTO #tmpBettrans (transid, bac)
 			SELECT transid,
 				ISNULL(TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bac)[1]', 'VARCHAR(50)') AS INT),0)
-			FROM dbo.rmBettrans WITH (NOLOCK)
+			FROM dbo.rmBettrans WITH (NOLOCK)				
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (112, 113)
 				AND bettype = 29
@@ -196,7 +206,7 @@ BEGIN
 			(
 				custid, username, currency, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, betcount
 			)
-			SELECT custid, username, b.currency
+			SELECT b.custid, b.username, b.currency
 				 ,SUM(stake)
 				 ,SUM(winlost - actual_stake)
 				 ,SUM(CASE WHEN 1 - tpositiontaking = 0 THEN 0  ELSE -(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking) END)
@@ -204,12 +214,13 @@ BEGIN
 				 ,SUM((winlost - actual_stake) * actualrate)
 				 ,SUM(CASE WHEN 1 - tpositiontaking = 0  THEN 0 ELSE (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate END)
 				 ,COUNT(1)
-			FROM dbo.rmBettrans b WITH (NOLOCK)
+			FROM dbo.rmBettrans b WITH (NOLOCK)				
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 				INNER JOIN #tmpCurrency tc ON tc.currency = b.currency
 				LEFT JOIN #tmpBettrans t ON b.transid = t.transid
+				LEFT JOIN dbo.rmCustomer c WITH (NOLOCK) ON b.custid = c.custid			 
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (112, 113)
 				AND (b.bettype <> 29
@@ -225,7 +236,8 @@ BEGIN
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 					)		
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY custid, username, b.currency
+				AND ISNULL(c.level, 0) IN (SELECT level FROM #tmpLevel)
+			GROUP BY b.custid, b.username, b.currency
 		END
 
 		-- rmSumWinloss
@@ -238,7 +250,7 @@ BEGIN
 			(
 				custid, username, currency, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, betcount
 			)
-			SELECT custid, username, a.currency
+			SELECT a.custid, a.username, a.currency
 				,SUM(stake)
 				,SUM(winlost - stake)
 				,SUM(company_winlost - ISNULL(a.extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.extra_comm, 0))
@@ -250,11 +262,13 @@ BEGIN
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
 				INNER JOIN #tmpCurrency tc ON tc.currency = a.currency
+				LEFT JOIN dbo.rmCustomer c WITH (NOLOCK) ON a.custid = c.custid
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY custid, username, a.currency
+				AND ISNULL(c.level, 0) IN (SELECT level FROM #tmpLevel)
+			GROUP BY a.custid, a.username, a.currency
 		END
 
 		-- rmSumWinloss_Old
@@ -267,7 +281,7 @@ BEGIN
 			(
 				custid, username, currency, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, betcount
 			)
-			SELECT custid, username, a.currency
+			SELECT a.custid, a.username, a.currency
 				,SUM(stake)
 				,SUM(winlost - stake)
 				,SUM(company_winlost - ISNULL(a.extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.extra_comm, 0))
@@ -279,11 +293,13 @@ BEGIN
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
 				INNER JOIN #tmpCurrency tc ON tc.currency = a.currency
+				LEFT JOIN dbo.rmCustomer c WITH (NOLOCK) ON a.custid = c.custid
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY custid, username, a.currency
+				AND ISNULL(c.level, 0) IN (SELECT level FROM #tmpLevel)
+			GROUP BY a.custid, a.username, a.currency
 		END
 	END
 
@@ -338,5 +354,6 @@ BEGIN
 	DROP TABLE #tmpCurrency
 	DROP TABLE #ParlayType
 	DROP TABLE #tmpBettrans
+	DROP TABLE #tmpLevel
 END
 GO
