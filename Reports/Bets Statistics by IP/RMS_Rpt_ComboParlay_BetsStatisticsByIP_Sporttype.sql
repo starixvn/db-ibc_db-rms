@@ -22,6 +22,7 @@ AS
 		- 20231115@Cherry: Add param TicketStatus (#196550)
 		- 20240109@Cherry: Change Original Odds from ExtraInfo
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20241206@Cherry: Sporttype of Betbuilder (#213805)
 
 	Parameter's Explanation:
 		@sporttype = '1': soccer only
@@ -86,8 +87,9 @@ BEGIN
 		AND a.custid = @custid
 		AND a.transdate >= @fromdate AND a.transdate < DATEADD(DAY, 1, @fromdate)
         AND (
-			(@sporttype = 1 AND a.liveawayscore = 1)
-            OR (@sporttype = 2 AND a.liveawayscore IN (2,3))
+			(@sporttype = 1 AND a.bettype = 29 AND a.liveawayscore = 1)
+            OR (@sporttype = 2 AND a.bettype = 29 AND a.liveawayscore IN (2,3))
+			OR (a.bettype <> 29 AND m.sporttype = @sporttype)
 			)
 		AND (@TicketStatus = '-1' OR
 			EXISTS (SELECT TOP 1 1 FROM #tmpStatus t WHERE a.statusID = t.statusid)
