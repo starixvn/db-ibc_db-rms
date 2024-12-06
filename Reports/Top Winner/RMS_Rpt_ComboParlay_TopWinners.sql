@@ -220,7 +220,7 @@ BEGIN
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 				INNER JOIN #tmpCurrency tc ON tc.currency = b.currency
 				LEFT JOIN #tmpBettrans t ON b.transid = t.transid
-				INNER JOIN dbo.rmCustomer c WITH (NOLOCK) ON b.custid = c.custid			 
+				LEFT JOIN dbo.rmCustomer c WITH (NOLOCK) ON b.custid = c.custid			 
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (112, 113)
 				AND (b.bettype <> 29
@@ -262,7 +262,7 @@ BEGIN
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
 				INNER JOIN #tmpCurrency tc ON tc.currency = a.currency
-				INNER JOIN dbo.rmCustomer c WITH (NOLOCK) ON a.custid = c.custid
+				LEFT JOIN dbo.rmCustomer c WITH (NOLOCK) ON a.custid = c.custid
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
@@ -293,7 +293,7 @@ BEGIN
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
 				INNER JOIN #tmpCurrency tc ON tc.currency = a.currency
-				INNER JOIN dbo.rmCustomer c WITH (NOLOCK) ON a.custid = c.custid
+				LEFT JOIN dbo.rmCustomer c WITH (NOLOCK) ON a.custid = c.custid
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
