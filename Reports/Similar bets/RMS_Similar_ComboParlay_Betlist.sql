@@ -30,6 +30,7 @@ AS
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20241204@Cherry: Show tracking user (#212544)
 */
 
 BEGIN
@@ -322,12 +323,14 @@ BEGIN
 			,p.statusID as statusID
 			,(p.odds2 - 1) * p.stake * p.actualrate AS potentialWinningAmt
 			,ci.CustomerClass
+			,l.username AS TrackingUser
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer r WITH (NOLOCK) ON p.custid = r.custid
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
-		WHERE transid = @transid
+			LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON p.transid = l.transid
+		WHERE p.transid = @transid
 
 		SELECT
 			p.transid
@@ -342,12 +345,14 @@ BEGIN
 			,ci.CustomerClass
 			,(p.odds2 - 1) * p.stake * p.actualrate AS potentialWinningAmt
 			, p.ip IP
+			,l.username AS TrackingUser
 		FROM @result r
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+			LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON p.transid = l.transid
 		ORDER BY cnt DESC
 	END
 
@@ -378,12 +383,14 @@ BEGIN
 			,p.statusID as statusID
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate  AS houseLoseAmt
 			,ci.CustomerClass
+			,l.username AS TrackingUser
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
-		WHERE transid = @transid
+			LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON p.transid = l.transid
+		WHERE p.transid = @transid
 
 		UNION 
 
@@ -412,12 +419,14 @@ BEGIN
 			,p.statusID as statusID
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate  AS houseLoseAmt
 			,ci.CustomerClass
+			,l.username AS TrackingUser
 		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
-		WHERE transid = @transid
+			LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON p.transid = l.transid
+		WHERE p.transid = @transid
 
 
 		SELECT
@@ -433,12 +442,14 @@ BEGIN
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate AS houseLoseAmt
 			,ci.CustomerClass
 			,p.ip IP
+			,l.username AS TrackingUser
 		FROM @result r
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+			LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON p.transid = l.transid
 		WHERE p.winlostdate > @MoveBetsDay
 		UNION 
 		SELECT
@@ -454,12 +465,14 @@ BEGIN
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate AS houseLoseAmt
 			,ci.CustomerClass
 			,p.ip IP
+			,l.username AS TrackingUser
 		FROM @result r
 			INNER JOIN dbo.rmBettrans_Old p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+			LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON p.transid = l.transid
 		WHERE p.winlostdate BETWEEN @BalanceUpDay AND  @MoveBetsDay
 		ORDER BY cnt DESC
 	END
