@@ -31,6 +31,7 @@ AS
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241204@Cherry: Show tracking user (#212544)
+		- 20241212@Cherry: Separate Cricket (#214664)
 */
 
 BEGIN
@@ -307,7 +308,7 @@ BEGIN
 			,p.custid
 			,p.bettype
 			,ISNULL(r.level, 0) AS level
-			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE p.transid2 END AS Sporttype
+			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5,50) THEN -2 ELSE p.transid2 END AS Sporttype
 			,p.odds2 * p.TotalBet AS odds
 			,(p.stake * p.actualrate) AS stake
 			,(p.stake * (p.odds2 - 1) * p.actualrate * (1 - p.tpositiontaking)) AS net_win
@@ -367,7 +368,7 @@ BEGIN
 			,p.custid
 			,p.bettype
 			,ISNULL(rc.level, 0) AS level
-			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE p.transid2 END AS Sporttype
+			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5,50) THEN -2 ELSE p.transid2 END AS Sporttype
 			,(p.winlost - p.actual_stake) / p.stake AS odds
 			,(p.stake * p.actualrate) AS stake
 			,((p.winlost - p.actual_stake) * p.actualrate) net_win
@@ -403,7 +404,7 @@ BEGIN
 			,p.custid
 			,p.bettype
 			,ISNULL(rc.level, 0) AS level
-			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE p.transid2 END AS Sporttype
+			,CASE WHEN p.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5,50) THEN -2 ELSE p.transid2 END AS Sporttype
 			,(p.winlost - p.actual_stake) / p.stake AS odds
 			,(p.stake * p.actualrate) AS stake
 			,((p.winlost - p.actual_stake) * p.actualrate) net_win
@@ -427,7 +428,6 @@ BEGIN
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 			LEFT JOIN dbo.rmUserTrackingLog l WITH(NOLOCK) ON p.transid = l.transid
 		WHERE p.transid = @transid
-
 
 		SELECT
 			p.transid
@@ -476,7 +476,6 @@ BEGIN
 		WHERE p.winlostdate BETWEEN @BalanceUpDay AND  @MoveBetsDay
 		ORDER BY cnt DESC
 	END
-
 
 END
 GO

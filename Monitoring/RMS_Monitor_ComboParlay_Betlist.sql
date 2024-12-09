@@ -466,7 +466,7 @@ BEGIN
 			,rb.refno
 			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
 			,rb.username
-			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype
+			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5,50) THEN -2 ELSE transid2 END AS Sporttype
 			,rb.odds2 * rb.TotalBet AS odds
 			,rb.statusID
 			,rb.stake * rb.actualrate AS stake

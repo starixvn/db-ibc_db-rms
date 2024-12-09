@@ -36,6 +36,7 @@ AS
 		- 20240115@Cherry: Report by Date (#199665)
 		- 20240229@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20241212@Cherry: Separate Cricket (#214664)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -99,7 +100,7 @@ BEGIN
 		IF ',' + @sporttype + ',' LIKE '%,-2,%'
 			INSERT INTO #tmpSport (sporttype)
 			SELECT SportType FROM bodb02.dbo.Sports WITH (NOLOCK)
-			WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
+			WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44,50)
 				AND SportType <= 99
 	END
 
