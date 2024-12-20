@@ -16,6 +16,7 @@ AS
 		- 20230420@Cherry: Add Site column (#186735)
 		- 20231115@Cherry: Add param TicketStatus, output column (#196550)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20241206@Cherry: Sporttype of Betbuilder (#213805)
 	
 	Parameter's Explanation:
 		@TicketStatus: 
@@ -39,8 +40,12 @@ BEGIN
 		b.custid
 		,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
 		,b.username
-		,SUM(CASE WHEN b.liveawayscore = 1 THEN 1 ELSE 0 END) as cnt_soccer
-		,SUM(CASE WHEN b.liveawayscore IN (2,3) THEN 1 ELSE 0 END) as cnt_others
+		,SUM(CASE WHEN b.liveawayscore = 1 AND b.bettype = 29 THEN 1 
+				WHEN b.bettype <> 29 AND m.sporttype = 1 THEN 1
+				ELSE 0 END) as cnt_soccer
+		,SUM(CASE WHEN b.liveawayscore IN (2,3) AND b.bettype = 29 THEN 1 
+				WHEN b.bettype <> 29 AND m.sporttype <> 1 THEN 1
+				ELSE 0 END) as cnt_others
 		,SUM(stake * actualrate) Stake
 		,SUM(CASE WHEN statusid = 0 THEN (odds2 - 1) * stake * actualrate
 				ELSE (winlost - actual_stake) * actualrate
@@ -51,6 +56,7 @@ BEGIN
 	FROM dbo.rmBettrans b WITH (NOLOCK)	
 		LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
 		LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+		LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON m.matchid = b.matchid AND b.bettype IN (38, 376)
 	WHERE b.ip = @IP
 		AND transdate >= @fromdate AND transdate < DATEADD(DAY, 1, @fromdate)
 		AND (@TicketStatus = '-1' OR
