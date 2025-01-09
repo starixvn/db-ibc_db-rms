@@ -27,6 +27,7 @@ AS
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20241212@Cherry: Separate Cricket (#214664)
 		
 	Parameter's Explanation:
 		- @selection:
@@ -90,7 +91,7 @@ BEGIN
 		IF ',' + @sporttype + ',' LIKE '%,-2,%'
 			INSERT INTO #tmpSport (sporttype)
 			SELECT SportType FROM bodb02.dbo.Sports WITH (NOLOCK)
-			WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
+			WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44,50)
 				AND SportType <= 99
 	END
 
@@ -233,7 +234,7 @@ BEGIN
 			,rb.hdp2 AS TotalSelection
 			,ISNULL(b.NumberWon, 0) AS NumberWon
 			,rb.TotalBet AS TotalBet
-			,CASE WHEN rb.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE rb.transid2 END AS Sporttype
+			,CASE WHEN rb.transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5,50) THEN -2 ELSE rb.transid2 END AS Sporttype
 			,CAST(CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 1 THEN 1 ELSE 0 END AS BIT) AS IsGOF
 			,CASE WHEN b.bac|16 = b.bac THEN 1 ELSE 0 END AS IsParlayGenerator
 			,CAST(CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus

@@ -26,6 +26,7 @@ AS
 		20230830@Cherry: Enhance (#192682)
 		20240312@Cherry: Change SQL account in metadata (#202012)
 		20240625@Cherry: Enhancement (#207024)
+		20241212@Cherry: Separate Cricket (#214664)
 
 	Param:
 		@AlertType = 1: Similar Bet
@@ -70,7 +71,7 @@ BEGIN
 	IF ',' + @SportType + ',' LIKE '%,-2,%'
 		INSERT INTO #tmpSport (SportType)
 		SELECT SportType FROM bodb02.dbo.Sports WITH (NOLOCK)
-		WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
+		WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44,50)
 			AND SportType <= 99
 
 	CREATE TABLE #tmpSelection (Selection INT)

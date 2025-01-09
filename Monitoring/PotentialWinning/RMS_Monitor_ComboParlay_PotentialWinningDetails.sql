@@ -27,6 +27,7 @@ AS
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20241212@Cherry: Separate Cricket (#214664)
 
 	Parameter's Explanation:
 		- @selection:
@@ -96,7 +97,7 @@ BEGIN
 		IF ',' + @sporttype + ',' LIKE '%,-2,%'
 			INSERT INTO #tmpSport (sporttype)
 			SELECT SportType FROM bodb02.dbo.Sports WITH (NOLOCK)
-			WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44)
+			WHERE SportType NOT IN (1,2,3,4,5,6,7,8,9,11,43,44,50)
 				AND SportType <= 99
 	END
 
@@ -224,7 +225,7 @@ BEGIN
 		,b.transid
 		,b.refno
 		,b.bettype
-		,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5) THEN -2 ELSE transid2 END AS Sporttype
+		,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5,50) THEN -2 ELSE transid2 END AS Sporttype
 		,ISNULL(n.NumberWon, 0) AS NumberWon
 		,b.odds2 * b.TotalBet AS odds
 		,b.stake * b.actualrate AS Stake
