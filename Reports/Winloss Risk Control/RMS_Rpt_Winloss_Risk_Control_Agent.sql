@@ -31,6 +31,7 @@ AS
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241212@Cherry: Separate Cricket (#214664)
+		- 20250115@Cherry: Support direct member (#215427)
 		
 	Parameter's Explanation:th
 		- @sporttype:
@@ -385,7 +386,7 @@ BEGIN
 		INSERT INTO #rptRiskWLControl_Summary(
 					CustID,
 					UserName, 
-					RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover)
+					RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover, CustomerClass)
 		SELECT		
 					b.mrecommend,
 					c.UserName,
@@ -397,10 +398,35 @@ BEGIN
 					SUM(ExtraPT)  ExtraPT,
 					SUM(Commission)  Commission,
 					SUM(RealIncome) RealIncome ,
-					SUM(RealTurnover) RealTurnover 
+					SUM(RealTurnover) RealTurnover,
+					c.CustomerClass
 		FROM		#rptRiskWLControl b
-		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.mrecommend
-		GROUP BY	b.mrecommend,c.UserName,c.RoleID
+			INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.mrecommend
+		WHERE b.mrecommend > 0
+		GROUP BY	b.mrecommend,c.UserName,c.RoleID, c.CustomerClass
+
+		-- Direct member
+		INSERT INTO #rptRiskWLControl_Summary(
+					CustID,
+					UserName, 
+					RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover, CustomerClass)
+		SELECT		
+					c.custid,
+					c.UserName,
+					c.RoleID,
+					COUNT(distinct b.custid) noMember,
+					SUM(betCount)  betCount,
+					SUM(member_Winloss) member_Winloss,
+					SUM(SMA_winloss) SMA_winloss ,
+					SUM(ExtraPT)  ExtraPT,
+					SUM(Commission)  Commission,
+					SUM(RealIncome) RealIncome ,
+					SUM(RealTurnover) RealTurnover,
+					c.CustomerClass
+		FROM		#rptRiskWLControl b
+			INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.custid
+		WHERE b.mrecommend < 0
+		GROUP BY	c.custid,c.UserName,c.RoleID, c.CustomerClass
 
 	END
 
@@ -410,7 +436,7 @@ BEGIN
 		INSERT INTO #rptRiskWLControl_Summary(
 					CustID,
 					UserName, 
-					RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover)
+					RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover, CustomerClass)
 		SELECT		
 					b.recommend,
 					c.UserName,
@@ -422,10 +448,35 @@ BEGIN
 					SUM(ExtraPT)  ExtraPT,
 					SUM(Commission)  Commission,
 					SUM(RealIncome) RealIncome ,
-					SUM(RealTurnover) RealTurnover 
+					SUM(RealTurnover) RealTurnover,
+					c.CustomerClass
 		FROM		#rptRiskWLControl b
-		INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.recommend
-		GROUP BY	b.recommend,c.UserName,c.RoleID
+			INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.recommend
+		WHERE		b.recommend > 0
+		GROUP BY	b.recommend,c.UserName,c.RoleID, c.CustomerClass
+
+		-- Direct member
+		INSERT INTO #rptRiskWLControl_Summary(
+					CustID,
+					UserName, 
+					RoleID, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover, CustomerClass)
+		SELECT		
+					c.custid,
+					c.UserName,
+					c.RoleID,
+					COUNT(distinct b.custid) noMember,
+					SUM(betCount)  betCount,
+					SUM(member_Winloss) member_Winloss,
+					SUM(SMA_winloss) SMA_winloss ,
+					SUM(ExtraPT)  ExtraPT,
+					SUM(Commission)  Commission,
+					SUM(RealIncome) RealIncome ,
+					SUM(RealTurnover) RealTurnover,
+					c.CustomerClass
+		FROM		#rptRiskWLControl b
+			INNER JOIN	bodb02.dbo.custInfo c ON c.custid = b.custid
+		WHERE		b.recommend < 0
+		GROUP BY	c.custid,c.UserName,c.RoleID, c.CustomerClass
 
 	END
 

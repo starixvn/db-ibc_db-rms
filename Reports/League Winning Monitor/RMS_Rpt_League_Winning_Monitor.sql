@@ -27,6 +27,7 @@ AS
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241106@Cherry: Add Single Match Parlay (#209293)
+		- 20250115@Cherry: Support direct member (#215427)
 		
 	Parameter's Explanation:
 		- @selection:
@@ -195,10 +196,7 @@ BEGIN
 
 		
 		IF @CustID <>0 
-		BEGIN
-
-			DECLARE @recommend INT 
-			SELECT @recommend = recommend FROM bodb02.dbo.Customer WITH(NOLOCK) WHERE custid = @CustID
+		BEGIN			
 
 			INSERT INTO #tmpBettrans(transid, bac)
 			SELECT transid,
@@ -208,7 +206,6 @@ BEGIN
 			WHERE custid = @CustID
 				AND statusID = 0
 				AND currency <> 20
-				AND recommend = @recommend
 				AND bettype = 29 
 				AND betteam = N'1'
 
@@ -224,7 +221,6 @@ BEGIN
 			WHERE 	  b.custid = @CustID
 					AND b.statusID = 0
 					AND b.currency <> 20
-					AND b.recommend = @recommend
 					AND ISNULL(mc.level, 0) IN (SELECT level FROM @levelTab)
 					AND (b.bettype <> 29
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)

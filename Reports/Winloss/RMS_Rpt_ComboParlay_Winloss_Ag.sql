@@ -1,6 +1,6 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss_Ag]
-	@Recommends		VARCHAR(MAX),
+	@UserName		NVARCHAR(50) = '',
 	@fromdate		DATETIME,
 	@todate			DATETIME,
 	@movebetsday	DATETIME,
@@ -37,6 +37,7 @@ AS
 		- 20240229@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241212@Cherry: Separate Cricket (#214664)
+		- 20250115@Cherry: Support direct member (#215427)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -104,11 +105,28 @@ BEGIN
 				AND SportType <= 99
 	END
 
-	-- agent
-	BEGIN
-		CREATE TABLE #recommend (recommend INT)
-		INSERT INTO #recommend (recommend)
-		SELECT value FROM STRING_SPLIT(@recommends, ',')
+	-- Userlist
+	DECLARE @custID INT, @RoleID TINYINT
+	SELECT @custID = custid, @RoleID = roleid
+	FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+	WHERE  username = @UserName
+
+	CREATE TABLE #userList(custID INT) -- member
+
+	IF @RoleID = 3 
+		BEGIN
+		INSERT INTO #userList (custID)
+		SELECT	custid
+		FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+		WHERE  mrecommend = @custID AND roleid = 1
+	END
+
+	IF @RoleID = 2 
+		BEGIN
+		INSERT INTO #userList (custID)
+		SELECT	custid
+		FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+		WHERE  recommend = @custID AND roleid = 1
 	END
 
 	-- get data
@@ -219,12 +237,12 @@ BEGIN
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
-				INNER JOIN #recommend r ON r.recommend = b.recommend
 				INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
 				LEFT JOIN #tmpGenerator t ON b.transid = t.transid
 			WHERE winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (112, 113)
 				AND b.currency <> 20
+				AND EXISTS(SELECT TOP 1 1 FROM #userList ul WHERE ul.custID = b.custid)
 				AND (b.bettype <> 29 
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
 						AND b.bettype = 29 AND b.betteam = N'1')
@@ -280,12 +298,12 @@ BEGIN
 			FROM dbo.rmSumWinloss a WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
-				INNER JOIN #recommend r ON a.recommend = r.recommend
 				INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON a.custid = ci.custid
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
 				AND a.currency <> 20
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
+				AND EXISTS(SELECT TOP 1 1 FROM #userList ul WHERE ul.custID = b.custid)					
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY winlostdate, a.custid ,a.username, ci.CustomerClass
 		END
@@ -328,12 +346,12 @@ BEGIN
 				,SUM(betcount)
 			FROM dbo.rmSumWinloss_Old a WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
-				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
-				INNER JOIN #recommend r ON a.recommend = r.recommend
+				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype				
 				INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON a.custid = ci.custid	
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
 				AND a.currency <> 20
+				AND EXISTS(SELECT TOP 1 1 FROM #userList ul WHERE ul.custID = b.custid)					
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY winlostdate, a.custid, a.username, ci.CustomerClass
@@ -388,7 +406,7 @@ BEGIN
 	END
 
 	DROP TABLE #bettype
-	DROP TABLE #recommend
+	DROP TABLE #userList
 	DROP TABLE #tmpSelection
 	DROP TABLE #tmpSport
 	DROP TABLE #tmpSum
