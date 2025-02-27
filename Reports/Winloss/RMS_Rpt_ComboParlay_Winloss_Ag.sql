@@ -38,6 +38,7 @@ AS
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241212@Cherry: Separate Cricket (#214664)
 		- 20250115@Cherry: Support direct member (#215427)
+		- 20250227@Cherry: Hot fix (#218639)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -303,7 +304,7 @@ BEGIN
 				AND a.statusID IN (112, 113)
 				AND a.currency <> 20
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
-				AND EXISTS(SELECT TOP 1 1 FROM #userList ul WHERE ul.custID = b.custid)					
+				AND EXISTS(SELECT TOP 1 1 FROM #userList ul WHERE ul.custID = a.custid)					
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY winlostdate, a.custid ,a.username, ci.CustomerClass
 		END
@@ -351,7 +352,7 @@ BEGIN
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date
 				AND a.statusID IN (112, 113)
 				AND a.currency <> 20
-				AND EXISTS(SELECT TOP 1 1 FROM #userList ul WHERE ul.custID = b.custid)					
+				AND EXISTS(SELECT TOP 1 1 FROM #userList ul WHERE ul.custID = a.custid)					
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY winlostdate, a.custid, a.username, ci.CustomerClass
