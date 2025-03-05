@@ -9,6 +9,7 @@
 	@selection		VARCHAR(MAX) = '',
 	@ParlayType		VARCHAR(100)='',
 	@LiveStatus		TINYINT = 3,
+	@HouseWL		MONEY = NULL,
 	@ReportBy		TINYINT = 1
 AS
 
@@ -35,6 +36,7 @@ AS
 			- 20240229@Cherry: Change attribute for Parlay Generator (#199766)
 			- 20240312@Cherry: Change SQL account in metadata (#202012)
 			- 20241212@Cherry: Separate Cricket (#214664)
+			- 20250306@Cherry: Add @HouseWL (#218958)
 
 	Parameter's Explanation:
 		- @sporttype:
@@ -317,6 +319,7 @@ BEGIN
 	END
 	
 	IF @ReportBy = 1
+	IF @HouseWL IS NULL
 	BEGIN
 		SELECT
 			CONVERT(VARCHAR(7), winlostdate, 120) [Month]
@@ -335,8 +338,29 @@ BEGIN
 		GROUP BY CONVERT(VARCHAR(7), winlostdate, 120)		
 		ORDER BY CONVERT(VARCHAR(7), winlostdate, 120)
 	END
+	ELSE
+	BEGIN
+		SELECT
+			CONVERT(VARCHAR(7), winlostdate, 120) [Month]
+			,sum(tickets_won) as tickets_won
+			,sum(tickets_lose) as tickets_lose 
+			,sum(stake_won) as stake_won  
+			,sum(stake_lose) as stake_lose
+			,sum(member_won) as member_won  
+			,sum(member_lose) as member_lose
+			,sum(ourPT_won) as ourPT_won  
+			,sum(ourPT_lose) as ourPT_lose
+			,@CustomerClass as CustomerClass
+			,@SiteGroup as SiteGroup
+			,sum(betcount) as TotalBets
+		FROM #tmpSum
+		GROUP BY CONVERT(VARCHAR(7), winlostdate, 120)	
+		HAVING sum(ourPT_won) + sum(ourPT_lose) <= @HouseWL
+		ORDER BY CONVERT(VARCHAR(7), winlostdate, 120)
+	END
 
 	IF @ReportBy = 2 
+	IF @HouseWL IS NULL
 	BEGIN
 		SELECT
 			winlostdate [Date]
@@ -353,6 +377,26 @@ BEGIN
 			,sum(betcount) as TotalBets
 		FROM #tmpSum
 		GROUP BY winlostdate		
+		ORDER BY winlostdate
+	END
+	ELSE
+	BEGIN
+		SELECT
+			winlostdate [Date]
+			,sum(tickets_won) as tickets_won
+			,sum(tickets_lose) as tickets_lose 
+			,sum(stake_won) as stake_won  
+			,sum(stake_lose) as stake_lose
+			,sum(member_won) as member_won  
+			,sum(member_lose) as member_lose
+			,sum(ourPT_won) as ourPT_won  
+			,sum(ourPT_lose) as ourPT_lose
+			,@CustomerClass as CustomerClass
+			,@SiteGroup as SiteGroup
+			,sum(betcount) as TotalBets
+		FROM #tmpSum
+		GROUP BY winlostdate		
+		HAVING sum(ourPT_won) + sum(ourPT_lose) <= @HouseWL
 		ORDER BY winlostdate
 	END
 

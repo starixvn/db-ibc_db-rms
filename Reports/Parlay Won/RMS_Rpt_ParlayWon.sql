@@ -8,7 +8,6 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ParlayWon]
 	,@Level			VARCHAR(100) = ''
 	,@Sporttype		VARCHAR(100) = ''
 	,@FromHouseAmt	MONEY = 5000
-	,@ToHouseAmt	MONEY = 10000
 	,@SortById		TINYINT = 1
 	,@IsSortAsc		BIT = 0
 	,@PageIndex		INT = 1
@@ -43,6 +42,7 @@ AS
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20240826@Cherry: Add filter @LeagueGroups (#209293)
 		- 20241212@Cherry: Separate Cricket (#214664)
+		- 20250306@Cherry: Remove @ToHouseAmt (#218958)
 
 	Parameter's Explanation:
 		- @selection:
@@ -314,7 +314,7 @@ BEGIN
 					AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 					AND (b.IP = @IP OR @IP IS NULL)
 			) r
-			WHERE @ToHouseAmt = 0 OR HouseLoseAmount <= @ToHouseAmt
+
 		END
 
 		IF @FromDate <= @MoveBetsDay
@@ -393,7 +393,7 @@ BEGIN
 					AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 					AND (b.IP = @IP OR @IP IS NULL)
 			) r
-			WHERE @ToHouseAmt = 0 OR HouseLoseAmount <= @ToHouseAmt
+			
 		END
 
 	END
