@@ -9,6 +9,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_LeagueBettype_Analysis]
 	,@Ratio			FLOAT = 0
 	,@ReportBy		TINYINT = 1
 	,@SportType		SMALLINT = 1
+	,@Username		VARCHAR(100) = ''
 AS
 
 /*
@@ -22,6 +23,7 @@ AS
 		- 20220719@Danny: Fix issue Show result of Basketball when selecting Sport is Soccer [RedmineID: #175613]
 		- 20240315@Cherry: Enhancement (#197684)
 		- 20240815@Cherry: Get None League Group (#204375)
+		- 20250314@Cherry: Add filter by Username (#214662)
 
 	Param's Explanation:
 		. @ParlayType: '1,2'

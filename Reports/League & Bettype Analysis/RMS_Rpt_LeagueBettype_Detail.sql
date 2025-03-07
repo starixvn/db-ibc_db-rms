@@ -12,6 +12,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_LeagueBettype_Detail]
 	,@BetType		INT = 0
 	,@ReportBy		TINYINT = 1
 	,@HouseWL		MONEY = 0
+	,@Username		VARCHAR(100) = ''
 
 AS
 
@@ -23,6 +24,7 @@ AS
 	Revisions:
 		- 20240315@Cherry: Initialize SP [RedmineID: #197684]
 		- 20241030@Cherry: Add Single Match Parlay (#209293)
+		- 20250314@Cherry: Add filter by Username (#214662)
 
 	Param's Explanation:
 		. @ParlayType: '1,2'
