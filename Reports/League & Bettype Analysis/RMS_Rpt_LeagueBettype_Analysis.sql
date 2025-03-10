@@ -10,6 +10,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_LeagueBettype_Analysis]
 	,@ReportBy		TINYINT = 1
 	,@SportType		SMALLINT = 1
 	,@Username		VARCHAR(100) = ''
+	,@Selection		VARCHAR(MAX) = ''
 AS
 
 /*
@@ -43,7 +44,11 @@ BEGIN
 	SET NOCOUNT ON
 
 	CREATE TABLE #Leagues (LeagueId INT, GroupId INT, GroupName VARCHAR(200))
-	
+	CREATE TABLE #tmpSelection (Selection TINYINT)
+
+	INSERT INTO #tmpSelection (selection)
+	SELECT val FROM dbo.f_RMS_strSplit(@Selection, ',')
+
 	-- League Group
 	BEGIN
 		INSERT INTO #Leagues (LeagueId)

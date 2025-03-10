@@ -13,6 +13,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_LeagueBettype_Detail]
 	,@ReportBy		TINYINT = 1
 	,@HouseWL		MONEY = 0
 	,@Username		VARCHAR(100) = ''
+	,@Selection		VARCHAR(MAX) = ''
 
 AS
 
@@ -47,7 +48,11 @@ BEGIN
 
 	CREATE TABLE #Leagues (LeagueId INT, GroupName VARCHAR(200), LeagueName NVARCHAR(500))
 	CREATE TABLE #Match (MatchID INT, HomeName NVARCHAR(100), AwayName NVARCHAR(100))
-	
+	CREATE TABLE #tmpSelection (Selection TINYINT)
+
+	INSERT INTO #tmpSelection (selection)
+	SELECT val FROM dbo.f_RMS_strSplit(@Selection, ',')
+
 	-- League Group
 	BEGIN
 		INSERT INTO #Leagues (LeagueId)
