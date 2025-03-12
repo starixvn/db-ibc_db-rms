@@ -50,8 +50,33 @@ BEGIN
 	CREATE TABLE #Match (MatchID INT, HomeName NVARCHAR(100), AwayName NVARCHAR(100))
 	CREATE TABLE #tmpSelection (Selection TINYINT)
 
-	INSERT INTO #tmpSelection (selection)
+	INSERT INTO #tmpSelection (Selection)
 	SELECT val FROM dbo.f_RMS_strSplit(@Selection, ',')
+
+	DECLARE @CustID INT, @RoleID TINYINT
+	CREATE TABLE #tmpCust(CustID INT)
+	IF @UserName <> ''
+	BEGIN
+		SELECT @custID = custid, @RoleID = roleid
+		FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+		WHERE  username = @UserName
+
+		IF @RoleID = 2 
+		BEGIN
+			INSERT INTO #tmpCust (CustID)
+			SELECT	custid
+			FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+			WHERE  recommend = @CustID AND roleid = 1
+		END
+
+		IF @RoleID = 1 
+		BEGIN
+			INSERT INTO #tmpCust (CustID)
+			SELECT	custid
+			FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+			WHERE  custid = @CustID AND roleid = 1
+		END
+	END
 
 	-- League Group
 	BEGIN
@@ -139,176 +164,369 @@ BEGIN
 		INNER JOIN bodb02.dbo.Team a WITH (NOLOCK) ON m.awayid = a.teamid
 	WHERE t.HomeName IS NULL
 	
-	IF @ReportBy = 1 -- view by league detail
-	BEGIN		
-		SELECT GroupName,
-			LeagueName,
-			MatchId,
-			[Event],
-			BetTypeId,
-			BetType,
-			BetTeam,
-			BetChoice,
-			SUM(TotalTickets)		AS TotalTickets,
-			SUM(WonTickets)			AS WonTickets,
-			SUM(DrawTickets)		AS DrawTickets,
-			SUM(ParlayWonTickets)	AS ParlayWonTickets,
-			SUM(Stake)				AS Stake,
-			SUM(MemberWinloss)		AS MemberWinloss,
-			SUM(MainHouseWinloss)	AS MainHouseWinloss
-		FROM (
-		SELECT
-			l.GroupName,
-			l.LeagueName,
-			m.MatchID MatchId,
-			m.HomeName + ' -vs- ' + m.AwayName AS [Event],
-			b.typeid BetTypeId,
-			b.typenamee AS BetType,
-			CASE WHEN s.Bettype IN (1,2,3,5,7,8,12,15) AND s.Betteam IN ('a','h','1','2','x') THEN s.Betteam
-				 WHEN s.Bettype IN (20,21,609,610,611,612) AND s.Betteam IN ('a','h','o','u','e') AND @SportType = 2 THEN s.Betteam				
-				 ELSE '-'
-			END BetTeam,
-			CASE WHEN s.Bettype IN (1, 7) AND s.Betteam = 'h' THEN m.HomeName
-				  WHEN s.Bettype IN (1, 7) AND s.Betteam = 'a' THEN m.AwayName
-				  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'h' THEN 'Odd'
-				  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'a' THEN 'Even'
-				  WHEN s.Bettype IN (3, 8) AND s.Betteam = 'h' THEN 'Over'
-				  WHEN s.Bettype IN (3, 8) AND s.Betteam = 'a' THEN 'Under'
-				  WHEN s.Bettype IN (5, 15) AND s.Betteam = '1' THEN m.HomeName
-				  WHEN s.Bettype IN (5, 15) AND s.Betteam = '2' THEN m.AwayName
-				  WHEN s.Bettype IN (5, 15) AND s.Betteam = 'x' THEN 'Draw'
-				  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'h' AND @SportType = 2 THEN m.HomeName
-				  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'a' AND @SportType = 2 THEN m.AwayName
-				  WHEN s.Bettype = 610 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Over'
-				  WHEN s.Bettype = 610 AND s.Betteam = 'u' AND @SportType = 2 THEN 'Under'
-				  WHEN s.Bettype = 611 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Odd'
-				  WHEN s.Bettype = 611 AND s.Betteam = 'e' AND @SportType = 2 THEN 'Even'
-				  ELSE '-'
-			END AS BetChoice,
-			SUM(BetCount)			AS TotalTickets,
-			SUM(WonCount)			AS WonTickets,
-			SUM(DrawCount)			AS DrawTickets,
-			SUM(MainWonCount)		AS ParlayWonTickets,
-			SUM(MainStake)			AS Stake,
-			SUM(MainMemberWinloss)	AS MemberWinloss,
-			SUM(MainHouseWinloss)	AS MainHouseWinloss
-		FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
-			INNER JOIN #Match m ON s.MatchId = m.MatchID
-			INNER JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON s.Bettype = b.typeid
-			INNER JOIN #Leagues l ON s.leagueid = l.leagueid			
-		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
-			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
-			AND (@Site = 2 OR s.IsDeposit = @Site) 	
-			AND s.bettype <> 38
-		GROUP BY
-			l.GroupName,
-			l.LeagueName,
-			m.MatchID,
-			m.HomeName,
-			m.AwayName,
-			b.typeid,
-			b.typenamee,
-			CASE WHEN s.Bettype IN (1,2,3,5,7,8,12,15) AND s.Betteam IN ('a','h','1','2','x') THEN s.Betteam
-				 WHEN s.Bettype IN (20,21,609,610,611,612) AND s.Betteam IN ('a','h','o','u','e') AND @SportType = 2 THEN s.Betteam
-				 ELSE '-'
-			END,
-			CASE WHEN s.Bettype IN (1, 7) AND s.Betteam = 'h' THEN m.HomeName
-				  WHEN s.Bettype IN (1, 7) AND s.Betteam = 'a' THEN m.AwayName
-				  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'h' THEN 'Odd'
-				  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'a' THEN 'Even'
-				  WHEN s.Bettype IN (3, 8) AND s.Betteam = 'h' THEN 'Over'
-				  WHEN s.Bettype IN (3, 8) AND s.Betteam = 'a' THEN 'Under'
-				  WHEN s.Bettype IN (5, 15) AND s.Betteam = '1' THEN m.HomeName
-				  WHEN s.Bettype IN (5, 15) AND s.Betteam = '2' THEN m.AwayName
-				  WHEN s.Bettype IN (5, 15) AND s.Betteam = 'x' THEN 'Draw'
-				  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'h' AND @SportType = 2 THEN m.HomeName
-				  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'a' AND @SportType = 2 THEN m.AwayName
-				  WHEN s.Bettype = 610 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Over'
-				  WHEN s.Bettype = 610 AND s.Betteam = 'u' AND @SportType = 2 THEN 'Under'
-				  WHEN s.Bettype = 611 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Odd'
-				  WHEN s.Bettype = 611 AND s.Betteam = 'e' AND @SportType = 2 THEN 'Even'
-				  ELSE '-'
-			END
-		HAVING SUM(MainHouseWinloss) <= @HouseWL
-		UNION ALL
-		SELECT
-			l.GroupName,
-			l.LeagueName,
-			m.MatchID MatchId,
-			m.HomeName + ' -vs- ' + m.AwayName AS [Event],
-			b.typeid BetTypeId,
-			b.typenamee AS BetType,
-			s.Betteam Betteam,
-			t.SelectionName BetChoice,
-			SUM(BetCount)			AS TotalTickets,
-			SUM(WonCount)			AS WonTickets,
-			SUM(DrawCount)			AS DrawTickets,
-			SUM(MainWonCount)		AS ParlayWonTickets,
-			SUM(MainStake)			AS Stake,
-			SUM(MainMemberWinloss)	AS MemberWinloss,
-			SUM(MainHouseWinloss)	AS MainHouseWinloss
-		FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
-			INNER JOIN #Match m ON s.MatchId = m.MatchID
-			INNER JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON s.Bettype = b.typeid
-			INNER JOIN #Leagues l ON s.leagueid = l.leagueid
-			INNER JOIN bodb02.dbo.SMP_Selection t WITH(NOLOCK) ON CAST(s.betteam AS INT) = t.SelectionType 
-		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
-			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
-			AND (@Site = 2 OR s.IsDeposit = @Site) 
-			AND s.bettype = 38
-		GROUP BY
-			l.GroupName,
-			l.LeagueName,
-			m.MatchID,
-			m.HomeName,
-			m.AwayName,
-			b.typeid,
-			b.typenamee,
-			s.Betteam,
-			t.SelectionName
-		HAVING SUM(MainHouseWinloss) <= @HouseWL	
-		) t
-		GROUP BY GroupName,
-			LeagueName,
-			MatchId,
-			[Event],
-			BetTypeId,
-			BetType,
-			BetTeam,
-			BetChoice
-		ORDER BY MainHouseWinloss DESC
-	END
-	
-	IF @ReportBy = 2 -- view by bettype detail
+	IF (EXISTS (SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 0)
+		AND @Username = '')
 	BEGIN
-		SELECT l.GroupName,
-			l.LeagueName,
-			m.MatchID MatchId,
-			m.HomeName + ' -vs- ' + m.AwayName AS [Event],
-			SUM(BetCount)			AS TotalTickets,
-			SUM(WonCount)			AS WonTickets,
-			SUM(DrawCount)			AS DrawTickets,
-			SUM(MainWonCount)		AS ParlayWonTickets,
-			SUM(MainStake)			AS Stake,
-			SUM(MainMemberWinloss)	AS MemberWinloss,
-			SUM(MainHouseWinloss)	AS MainHouseWinloss
-		FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
-			INNER JOIN #Leagues l ON s.LeagueId = l.LeagueId
-			INNER JOIN #Match m ON s.MatchId = m.MatchID
-		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
-			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
-			AND (@Site = 2 OR s.IsDeposit = @Site) 
-			AND (@BetType = 0 OR s.Bettype = @BetType)
-			AND (s.bettype <> 38 OR
-				(s.bettype = 38 AND s.Betteam = '0'))
-		GROUP BY
-			m.MatchID,
-			m.HomeName,
-			m.AwayName,
-			l.GroupName,
-			l.leaguename
-		HAVING SUM(MainHouseWinloss) <= @HouseWL			
-		ORDER BY MainHouseWinloss DESC
+		IF @ReportBy = 1 -- view by league detail
+		BEGIN		
+			SELECT GroupName,
+				LeagueName,
+				MatchId,
+				[Event],
+				BetTypeId,
+				BetType,
+				BetTeam,
+				BetChoice,
+				SUM(TotalTickets)		AS TotalTickets,
+				SUM(WonTickets)			AS WonTickets,
+				SUM(DrawTickets)		AS DrawTickets,
+				SUM(ParlayWonTickets)	AS ParlayWonTickets,
+				SUM(Stake)				AS Stake,
+				SUM(MemberWinloss)		AS MemberWinloss,
+				SUM(MainHouseWinloss)	AS MainHouseWinloss
+			FROM (
+			SELECT
+				l.GroupName,
+				l.LeagueName,
+				m.MatchID MatchId,
+				m.HomeName + ' -vs- ' + m.AwayName AS [Event],
+				b.typeid BetTypeId,
+				b.typenamee AS BetType,
+				CASE WHEN s.Bettype IN (1,2,3,5,7,8,12,15) AND s.Betteam IN ('a','h','1','2','x') THEN s.Betteam
+					 WHEN s.Bettype IN (20,21,609,610,611,612) AND s.Betteam IN ('a','h','o','u','e') AND @SportType = 2 THEN s.Betteam				
+					 ELSE '-'
+				END BetTeam,
+				CASE WHEN s.Bettype IN (1, 7) AND s.Betteam = 'h' THEN m.HomeName
+					  WHEN s.Bettype IN (1, 7) AND s.Betteam = 'a' THEN m.AwayName
+					  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'h' THEN 'Odd'
+					  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'a' THEN 'Even'
+					  WHEN s.Bettype IN (3, 8) AND s.Betteam = 'h' THEN 'Over'
+					  WHEN s.Bettype IN (3, 8) AND s.Betteam = 'a' THEN 'Under'
+					  WHEN s.Bettype IN (5, 15) AND s.Betteam = '1' THEN m.HomeName
+					  WHEN s.Bettype IN (5, 15) AND s.Betteam = '2' THEN m.AwayName
+					  WHEN s.Bettype IN (5, 15) AND s.Betteam = 'x' THEN 'Draw'
+					  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'h' AND @SportType = 2 THEN m.HomeName
+					  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'a' AND @SportType = 2 THEN m.AwayName
+					  WHEN s.Bettype = 610 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Over'
+					  WHEN s.Bettype = 610 AND s.Betteam = 'u' AND @SportType = 2 THEN 'Under'
+					  WHEN s.Bettype = 611 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Odd'
+					  WHEN s.Bettype = 611 AND s.Betteam = 'e' AND @SportType = 2 THEN 'Even'
+					  ELSE '-'
+				END AS BetChoice,
+				SUM(BetCount)			AS TotalTickets,
+				SUM(WonCount)			AS WonTickets,
+				SUM(DrawCount)			AS DrawTickets,
+				SUM(MainWonCount)		AS ParlayWonTickets,
+				SUM(MainStake)			AS Stake,
+				SUM(MainMemberWinloss)	AS MemberWinloss,
+				SUM(MainHouseWinloss)	AS MainHouseWinloss
+			FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
+				INNER JOIN #Match m ON s.MatchId = m.MatchID
+				INNER JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON s.Bettype = b.typeid
+				INNER JOIN #Leagues l ON s.leagueid = l.leagueid			
+			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
+				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
+				AND (@Site = 2 OR s.IsDeposit = @Site) 	
+				AND s.bettype <> 38
+			GROUP BY
+				l.GroupName,
+				l.LeagueName,
+				m.MatchID,
+				m.HomeName,
+				m.AwayName,
+				b.typeid,
+				b.typenamee,
+				CASE WHEN s.Bettype IN (1,2,3,5,7,8,12,15) AND s.Betteam IN ('a','h','1','2','x') THEN s.Betteam
+					 WHEN s.Bettype IN (20,21,609,610,611,612) AND s.Betteam IN ('a','h','o','u','e') AND @SportType = 2 THEN s.Betteam
+					 ELSE '-'
+				END,
+				CASE WHEN s.Bettype IN (1, 7) AND s.Betteam = 'h' THEN m.HomeName
+					  WHEN s.Bettype IN (1, 7) AND s.Betteam = 'a' THEN m.AwayName
+					  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'h' THEN 'Odd'
+					  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'a' THEN 'Even'
+					  WHEN s.Bettype IN (3, 8) AND s.Betteam = 'h' THEN 'Over'
+					  WHEN s.Bettype IN (3, 8) AND s.Betteam = 'a' THEN 'Under'
+					  WHEN s.Bettype IN (5, 15) AND s.Betteam = '1' THEN m.HomeName
+					  WHEN s.Bettype IN (5, 15) AND s.Betteam = '2' THEN m.AwayName
+					  WHEN s.Bettype IN (5, 15) AND s.Betteam = 'x' THEN 'Draw'
+					  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'h' AND @SportType = 2 THEN m.HomeName
+					  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'a' AND @SportType = 2 THEN m.AwayName
+					  WHEN s.Bettype = 610 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Over'
+					  WHEN s.Bettype = 610 AND s.Betteam = 'u' AND @SportType = 2 THEN 'Under'
+					  WHEN s.Bettype = 611 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Odd'
+					  WHEN s.Bettype = 611 AND s.Betteam = 'e' AND @SportType = 2 THEN 'Even'
+					  ELSE '-'
+				END
+			HAVING SUM(MainHouseWinloss) <= @HouseWL
+			UNION ALL
+			SELECT
+				l.GroupName,
+				l.LeagueName,
+				m.MatchID MatchId,
+				m.HomeName + ' -vs- ' + m.AwayName AS [Event],
+				b.typeid BetTypeId,
+				b.typenamee AS BetType,
+				s.Betteam Betteam,
+				t.SelectionName BetChoice,
+				SUM(BetCount)			AS TotalTickets,
+				SUM(WonCount)			AS WonTickets,
+				SUM(DrawCount)			AS DrawTickets,
+				SUM(MainWonCount)		AS ParlayWonTickets,
+				SUM(MainStake)			AS Stake,
+				SUM(MainMemberWinloss)	AS MemberWinloss,
+				SUM(MainHouseWinloss)	AS MainHouseWinloss
+			FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
+				INNER JOIN #Match m ON s.MatchId = m.MatchID
+				INNER JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON s.Bettype = b.typeid
+				INNER JOIN #Leagues l ON s.leagueid = l.leagueid
+				INNER JOIN bodb02.dbo.SMP_Selection t WITH(NOLOCK) ON CAST(s.betteam AS INT) = t.SelectionType 
+			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
+				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
+				AND (@Site = 2 OR s.IsDeposit = @Site) 
+				AND s.bettype = 38
+			GROUP BY
+				l.GroupName,
+				l.LeagueName,
+				m.MatchID,
+				m.HomeName,
+				m.AwayName,
+				b.typeid,
+				b.typenamee,
+				s.Betteam,
+				t.SelectionName
+			HAVING SUM(MainHouseWinloss) <= @HouseWL	
+			) t
+			GROUP BY GroupName,
+				LeagueName,
+				MatchId,
+				[Event],
+				BetTypeId,
+				BetType,
+				BetTeam,
+				BetChoice
+			ORDER BY MainHouseWinloss DESC
+		END
+	
+		IF @ReportBy = 2 -- view by bettype detail
+		BEGIN
+			SELECT l.GroupName,
+				l.LeagueName,
+				m.MatchID MatchId,
+				m.HomeName + ' -vs- ' + m.AwayName AS [Event],
+				SUM(BetCount)			AS TotalTickets,
+				SUM(WonCount)			AS WonTickets,
+				SUM(DrawCount)			AS DrawTickets,
+				SUM(MainWonCount)		AS ParlayWonTickets,
+				SUM(MainStake)			AS Stake,
+				SUM(MainMemberWinloss)	AS MemberWinloss,
+				SUM(MainHouseWinloss)	AS MainHouseWinloss
+			FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
+				INNER JOIN #Leagues l ON s.LeagueId = l.LeagueId
+				INNER JOIN #Match m ON s.MatchId = m.MatchID
+			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
+				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
+				AND (@Site = 2 OR s.IsDeposit = @Site) 
+				AND (@BetType = 0 OR s.Bettype = @BetType)
+				AND (s.bettype <> 38 OR
+					(s.bettype = 38 AND s.Betteam = '0'))
+			GROUP BY
+				m.MatchID,
+				m.HomeName,
+				m.AwayName,
+				l.GroupName,
+				l.leaguename
+			HAVING SUM(MainHouseWinloss) <= @HouseWL			
+			ORDER BY MainHouseWinloss DESC
+		END
+	END
+	ELSE	-- @Username <> ''
+	BEGIN
+		IF @ReportBy = 1 -- view by league detail
+		BEGIN		
+			SELECT GroupName,
+				LeagueName,
+				MatchId,
+				[Event],
+				BetTypeId,
+				BetType,
+				BetTeam,
+				BetChoice,
+				SUM(TotalTickets)		AS TotalTickets,
+				SUM(WonTickets)			AS WonTickets,
+				SUM(DrawTickets)		AS DrawTickets,
+				SUM(ParlayWonTickets)	AS ParlayWonTickets,
+				SUM(Stake)				AS Stake,
+				SUM(MemberWinloss)		AS MemberWinloss,
+				SUM(MainHouseWinloss)	AS MainHouseWinloss
+			FROM (
+			SELECT
+				l.GroupName,
+				l.LeagueName,
+				m.MatchID MatchId,
+				m.HomeName + ' -vs- ' + m.AwayName AS [Event],
+				b.typeid BetTypeId,
+				b.typenamee AS BetType,
+				CASE WHEN s.Bettype IN (1,2,3,5,7,8,12,15) AND s.Betteam IN ('a','h','1','2','x') THEN s.Betteam
+					 WHEN s.Bettype IN (20,21,609,610,611,612) AND s.Betteam IN ('a','h','o','u','e') AND @SportType = 2 THEN s.Betteam				
+					 ELSE '-'
+				END BetTeam,
+				CASE WHEN s.Bettype IN (1, 7) AND s.Betteam = 'h' THEN m.HomeName
+					  WHEN s.Bettype IN (1, 7) AND s.Betteam = 'a' THEN m.AwayName
+					  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'h' THEN 'Odd'
+					  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'a' THEN 'Even'
+					  WHEN s.Bettype IN (3, 8) AND s.Betteam = 'h' THEN 'Over'
+					  WHEN s.Bettype IN (3, 8) AND s.Betteam = 'a' THEN 'Under'
+					  WHEN s.Bettype IN (5, 15) AND s.Betteam = '1' THEN m.HomeName
+					  WHEN s.Bettype IN (5, 15) AND s.Betteam = '2' THEN m.AwayName
+					  WHEN s.Bettype IN (5, 15) AND s.Betteam = 'x' THEN 'Draw'
+					  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'h' AND @SportType = 2 THEN m.HomeName
+					  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'a' AND @SportType = 2 THEN m.AwayName
+					  WHEN s.Bettype = 610 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Over'
+					  WHEN s.Bettype = 610 AND s.Betteam = 'u' AND @SportType = 2 THEN 'Under'
+					  WHEN s.Bettype = 611 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Odd'
+					  WHEN s.Bettype = 611 AND s.Betteam = 'e' AND @SportType = 2 THEN 'Even'
+					  ELSE '-'
+				END AS BetChoice,
+				SUM(BetCount)			AS TotalTickets,
+				SUM(WonCount)			AS WonTickets,
+				SUM(DrawCount)			AS DrawTickets,
+				SUM(MainWonCount)		AS ParlayWonTickets,
+				SUM(MainStake)			AS Stake,
+				SUM(MainMemberWinloss)	AS MemberWinloss,
+				SUM(MainHouseWinloss)	AS MainHouseWinloss
+			FROM dbo.rmSumByCust s WITH (NOLOCK)
+				INNER JOIN #Match m ON s.MatchId = m.MatchID
+				INNER JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON s.Bettype = b.typeid
+				INNER JOIN #Leagues l ON s.leagueid = l.leagueid			
+			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
+				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
+				AND (@Site = 2 OR s.IsDeposit = @Site) 	
+				AND s.bettype <> 38
+				AND (s.Selection IN (SELECT Selection FROM #tmpSelection)
+					OR (EXISTS(SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 10)
+						AND s.Selection > 10)
+					)
+				AND s.CustId IN (SELECT CustID FROM #tmpCust)
+			GROUP BY
+				l.GroupName,
+				l.LeagueName,
+				m.MatchID,
+				m.HomeName,
+				m.AwayName,
+				b.typeid,
+				b.typenamee,
+				CASE WHEN s.Bettype IN (1,2,3,5,7,8,12,15) AND s.Betteam IN ('a','h','1','2','x') THEN s.Betteam
+					 WHEN s.Bettype IN (20,21,609,610,611,612) AND s.Betteam IN ('a','h','o','u','e') AND @SportType = 2 THEN s.Betteam
+					 ELSE '-'
+				END,
+				CASE WHEN s.Bettype IN (1, 7) AND s.Betteam = 'h' THEN m.HomeName
+					  WHEN s.Bettype IN (1, 7) AND s.Betteam = 'a' THEN m.AwayName
+					  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'h' THEN 'Odd'
+					  WHEN s.Bettype IN (2, 12) AND s.Betteam = 'a' THEN 'Even'
+					  WHEN s.Bettype IN (3, 8) AND s.Betteam = 'h' THEN 'Over'
+					  WHEN s.Bettype IN (3, 8) AND s.Betteam = 'a' THEN 'Under'
+					  WHEN s.Bettype IN (5, 15) AND s.Betteam = '1' THEN m.HomeName
+					  WHEN s.Bettype IN (5, 15) AND s.Betteam = '2' THEN m.AwayName
+					  WHEN s.Bettype IN (5, 15) AND s.Betteam = 'x' THEN 'Draw'
+					  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'h' AND @SportType = 2 THEN m.HomeName
+					  WHEN s.Bettype IN (20, 21, 609, 612) AND s.Betteam = 'a' AND @SportType = 2 THEN m.AwayName
+					  WHEN s.Bettype = 610 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Over'
+					  WHEN s.Bettype = 610 AND s.Betteam = 'u' AND @SportType = 2 THEN 'Under'
+					  WHEN s.Bettype = 611 AND s.Betteam = 'o' AND @SportType = 2 THEN 'Odd'
+					  WHEN s.Bettype = 611 AND s.Betteam = 'e' AND @SportType = 2 THEN 'Even'
+					  ELSE '-'
+				END
+			HAVING SUM(MainHouseWinloss) <= @HouseWL
+			UNION ALL
+			SELECT
+				l.GroupName,
+				l.LeagueName,
+				m.MatchID MatchId,
+				m.HomeName + ' -vs- ' + m.AwayName AS [Event],
+				b.typeid BetTypeId,
+				b.typenamee AS BetType,
+				s.Betteam Betteam,
+				t.SelectionName BetChoice,
+				SUM(BetCount)			AS TotalTickets,
+				SUM(WonCount)			AS WonTickets,
+				SUM(DrawCount)			AS DrawTickets,
+				SUM(MainWonCount)		AS ParlayWonTickets,
+				SUM(MainStake)			AS Stake,
+				SUM(MainMemberWinloss)	AS MemberWinloss,
+				SUM(MainHouseWinloss)	AS MainHouseWinloss
+			FROM dbo.rmSumByCust s WITH (NOLOCK)
+				INNER JOIN #Match m ON s.MatchId = m.MatchID
+				INNER JOIN bodb02.dbo.bettype b WITH(NOLOCK) ON s.Bettype = b.typeid
+				INNER JOIN #Leagues l ON s.leagueid = l.leagueid
+				INNER JOIN bodb02.dbo.SMP_Selection t WITH(NOLOCK) ON CAST(s.betteam AS INT) = t.SelectionType 
+			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
+				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
+				AND (@Site = 2 OR s.IsDeposit = @Site) 
+				AND s.bettype = 38
+				AND (s.Selection IN (SELECT Selection FROM #tmpSelection)
+					OR (EXISTS(SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 10)
+						AND s.Selection > 10)
+					)
+				AND s.CustId IN (SELECT CustID FROM #tmpCust)
+			GROUP BY
+				l.GroupName,
+				l.LeagueName,
+				m.MatchID,
+				m.HomeName,
+				m.AwayName,
+				b.typeid,
+				b.typenamee,
+				s.Betteam,
+				t.SelectionName
+			HAVING SUM(MainHouseWinloss) <= @HouseWL	
+			) t
+			GROUP BY GroupName,
+				LeagueName,
+				MatchId,
+				[Event],
+				BetTypeId,
+				BetType,
+				BetTeam,
+				BetChoice
+			ORDER BY MainHouseWinloss DESC
+		END
+	
+		IF @ReportBy = 2 -- view by bettype detail
+		BEGIN
+			SELECT l.GroupName,
+				l.LeagueName,
+				m.MatchID MatchId,
+				m.HomeName + ' -vs- ' + m.AwayName AS [Event],
+				SUM(BetCount)			AS TotalTickets,
+				SUM(WonCount)			AS WonTickets,
+				SUM(DrawCount)			AS DrawTickets,
+				SUM(MainWonCount)		AS ParlayWonTickets,
+				SUM(MainStake)			AS Stake,
+				SUM(MainMemberWinloss)	AS MemberWinloss,
+				SUM(MainHouseWinloss)	AS MainHouseWinloss
+			FROM dbo.rmSumByCust s WITH (NOLOCK)
+				INNER JOIN #Leagues l ON s.LeagueId = l.LeagueId
+				INNER JOIN #Match m ON s.MatchId = m.MatchID
+			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
+				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
+				AND (@Site = 2 OR s.IsDeposit = @Site) 
+				AND (@BetType = 0 OR s.Bettype = @BetType)
+				AND (s.bettype <> 38 OR
+					(s.bettype = 38 AND s.Betteam = '0'))
+				AND (s.Selection IN (SELECT Selection FROM #tmpSelection)
+					OR (EXISTS(SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 10)
+						AND s.Selection > 10)
+					)
+				AND s.CustId IN (SELECT CustID FROM #tmpCust)
+			GROUP BY
+				m.MatchID,
+				m.HomeName,
+				m.AwayName,
+				l.GroupName,
+				l.leaguename
+			HAVING SUM(MainHouseWinloss) <= @HouseWL			
+			ORDER BY MainHouseWinloss DESC
+		END
 	END
 
 	DECLARE @MBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
@@ -340,20 +558,40 @@ BEGIN
 	
 	IF @ReportBy = 3
 	BEGIN
-		INSERT INTO #tmpTransList (TransID)
-		SELECT DISTINCT a.val
-		FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
-			CROSS APPLY OPENJSON (CAST(DECOMPRESS(s.TransList) AS NVARCHAR(MAX))) WITH (tl VARCHAR(MAX)) 
-			CROSS APPLY bodb02.dbo.strSplit(tl,',') a
-		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
-			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
-			AND (@Site = 2 OR s.IsDeposit = @Site) 
-			AND (@BetType = 0 OR s.Bettype = @BetType)
-			AND s.matchid = @Match
-			AND (@BetTeam = ''
-				OR (@BetTeam = '-' AND s.Betteam NOT IN ('a','h','1','2','x','o','u','e'))
-				OR s.Betteam = @BetTeam)		
-		
+		IF (EXISTS (SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 0)
+				AND @Username = '')
+			INSERT INTO #tmpTransList (TransID)
+			SELECT DISTINCT a.val
+			FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
+				CROSS APPLY OPENJSON (CAST(DECOMPRESS(s.TransList) AS NVARCHAR(MAX))) WITH (tl VARCHAR(MAX)) 
+				CROSS APPLY bodb02.dbo.strSplit(tl,',') a
+			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
+				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
+				AND (@Site = 2 OR s.IsDeposit = @Site) 
+				AND (@BetType = 0 OR s.Bettype = @BetType)
+				AND s.matchid = @Match
+				AND (@BetTeam = ''
+					OR (@BetTeam = '-' AND s.Betteam NOT IN ('a','h','1','2','x','o','u','e'))
+					OR s.Betteam = @BetTeam)		
+		ELSE
+			INSERT INTO #tmpTransList (TransID)
+			SELECT DISTINCT a.val
+			FROM dbo.rmSumByCust s WITH (NOLOCK) 
+				CROSS APPLY bodb02.dbo.strSplit(s.TransList,',') a
+			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
+				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
+				AND (@Site = 2 OR s.IsDeposit = @Site) 
+				AND (@BetType = 0 OR s.Bettype = @BetType)
+				AND s.matchid = @Match
+				AND (@BetTeam = ''
+					OR (@BetTeam = '-' AND s.Betteam NOT IN ('a','h','1','2','x','o','u','e'))
+					OR s.Betteam = @BetTeam)
+				AND (s.Selection IN (SELECT Selection FROM #tmpSelection)
+					OR (EXISTS(SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 10)
+						AND s.Selection > 10)
+					)
+				AND s.CustId IN (SELECT CustID FROM #tmpCust)
+	
 	INSERT INTO #tmpBettrans
 	(
 		transdate,
@@ -447,6 +685,10 @@ BEGIN
 
 	DROP TABLE #tmpBettrans
 	DROP TABLE #tmpTransList
+	DROP TABLE #Leagues
+	DROP TABLE #Match
+	DROP TABLE #tmpCust
+	DROP TABLE #tmpSelection
 
 END
 GO

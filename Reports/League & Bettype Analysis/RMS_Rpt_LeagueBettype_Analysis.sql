@@ -46,8 +46,33 @@ BEGIN
 	CREATE TABLE #Leagues (LeagueId INT, GroupId INT, GroupName VARCHAR(200))
 	CREATE TABLE #tmpSelection (Selection TINYINT)
 
-	INSERT INTO #tmpSelection (selection)
+	INSERT INTO #tmpSelection (Selection)
 	SELECT val FROM dbo.f_RMS_strSplit(@Selection, ',')
+
+	DECLARE @CustID INT, @RoleID TINYINT
+	CREATE TABLE #tmpCust(CustID INT)
+	IF @UserName <> ''
+	BEGIN
+		SELECT @custID = custid, @RoleID = roleid
+		FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+		WHERE  username = @UserName
+
+		IF @RoleID = 2 
+		BEGIN
+			INSERT INTO #tmpCust (CustID)
+			SELECT	custid
+			FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+			WHERE  recommend = @CustID AND roleid = 1
+		END
+
+		IF @RoleID = 1 
+		BEGIN
+			INSERT INTO #tmpCust (CustID)
+			SELECT	custid
+			FROM	bodb02.dbo.custInfo WITH(NOLOCK)
+			WHERE  custid = @CustID AND roleid = 1
+		END
+	END
 
 	-- League Group
 	BEGIN
@@ -85,65 +110,141 @@ BEGIN
 
 	END
 
-	IF @ReportBy = 1 -- view by league
+	IF (EXISTS (SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 0)
+		AND @Username = '')
 	BEGIN
-		SELECT
-			l.GroupId
-			,l.GroupName
-			,l.leagueId
-			,SUM(BetCount)			AS TotalTickets
-			,SUM(WonCount)			AS WonTickets
-			,SUM(DrawCount)			AS DrawTickets
-			,SUM(MainWonCount)		AS ParlayWonTickets
-			,SUM(MainStake)			AS Stake
-			,SUM(MainMemberWinloss)	AS MemberWinloss
-			,SUM(MainHouseWinloss)	AS MainHouseWinloss
-		FROM dbo.rmSumByLeague s WITH (NOLOCK)
-			INNER JOIN #Leagues l ON s.leagueId = l.LeagueId
-		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
-			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
-			AND (@Site = 2 OR s.IsDeposit = @Site)
-		GROUP BY
-			l.GroupId
-			,l.GroupName
-			,l.leagueId
-		HAVING CASE WHEN SUM(BetCount) = 0 THEN 0 ELSE 1.0 * SUM(WonCount)/SUM(BetCount) END >= @Ratio
-		ORDER BY TotalTickets DESC
-	END
-	ELSE IF @ReportBy = 2 -- view by bettype
-	BEGIN
-
-		IF @SportType = 1
+		IF @ReportBy = 1 -- view by league
 		BEGIN
-			-- all leagues --> leagueid = 0
-			IF EXISTS (SELECT 1 FROM #Leagues WHERE GroupName = 'None')
-				AND (SELECT COUNT(1) FROM  #Leagues WHERE GroupName <> 'None') = (SELECT COUNT(1) FROM dbo.rmLeague l WITH (NOLOCK))
+			SELECT
+				l.GroupId
+				,l.GroupName
+				,l.leagueId
+				,SUM(BetCount)			AS TotalTickets
+				,SUM(WonCount)			AS WonTickets
+				,SUM(DrawCount)			AS DrawTickets
+				,SUM(MainWonCount)		AS ParlayWonTickets
+				,SUM(MainStake)			AS Stake
+				,SUM(MainMemberWinloss)	AS MemberWinloss
+				,SUM(MainHouseWinloss)	AS MainHouseWinloss
+			FROM dbo.rmSumByLeague s WITH (NOLOCK)
+				INNER JOIN #Leagues l ON s.leagueId = l.LeagueId
+			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
+				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
+				AND (@Site = 2 OR s.IsDeposit = @Site)
+			GROUP BY
+				l.GroupId
+				,l.GroupName
+				,l.leagueId
+			HAVING CASE WHEN SUM(BetCount) = 0 THEN 0 ELSE 1.0 * SUM(WonCount)/SUM(BetCount) END >= @Ratio
+			ORDER BY TotalTickets DESC
+		END
+		ELSE IF @ReportBy = 2 -- view by bettype
+		BEGIN
+			IF @SportType = 1
 			BEGIN
-				DELETE #Leagues
+				-- all leagues --> leagueid = 0
+				IF EXISTS (SELECT 1 FROM #Leagues WHERE GroupName = 'None')
+					AND (SELECT COUNT(1) FROM  #Leagues WHERE GroupName <> 'None') = (SELECT COUNT(1) FROM dbo.rmLeague l WITH (NOLOCK))
+				BEGIN
+					DELETE #Leagues
 
-				INSERT INTO #Leagues (LeagueId)
-				VALUES (0)
-			END
-		END 
-
-		SELECT
-			s.Bettype				AS BettypeId
-			,SUM(BetCount)			AS TotalTickets
-			,SUM(WonCount)			AS WonTickets
-			,SUM(DrawCount)			AS DrawTickets
-			,SUM(MainWonCount)		AS ParlayWonTickets
-			,SUM(MainStake)			AS Stake
-			,SUM(MainMemberWinloss)	AS MemberWinloss
-			,SUM(MainHouseWinloss)	AS MainHouseWinloss
-		FROM dbo.rmSumByBettype s WITH (NOLOCK)
-			INNER JOIN #Leagues l ON s.leagueId = l.LeagueId
-		WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
-			AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
-			AND (@Site = 2 OR s.IsDeposit = @Site)
-		GROUP BY
-			s.Bettype
-		HAVING CASE WHEN SUM(BetCount) = 0 THEN 0 ELSE 1.0 * SUM(WonCount)/SUM(BetCount) END >= @Ratio
-		ORDER BY TotalTickets DESC
+					INSERT INTO #Leagues (LeagueId)
+					VALUES (0)
+				END
+			END 
+			SELECT
+				s.Bettype				AS BettypeId
+				,SUM(BetCount)			AS TotalTickets
+				,SUM(WonCount)			AS WonTickets
+				,SUM(DrawCount)			AS DrawTickets
+				,SUM(MainWonCount)		AS ParlayWonTickets
+				,SUM(MainStake)			AS Stake
+				,SUM(MainMemberWinloss)	AS MemberWinloss
+				,SUM(MainHouseWinloss)	AS MainHouseWinloss
+			FROM dbo.rmSumByBettype s WITH (NOLOCK)
+				INNER JOIN #Leagues l ON s.leagueId = l.LeagueId
+			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
+				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
+				AND (@Site = 2 OR s.IsDeposit = @Site)
+			GROUP BY
+				s.Bettype
+			HAVING CASE WHEN SUM(BetCount) = 0 THEN 0 ELSE 1.0 * SUM(WonCount)/SUM(BetCount) END >= @Ratio
+			ORDER BY TotalTickets DESC
+		END
 	END
+	ELSE -- @Username <> ''
+	BEGIN
+		IF @ReportBy = 1 -- view by league
+		BEGIN
+			SELECT
+				l.GroupId
+				,l.GroupName
+				,l.leagueId
+				,SUM(BetCount)			AS TotalTickets
+				,SUM(WonCount)			AS WonTickets
+				,SUM(DrawCount)			AS DrawTickets
+				,SUM(MainWonCount)		AS ParlayWonTickets
+				,SUM(MainStake)			AS Stake
+				,SUM(MainMemberWinloss)	AS MemberWinloss
+				,SUM(MainHouseWinloss)	AS MainHouseWinloss
+			FROM dbo.rmSumByCust s WITH (NOLOCK)
+				INNER JOIN #Leagues l ON s.leagueId = l.LeagueId
+			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
+				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
+				AND (@Site = 2 OR s.IsDeposit = @Site)
+				AND (s.Selection IN (SELECT Selection FROM #tmpSelection)
+					OR (EXISTS(SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 10)
+						AND s.Selection > 10)
+					)
+				AND s.CustId IN (SELECT CustID FROM #tmpCust)
+			GROUP BY
+				l.GroupId
+				,l.GroupName
+				,l.leagueId
+			HAVING CASE WHEN SUM(BetCount) = 0 THEN 0 ELSE 1.0 * SUM(WonCount)/SUM(BetCount) END >= @Ratio
+			ORDER BY TotalTickets DESC
+		END
+		ELSE IF @ReportBy = 2 -- view by bettype
+		BEGIN
+			IF @SportType = 1
+			BEGIN
+				-- all leagues --> leagueid = 0
+				IF EXISTS (SELECT 1 FROM #Leagues WHERE GroupName = 'None')
+					AND (SELECT COUNT(1) FROM  #Leagues WHERE GroupName <> 'None') = (SELECT COUNT(1) FROM dbo.rmLeague l WITH (NOLOCK))
+				BEGIN
+					DELETE #Leagues
+
+					INSERT INTO #Leagues (LeagueId)
+					VALUES (0)
+				END
+			END 
+			SELECT
+				s.Bettype				AS BettypeId
+				,SUM(BetCount)			AS TotalTickets
+				,SUM(WonCount)			AS WonTickets
+				,SUM(DrawCount)			AS DrawTickets
+				,SUM(MainWonCount)		AS ParlayWonTickets
+				,SUM(MainStake)			AS Stake
+				,SUM(MainMemberWinloss)	AS MemberWinloss
+				,SUM(MainHouseWinloss)	AS MainHouseWinloss
+			FROM dbo.rmSumByCust s WITH (NOLOCK)
+				INNER JOIN #Leagues l ON s.leagueId = l.LeagueId
+			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
+				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
+				AND (@Site = 2 OR s.IsDeposit = @Site)
+				AND (s.Selection IN (SELECT Selection FROM #tmpSelection)
+					OR (EXISTS(SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 10)
+						AND s.Selection > 10)
+					)
+				AND s.CustId IN (SELECT CustID FROM #tmpCust)
+			GROUP BY
+				s.Bettype
+			HAVING CASE WHEN SUM(BetCount) = 0 THEN 0 ELSE 1.0 * SUM(WonCount)/SUM(BetCount) END >= @Ratio
+			ORDER BY TotalTickets DESC
+		END
+	END
+	DROP TABLE #Leagues
+	DROP TABLE #tmpCust
+	DROP TABLE #tmpSelection
 END
 GO
