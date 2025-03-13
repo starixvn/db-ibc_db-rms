@@ -564,7 +564,7 @@ BEGIN
 			SELECT DISTINCT a.val
 			FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
 				CROSS APPLY OPENJSON (CAST(DECOMPRESS(s.TransList) AS NVARCHAR(MAX))) WITH (tl VARCHAR(MAX)) 
-				CROSS APPLY string_split(tl,',') a
+				CROSS APPLY bodb02.dbo.strSplit(tl,',') a
 			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
 				AND (@Site = 2 OR s.IsDeposit = @Site) 
@@ -577,7 +577,7 @@ BEGIN
 			INSERT INTO #tmpTransList (TransID)
 			SELECT DISTINCT a.val
 			FROM dbo.rmSumByCust s WITH (NOLOCK) 
-				CROSS APPLY string_split(s.TransList,',') a
+				CROSS APPLY bodb02.dbo.strSplit(s.TransList,',') a
 			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
 				AND (@Site = 2 OR s.IsDeposit = @Site) 
