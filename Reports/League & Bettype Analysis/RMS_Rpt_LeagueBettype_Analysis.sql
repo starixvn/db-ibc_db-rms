@@ -110,7 +110,7 @@ BEGIN
 
 	END
 
-	IF (EXISTS (SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 0)
+	IF ((SELECT COUNT(*) FROM #tmpSelection) = 9
 		AND @Username = '')
 	BEGIN
 		IF @ReportBy = 1 -- view by league
