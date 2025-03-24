@@ -197,6 +197,8 @@ BEGIN
 						AND s.Selection > 10)
 					)
 				AND s.CustId IN (SELECT CustID FROM #tmpCust)
+				AND (s.bettype <> 38 OR
+					(s.bettype = 38 AND s.Betteam = '0'))
 			GROUP BY
 				l.GroupId
 				,l.GroupName
@@ -237,6 +239,8 @@ BEGIN
 						AND s.Selection > 10)
 					)
 				AND s.CustId IN (SELECT CustID FROM #tmpCust)
+				AND (s.bettype <> 38 OR
+					(s.bettype = 38 AND s.Betteam = '0'))
 			GROUP BY
 				s.Bettype
 			HAVING CASE WHEN SUM(BetCount) = 0 THEN 0 ELSE 1.0 * SUM(WonCount)/SUM(BetCount) END >= @Ratio
