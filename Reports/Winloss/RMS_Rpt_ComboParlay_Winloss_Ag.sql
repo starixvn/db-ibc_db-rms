@@ -9,6 +9,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_Winloss_Ag]
 	@selection		VARCHAR(MAX) = '',
 	@ParlayType		VARCHAR(100) = '',
 	@LiveStatus		TINYINT = 3,
+	@HouseWL		MONEY = NULL,
 	@ReportBy		TINYINT = 1
 AS
 
@@ -39,6 +40,7 @@ AS
 		- 20241212@Cherry: Separate Cricket (#214664)
 		- 20250115@Cherry: Support direct member (#215427)
 		- 20250227@Cherry: Hot fix (#218639)
+		- 20250306@Cherry: Add @HouseWL (#218958)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -361,6 +363,7 @@ BEGIN
 	
 	-- Return data
 	IF @ReportBy = 1
+	IF @HouseWL IS NULL
 	BEGIN
 		SELECT CONVERT(VARCHAR(7), b.winlostdate, 120)  [Month]
 			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
@@ -382,8 +385,32 @@ BEGIN
 			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
 		ORDER BY CONVERT(VARCHAR(7), b.winlostdate, 120), b.username
 	END
+	ELSE
+	BEGIN
+		SELECT CONVERT(VARCHAR(7), b.winlostdate, 120)  [Month]
+			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+			,b.username
+			,SUM(b.tickets_won)	AS tickets_won
+			,SUM(b.tickets_lose)	AS tickets_lose
+			,SUM(b.stake_won)		AS stake_won
+			,SUM(b.stake_lose)	AS stake_lose
+			,SUM(b.member_won)	AS member_won
+			,SUM(b.member_lose)	AS member_lose
+			,SUM(b.ourPT_won) AS ourPT_won
+			,SUM(b.ourPT_lose)	AS ourPT_lose
+			,b.CustomerClass
+			,SUM(b.betcount) TotalBets
+		FROM #tmpSum b
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
+			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+		GROUP BY CONVERT(VARCHAR(7), b.winlostdate, 120), b.username, b.CustomerClass,
+			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
+		HAVING SUM(b.ourPT_won) + SUM(b.ourPT_lose) <= @HouseWL
+		ORDER BY CONVERT(VARCHAR(7), b.winlostdate, 120), b.username
+	END
 
 	IF @ReportBy = 2
+	IF @HouseWL IS NULL
 	BEGIN
 		SELECT b.winlostdate [Date]
 			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
@@ -403,6 +430,29 @@ BEGIN
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		GROUP BY b.winlostdate, b.username, b.CustomerClass,
 			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
+		ORDER BY b.winlostdate, b.username
+	END
+	ELSE
+	BEGIN
+		SELECT b.winlostdate [Date]
+			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+			,b.username
+			,SUM(b.tickets_won)	AS tickets_won
+			,SUM(b.tickets_lose)	AS tickets_lose
+			,SUM(b.stake_won)		AS stake_won
+			,SUM(b.stake_lose)	AS stake_lose
+			,SUM(b.member_won)	AS member_won
+			,SUM(b.member_lose)	AS member_lose
+			,SUM(b.ourPT_won) AS ourPT_won
+			,SUM(b.ourPT_lose)	AS ourPT_lose
+			,b.CustomerClass
+			,SUM(b.betcount) TotalBets
+		FROM #tmpSum b
+			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
+			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+		GROUP BY b.winlostdate, b.username, b.CustomerClass,
+			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
+		HAVING SUM(b.ourPT_won) + SUM(b.ourPT_lose) <= @HouseWL
 		ORDER BY b.winlostdate, b.username
 	END
 
