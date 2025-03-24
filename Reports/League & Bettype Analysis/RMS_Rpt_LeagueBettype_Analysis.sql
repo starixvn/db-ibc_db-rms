@@ -196,7 +196,8 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 10)
 						AND s.Selection > 10)
 					)
-				AND s.CustId IN (SELECT CustID FROM #tmpCust)
+				AND (s.CustId IN (SELECT CustID FROM #tmpCust)
+					OR @Username = '')
 				AND (s.bettype <> 38 OR
 					(s.bettype = 38 AND s.Betteam = '0'))
 			GROUP BY
@@ -238,7 +239,8 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 10)
 						AND s.Selection > 10)
 					)
-				AND s.CustId IN (SELECT CustID FROM #tmpCust)
+				AND (s.CustId IN (SELECT CustID FROM #tmpCust)
+					OR @Username = '')
 				AND (s.bettype <> 38 OR
 					(s.bettype = 38 AND s.Betteam = '0'))
 			GROUP BY

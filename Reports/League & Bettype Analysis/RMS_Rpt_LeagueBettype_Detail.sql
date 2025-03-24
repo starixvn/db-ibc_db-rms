@@ -406,7 +406,8 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 10)
 						AND s.Selection > 10)
 					)
-				AND s.CustId IN (SELECT CustID FROM #tmpCust)
+				AND (s.CustId IN (SELECT CustID FROM #tmpCust)
+					OR @Username = '')
 			GROUP BY
 				l.GroupName,
 				l.LeagueName,
@@ -467,7 +468,8 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 10)
 						AND s.Selection > 10)
 					)
-				AND s.CustId IN (SELECT CustID FROM #tmpCust)
+				AND (s.CustId IN (SELECT CustID FROM #tmpCust)
+					OR @Username = '')
 			GROUP BY
 				l.GroupName,
 				l.LeagueName,
@@ -517,7 +519,8 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 10)
 						AND s.Selection > 10)
 					)
-				AND s.CustId IN (SELECT CustID FROM #tmpCust)
+				AND (s.CustId IN (SELECT CustID FROM #tmpCust)
+					OR @Username = '')
 			GROUP BY
 				m.MatchID,
 				m.HomeName,
@@ -590,7 +593,8 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #tmpSelection WHERE Selection = 10)
 						AND s.Selection > 10)
 					)
-				AND s.CustId IN (SELECT CustID FROM #tmpCust)
+				AND (s.CustId IN (SELECT CustID FROM #tmpCust)
+					OR @Username = '')
 	
 	INSERT INTO #tmpBettrans
 	(
