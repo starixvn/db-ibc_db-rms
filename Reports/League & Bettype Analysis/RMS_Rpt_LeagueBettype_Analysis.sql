@@ -49,13 +49,22 @@ BEGIN
 	INSERT INTO #tmpSelection (Selection)
 	SELECT val FROM dbo.f_RMS_strSplit(@Selection, ',')
 
+	DECLARE @CustomerClass SMALLINT, @SiteGroup VARCHAR(10)
+
 	DECLARE @CustID INT, @RoleID TINYINT
 	CREATE TABLE #tmpCust(CustID INT)
 	IF @UserName <> ''
 	BEGIN
-		SELECT @custID = custid, @RoleID = roleid
+		SELECT @CustID = custid, 
+				@RoleID = roleid,
+				@CustomerClass = CustomerClass
 		FROM	bodb02.dbo.custInfo WITH(NOLOCK)
 		WHERE  username = @UserName
+
+		SELECT @SiteGroup = CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END 
+		FROM bodb02.dbo.Customer c WITH(NOLOCK)
+			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
+		WHERE c.custid = @CustID
 
 		IF @RoleID = 2 
 		BEGIN
@@ -180,6 +189,8 @@ BEGIN
 				l.GroupId
 				,l.GroupName
 				,l.leagueId
+				,@CustomerClass as CustomerClass
+				,@SiteGroup as SiteGroup
 				,SUM(BetCount)			AS TotalTickets
 				,SUM(WonCount)			AS WonTickets
 				,SUM(DrawCount)			AS DrawTickets
@@ -223,6 +234,8 @@ BEGIN
 			END 
 			SELECT
 				s.Bettype				AS BettypeId
+				,@CustomerClass as CustomerClass
+				,@SiteGroup as SiteGroup
 				,SUM(BetCount)			AS TotalTickets
 				,SUM(WonCount)			AS WonTickets
 				,SUM(DrawCount)			AS DrawTickets
