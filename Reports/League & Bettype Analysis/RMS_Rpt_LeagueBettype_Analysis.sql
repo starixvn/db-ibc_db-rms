@@ -146,6 +146,7 @@ BEGIN
 				,l.leagueId
 			HAVING CASE WHEN SUM(BetCount) = 0 THEN 0 ELSE 1.0 * SUM(WonCount)/SUM(BetCount) END >= @Ratio
 			ORDER BY TotalTickets DESC
+			OPTION(RECOMPILE)
 		END
 		ELSE IF @ReportBy = 2 -- view by bettype
 		BEGIN
@@ -179,6 +180,7 @@ BEGIN
 				s.Bettype
 			HAVING CASE WHEN SUM(BetCount) = 0 THEN 0 ELSE 1.0 * SUM(WonCount)/SUM(BetCount) END >= @Ratio
 			ORDER BY TotalTickets DESC
+			OPTION(RECOMPILE)
 		END
 	END
 	ELSE -- @Username <> ''
@@ -217,6 +219,7 @@ BEGIN
 				,l.leagueId
 			HAVING CASE WHEN SUM(BetCount) = 0 THEN 0 ELSE 1.0 * SUM(WonCount)/SUM(BetCount) END >= @Ratio
 			ORDER BY TotalTickets DESC
+			OPTION(RECOMPILE)
 		END
 		ELSE IF @ReportBy = 2 -- view by bettype
 		BEGIN
@@ -260,6 +263,7 @@ BEGIN
 				s.Bettype
 			HAVING CASE WHEN SUM(BetCount) = 0 THEN 0 ELSE 1.0 * SUM(WonCount)/SUM(BetCount) END >= @Ratio
 			ORDER BY TotalTickets DESC
+			OPTION(RECOMPILE)
 		END
 	END
 	DROP TABLE #Leagues

@@ -123,7 +123,7 @@ BEGIN
 					AND (@Site = 2 OR s.IsDeposit = @Site)
 					AND NOT EXISTS (SELECT 1 FROM dbo.rmLeague l WITH (NOLOCK) WHERE s.leagueId = l.LeagueId)
 					AND l.sporttype = 1
-				GROUP BY s.leagueId, l.leaguename
+				GROUP BY s.leagueId, l.leaguename				
 		END
 
 		
@@ -314,6 +314,7 @@ BEGIN
 				BetTeam,
 				BetChoice
 			ORDER BY MainHouseWinloss DESC
+			OPTION(RECOMPILE)
 		END
 	
 		IF @ReportBy = 2 -- view by bettype detail
@@ -346,6 +347,7 @@ BEGIN
 				l.leaguename
 			HAVING SUM(MainHouseWinloss) <= @HouseWL			
 			ORDER BY MainHouseWinloss DESC
+			OPTION(RECOMPILE)
 		END
 	END
 	ELSE	-- @Username <> ''
@@ -502,6 +504,7 @@ BEGIN
 				BetTeam,
 				BetChoice
 			ORDER BY MainHouseWinloss DESC
+			OPTION(RECOMPILE)
 		END
 	
 		IF @ReportBy = 2 -- view by bettype detail
@@ -542,6 +545,7 @@ BEGIN
 				l.leaguename
 			HAVING SUM(MainHouseWinloss) <= @HouseWL			
 			ORDER BY MainHouseWinloss DESC
+			OPTION(RECOMPILE)
 		END
 	END
 
@@ -576,6 +580,7 @@ BEGIN
 	BEGIN
 		IF ((SELECT COUNT(*) FROM #tmpSelection) = 9
 				AND @Username = '')
+		BEGIN
 			INSERT INTO #tmpTransList (TransID)
 			SELECT DISTINCT a.val
 			FROM dbo.rmSumByEventBettype s WITH (NOLOCK)
@@ -588,8 +593,11 @@ BEGIN
 				AND s.matchid = @Match
 				AND (@BetTeam = ''
 					OR (@BetTeam = '-' AND s.Betteam NOT IN ('a','h','1','2','x','o','u','e'))
-					OR s.Betteam = @BetTeam)		
+					OR s.Betteam = @BetTeam)	
+			OPTION(RECOMPILE)
+		END
 		ELSE
+		BEGIN
 			INSERT INTO #tmpTransList (TransID)
 			SELECT DISTINCT a.val
 			FROM dbo.rmSumByCust s WITH (NOLOCK) 
@@ -608,6 +616,8 @@ BEGIN
 					)
 				AND (s.CustId IN (SELECT CustID FROM #tmpCust)
 					OR @Username = '')
+			OPTION(RECOMPILE)
+		END
 	
 	INSERT INTO #tmpBettrans
 	(
