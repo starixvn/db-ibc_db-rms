@@ -222,19 +222,7 @@ BEGIN
 			OPTION(RECOMPILE)
 		END
 		ELSE IF @ReportBy = 2 -- view by bettype
-		BEGIN
-			IF @SportType = 1
-			BEGIN
-				-- all leagues --> leagueid = 0
-				IF EXISTS (SELECT 1 FROM #Leagues WHERE GroupName = 'None')
-					AND (SELECT COUNT(1) FROM  #Leagues WHERE GroupName <> 'None') = (SELECT COUNT(1) FROM dbo.rmLeague l WITH (NOLOCK))
-				BEGIN
-					DELETE #Leagues
-
-					INSERT INTO #Leagues (LeagueId)
-					VALUES (0)
-				END
-			END 
+		BEGIN			
 			SELECT
 				s.Bettype				AS BettypeId
 				,@CustomerClass as CustomerClass
