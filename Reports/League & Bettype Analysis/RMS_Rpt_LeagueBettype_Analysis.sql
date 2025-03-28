@@ -208,6 +208,7 @@ BEGIN
 				AND (bettype <> 38 OR
 					(bettype = 38 AND Betteam = '0'))
 				AND TransList IS NOT NULL
+				OPTION(RECOMPILE)
 
 			SELECT
 				l.GroupId
@@ -218,13 +219,13 @@ BEGIN
 				,SUM(BetCount)			AS TotalTickets
 				,SUM(WonCount)			AS WonTickets
 				,SUM(DrawCount)			AS DrawTickets
-				,ParlayWonTickets
+				,ISNULL(ParlayWonTickets,0) AS ParlayWonTickets
 				,SUM(MainStake)			AS Stake
 				,SUM(MainMemberWinloss)	AS MemberWinloss
 				,SUM(MainHouseWinloss)	AS MainHouseWinloss
 			FROM dbo.rmSumByCust s WITH (NOLOCK)				
 				INNER JOIN #Leagues l ON s.leagueId = l.LeagueId
-				INNER JOIN (
+				LEFT JOIN (
 					SELECT LeagueBettype,
 						SUM(MainWonCount) ParlayWonTickets
 					FROM #tmpWonTicket
@@ -272,6 +273,7 @@ BEGIN
 				AND (bettype <> 38 OR
 					(bettype = 38 AND Betteam = '0'))
 				AND TransList IS NOT NULL
+				OPTION(RECOMPILE)
 
 			SELECT
 				s.Bettype				AS BettypeId
@@ -280,13 +282,13 @@ BEGIN
 				,SUM(BetCount)			AS TotalTickets
 				,SUM(WonCount)			AS WonTickets
 				,SUM(DrawCount)			AS DrawTickets
-				,ParlayWonTickets
+				,ISNULL(ParlayWonTickets,0) AS ParlayWonTickets
 				,SUM(MainStake)			AS Stake
 				,SUM(MainMemberWinloss)	AS MemberWinloss
 				,SUM(MainHouseWinloss)	AS MainHouseWinloss
 			FROM dbo.rmSumByCust s WITH (NOLOCK)
 				INNER JOIN #Leagues l ON s.leagueId = l.LeagueId
-				INNER JOIN (
+				LEFT JOIN (
 					SELECT LeagueBettype,
 						SUM(MainWonCount) ParlayWonTickets
 					FROM #tmpWonTicket
