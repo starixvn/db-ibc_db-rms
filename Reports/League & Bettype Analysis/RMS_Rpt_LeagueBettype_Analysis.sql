@@ -291,7 +291,7 @@ BEGIN
 						SUM(MainWonCount) ParlayWonTickets
 					FROM #tmpWonTicket
 					GROUP BY LeagueBettype
-				) b ON b.LeagueBettype = s.leagueId
+				) b ON b.LeagueBettype = s.Bettype
 			WHERE s.winlostdate BETWEEN @FromDate AND @ToDate
 				AND ',' + @ParlayType + ',' LIKE '%,' + CONVERT(VARCHAR(5), s.ParlayType - 1) + ',%'
 				AND (@Site = 2 OR s.IsDeposit = @Site)
