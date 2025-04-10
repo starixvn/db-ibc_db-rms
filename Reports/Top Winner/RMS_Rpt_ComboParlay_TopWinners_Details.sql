@@ -33,6 +33,7 @@ AS
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241212@Cherry: Separate Cricket (#214664)
+		- 20250410@Cherry: Upgrade ExchangeID (#222189)
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -64,7 +65,7 @@ BEGIN
 
 	-- currency
 	BEGIN
-		CREATE TABLE #tmpCurrency (currency TINYINT)
+		CREATE TABLE #tmpCurrency (currency SMALLINT)
 		INSERT INTO #tmpCurrency (currency)
 		SELECT value FROM STRING_SPLIT(@currency, ',')
 

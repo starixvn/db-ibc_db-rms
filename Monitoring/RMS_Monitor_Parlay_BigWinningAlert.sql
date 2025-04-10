@@ -14,6 +14,7 @@ AS
 		- 20230404@Cherry: Initialize SP [RedmineID: #186037]
 		- 20231101@Cherry: Parlay Generator (#195498)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20250410@Cherry: Upgrade ExchangeID (#222189)
 */
 
 BEGIN
@@ -48,7 +49,7 @@ BEGIN
 		Combo INT,
 		Winlostdate SMALLDATETIME,
 		Betcheck NVARCHAR(50),
-		CurrencyID TINYINT,
+		CurrencyID SMALLINT,
 		Stake MONEY,
 		Winloss MONEY
 	)

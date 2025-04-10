@@ -43,6 +43,7 @@ AS
 		- 20240826@Cherry: Add filter @LeagueGroups (#209293)
 		- 20241212@Cherry: Separate Cricket (#214664)
 		- 20250306@Cherry: Remove @ToHouseAmt (#218958)
+		- 20250410@Cherry: Upgrade ExchangeID (#222189)
 
 	Parameter's Explanation:
 		- @selection:
@@ -104,7 +105,7 @@ BEGIN
 
 	-- currency
 	BEGIN
-		DECLARE @tmpCurrency TABLE (currency TINYINT)
+		DECLARE @tmpCurrency TABLE (currency SMALLINT)
 		INSERT INTO @tmpCurrency (currency)
 		SELECT val FROM dbo.f_RMS_strSplit(@Currency, ',')
 	END
