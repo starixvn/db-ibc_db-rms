@@ -39,6 +39,7 @@ AS
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241204@Cherry: Add level (#212544)
 		- 20241212@Cherry: Separate Cricket (#214664)
+		- 20250410@Cherry: Upgrade ExchangeID (#222189)
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -83,7 +84,7 @@ BEGIN
 
 	-- currency
 	BEGIN
-		CREATE TABLE #tmpCurrency (currency TINYINT)
+		CREATE TABLE #tmpCurrency (currency SMALLINT)
 		INSERT INTO #tmpCurrency (currency)
 		SELECT value FROM STRING_SPLIT(@currency, ',')
 
