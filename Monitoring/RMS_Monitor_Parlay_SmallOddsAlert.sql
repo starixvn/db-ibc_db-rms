@@ -14,6 +14,7 @@ AS
 		- 20231101@Cherry: Parlay Generator (#195498)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20250604@Cherry: Show Total Selection as INT (#229589)
 */
 
 BEGIN
@@ -37,7 +38,7 @@ BEGIN
 		stake MONEY,
 		WinningAmount MONEY,
 		CompanyLoseAmount MONEY,
-		Selection SMALLMONEY,
+		Selection INT,
 		odds SMALLMONEY,
 		HousePT SMALLMONEY,
 		TotalBets INT

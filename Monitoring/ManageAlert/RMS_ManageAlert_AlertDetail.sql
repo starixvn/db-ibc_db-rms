@@ -19,6 +19,7 @@ AS
 		20240102@Cherry: Parlay Type for Parlay Boost (#199217)
 		20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		20240312@Cherry: Change SQL account in metadata (#202012)
+		20250604@Cherry: Show Total Selection as INT (#229589)
 
 	Param:
 		@TicketStatus = 112: Won
@@ -94,7 +95,7 @@ BEGIN
 		Ip VARCHAR(50),
 		HousePT SMALLMONEY,
 		TotalBet INT,
-		TotalSelection SMALLMONEY,
+		TotalSelection INT,
 		Sporttype BIGINT,
 		Status NVARCHAR(10),
 		IsParlayGenerator BIT,
