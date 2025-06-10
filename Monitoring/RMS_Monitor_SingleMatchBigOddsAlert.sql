@@ -10,6 +10,7 @@ AS
 
 	Revisions:
 		- 20240815@Cherry: Initialize SP [RedmineID: #209293]
+		- 20250604@Cherry: Show Total Selection as INT (#229589)
 
 */
 
@@ -38,7 +39,7 @@ BEGIN
 		stake MONEY,
 		WinningAmount MONEY,
 		CompanyLoseAmount MONEY,
-		Selection SMALLMONEY,
+		Selection INT,
 		odds SMALLMONEY,
 		TotalBets INT
 	)
