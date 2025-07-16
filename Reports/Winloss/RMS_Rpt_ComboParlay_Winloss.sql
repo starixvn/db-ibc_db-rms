@@ -34,6 +34,7 @@ AS
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241212@Cherry: Separate Cricket (#214664)
+		- 20250716@Cherry: Report by Parlay Type (#232923)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -47,6 +48,7 @@ AS
 		- @ReportType:
 					. '1': combo
 					. '2': Sporttype
+					. '3': Parlay Type
 		- @ParlayType:
 					. 1: Mix parlay
 					. 2: Combo parlay
@@ -171,7 +173,8 @@ BEGIN
 			member_lose MONEY,
 			ourPT_won MONEY,
 			ourPT_lose MONEY,
-			sporttype INT
+			sporttype INT,
+			parlaytype INT
 		)
 
 		CREATE TABLE #tmpCust(CustID INT)
@@ -209,7 +212,9 @@ BEGIN
 			INSERT INTO #rptWinloss
 			(
 				winlostdate,combo,sporttype
-				,tickets_won,tickets_lose,stake_won,stake_lose,member_won,member_lose,ourPT_won,ourPT_lose
+				,tickets_won,tickets_lose,stake_won,
+				stake_lose,member_won,member_lose,
+				ourPT_won,ourPT_lose,parlaytype
 			)
 			SELECT b.winlostdate, b.hdp2, b.transid2
 				,SUM(CASE WHEN statusID = 112 THEN 1 ELSE 0 END) AS tickets_won
@@ -220,6 +225,14 @@ BEGIN
 				,SUM(CASE WHEN statusID = 113 THEN -(winlost - actual_stake) * actualrate ELSE 0 END) AS member_lose
 				,SUM(CASE WHEN 1 - tpositiontaking = 0 THEN 0 ELSE CASE WHEN statusID = 112 THEN (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate ELSE 0 END END) AS ourPT_won
 				,SUM(CASE WHEN 1 - tpositiontaking = 0 THEN 0 ELSE CASE WHEN statusID = 113 THEN (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate ELSE 0 END END) AS ourPT_lose
+				,CASE WHEN b.bettype = 38 THEN 3
+					  WHEN b.bettype = 376 THEN 4
+					  WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
+					  WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 2
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 5
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 6
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 7
+				END parlaytype
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
@@ -242,7 +255,15 @@ BEGIN
 					)		
 				AND EXISTS(SELECT TOP 1 1 FROM #tmpCust ct WHERE b.custid = ct.custid)						
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY b.winlostdate, b.hdp2, b.transid2
+			GROUP BY b.winlostdate, b.hdp2, b.transid2,
+				CASE WHEN b.bettype = 38 THEN 3
+					  WHEN b.bettype = 376 THEN 4
+					  WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
+					  WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 2
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 5
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 6
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 7
+				END
 			OPTION (RECOMPILE)
 
 			DELETE FROM #tmpCust
@@ -270,7 +291,9 @@ BEGIN
 			INSERT INTO #rptWinloss
 			(
 				winlostdate,combo,sporttype
-				,tickets_won,tickets_lose,stake_won,stake_lose,member_won,member_lose,ourPT_won,ourPT_lose
+				,tickets_won,tickets_lose,stake_won,
+				stake_lose,member_won,member_lose,
+				ourPT_won,ourPT_lose,parlaytype
 			)
 			SELECT
 				a.winlostdate, a.combo, a.sporttype
@@ -282,6 +305,7 @@ BEGIN
 				,SUM(CASE WHEN statusID = 113 THEN -(a.winlost-a.stake)*actualrate ELSE 0 END) AS member_lose
 				,SUM(CASE WHEN statusID = 112 THEN (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) * actualrate ELSE 0 END) AS ourPT_won
 				,SUM(CASE WHEN statusID = 113 THEN (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) * actualrate ELSE 0 END) AS ourPT_lose		
+				,a.parlaytype - 1
 			FROM dbo.rmSumWinloss a WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
@@ -291,7 +315,7 @@ BEGIN
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND EXISTS(SELECT TOP 1 1 FROM #tmpCust ct WHERE a.custid = ct.custid) 
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY a.winlostdate, a.combo, a.sporttype
+			GROUP BY a.winlostdate, a.combo, a.sporttype,a.parlaytype - 1
 			OPTION (RECOMPILE)
 
 			DELETE FROM #tmpCust
@@ -319,7 +343,9 @@ BEGIN
 			INSERT INTO #rptWinloss
 			(
 				winlostdate,combo,sporttype
-				,tickets_won,tickets_lose,stake_won,stake_lose,member_won,member_lose,ourPT_won,ourPT_lose
+				,tickets_won,tickets_lose,stake_won,
+				stake_lose,member_won,member_lose,
+				ourPT_won,ourPT_lose,parlaytype
 			)
 			SELECT
 				a.winlostdate, a.combo, a.sporttype
@@ -331,6 +357,7 @@ BEGIN
 				,SUM(CASE WHEN statusID = 113 THEN -(a.winlost-a.stake)*actualrate ELSE 0 END) AS member_lose
 				,SUM(CASE WHEN statusID = 112 THEN (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) * actualrate ELSE 0 END) AS ourPT_won
 				,SUM(CASE WHEN statusID = 113 THEN (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) * actualrate ELSE 0 END) AS ourPT_lose		
+				,a.parlaytype - 1
 			FROM dbo.rmSumWinloss_Old a WITH (NOLOCK)
 				INNER JOIN #tmpSelection s ON a.combo = s.selection
 				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
@@ -340,7 +367,7 @@ BEGIN
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
 				AND EXISTS(SELECT TOP 1 1 FROM #tmpCust ct WHERE a.custid = ct.custid) 						
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY a.winlostdate, a.combo, a.sporttype
+			GROUP BY a.winlostdate, a.combo, a.sporttype,a.parlaytype - 1
 			OPTION (RECOMPILE)
 
 			DELETE FROM #tmpCust
@@ -363,7 +390,7 @@ BEGIN
 		FROM #rptWinloss
 		GROUP BY winlostdate, CASE WHEN combo > 10 THEN 10 ELSE combo END
 		ORDER BY winlostdate ASC, combo ASC
-	ELSE
+	ELSE IF @ReportType = 2
 		SELECT
 			winlostdate
 			,CASE WHEN sporttype NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5,50) THEN -2 ELSE sporttype END AS sporttype
@@ -378,6 +405,44 @@ BEGIN
 		FROM #rptWinloss
 		GROUP BY winlostdate, CASE WHEN sporttype NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5,50) THEN -2 ELSE sporttype END
 		ORDER BY winlostdate ASC, sporttype ASC
+	ELSE IF @ReportType = 3
+		SELECT
+			winlostdate
+			,CASE WHEN parlaytype = 1 THEN 'Mix Parlay'
+				WHEN parlaytype = 2 THEN 'Combo Parlay'
+				WHEN parlaytype = 3 THEN 'Single Match Parlay'
+				WHEN parlaytype = 4 THEN 'Penalty Shootout Combo'
+				WHEN parlaytype = 5 THEN 'GOF'
+				WHEN parlaytype = 6 THEN 'Parlay Generator'
+				WHEN parlaytype = 7 THEN 'Parlay Boost'
+				END AS parlaytype
+			,SUM(tickets_won)	AS tickets_won
+			,SUM(tickets_lose)	AS tickets_lose
+			,SUM(stake_won)		AS stake_won
+			,SUM(stake_lose)	AS stake_lose
+			,SUM(member_won)	AS member_won
+			,SUM(member_lose)	AS member_lose
+			,SUM(ourPT_won)		AS ourPT_won
+			,SUM(ourPT_lose)	AS ourPT_lose
+		FROM #rptWinloss
+		GROUP BY winlostdate, 
+			CASE WHEN parlaytype = 1 THEN 'Mix Parlay'
+				WHEN parlaytype = 2 THEN 'Combo Parlay'
+				WHEN parlaytype = 3 THEN 'Single Match Parlay'
+				WHEN parlaytype = 4 THEN 'Penalty Shootout Combo'
+				WHEN parlaytype = 5 THEN 'GOF'
+				WHEN parlaytype = 6 THEN 'Parlay Generator'
+				WHEN parlaytype = 7 THEN 'Parlay Boost'
+				END
+		ORDER BY winlostdate ASC, 
+			CASE WHEN parlaytype = 1 THEN 'Mix Parlay'
+				WHEN parlaytype = 2 THEN 'Combo Parlay'
+				WHEN parlaytype = 3 THEN 'Single Match Parlay'
+				WHEN parlaytype = 4 THEN 'Penalty Shootout Combo'
+				WHEN parlaytype = 5 THEN 'GOF'
+				WHEN parlaytype = 6 THEN 'Parlay Generator'
+				WHEN parlaytype = 7 THEN 'Parlay Boost'
+				END
 	
 	DROP TABLE #bettype
 	DROP TABLE #rptWinloss
