@@ -227,11 +227,11 @@ BEGIN
 				,SUM(CASE WHEN 1 - tpositiontaking = 0 THEN 0 ELSE CASE WHEN statusID = 113 THEN (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate ELSE 0 END END) AS ourPT_lose
 				,CASE WHEN b.bettype = 38 THEN 3
 					  WHEN b.bettype = 376 THEN 4
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 7
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 6
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 5
 					  WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
 					  WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 2
-					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 5
-					  WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 6
-					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 7
 				END parlaytype
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
@@ -258,11 +258,11 @@ BEGIN
 			GROUP BY b.winlostdate, b.hdp2, b.transid2,
 				CASE WHEN b.bettype = 38 THEN 3
 					  WHEN b.bettype = 376 THEN 4
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 7
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 6
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 5
 					  WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
 					  WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 2
-					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 5
-					  WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 6
-					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 7
 				END
 			OPTION (RECOMPILE)
 
