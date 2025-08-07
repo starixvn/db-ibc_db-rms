@@ -227,6 +227,7 @@ BEGIN
 				,SUM(CASE WHEN 1 - tpositiontaking = 0 THEN 0 ELSE CASE WHEN statusID = 113 THEN (-(winlost - actual_stake) * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) - scomm  + scomm * CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)) / (1 - tpositiontaking)) * actualrate ELSE 0 END END) AS ourPT_lose
 				,CASE WHEN b.bettype = 38 THEN 3
 					  WHEN b.bettype = 376 THEN 4
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac AND b.oddsspread = 2 THEN 77 --Parlay Generator & Boost
 					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 7
 					  WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 6
 					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 5
@@ -258,6 +259,7 @@ BEGIN
 			GROUP BY b.winlostdate, b.hdp2, b.transid2,
 				CASE WHEN b.bettype = 38 THEN 3
 					  WHEN b.bettype = 376 THEN 4
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac AND b.oddsspread = 2 THEN 77
 					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 7
 					  WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 6
 					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 5
@@ -415,6 +417,7 @@ BEGIN
 				WHEN parlaytype = 5 THEN 'GOF'
 				WHEN parlaytype = 6 THEN 'Parlay Generator'
 				WHEN parlaytype = 7 THEN 'Parlay Boost'
+				WHEN parlaytype = 77 THEN 'Parlay Boost & Generator'
 				END AS parlaytype
 			,SUM(tickets_won)	AS tickets_won
 			,SUM(tickets_lose)	AS tickets_lose
@@ -433,6 +436,7 @@ BEGIN
 				WHEN parlaytype = 5 THEN 'GOF'
 				WHEN parlaytype = 6 THEN 'Parlay Generator'
 				WHEN parlaytype = 7 THEN 'Parlay Boost'
+				WHEN parlaytype = 77 THEN 'Parlay Boost & Generator'
 				END
 		ORDER BY winlostdate ASC, 
 			CASE WHEN parlaytype = 1 THEN 'Mix Parlay'
@@ -442,6 +446,7 @@ BEGIN
 				WHEN parlaytype = 5 THEN 'GOF'
 				WHEN parlaytype = 6 THEN 'Parlay Generator'
 				WHEN parlaytype = 7 THEN 'Parlay Boost'
+				WHEN parlaytype = 77 THEN 'Parlay Boost & Generator'
 				END
 	
 	DROP TABLE #bettype
