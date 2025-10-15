@@ -28,6 +28,7 @@ AS
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241106@Cherry: Add Single Match Parlay (#209293)
 		- 20250115@Cherry: Support direct member (#215427)
+		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
 		
 	Parameter's Explanation:
 		- @selection:
@@ -380,7 +381,7 @@ BEGIN
 			;WITH t AS
 			(
 				SELECT	r.custid , 
-						CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup,
+						CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup,
 						c.username, 
 						SUM(rm.stake * rm.actualrate)  AS totalStake, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate) AS totalWinningAmt, 
@@ -391,7 +392,7 @@ BEGIN
 					LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.custid = r.custid
 					LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 				GROUP BY r.custid, c.username,
-						CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END 
+						CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END 
 			), u AS
 			(
 				SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
@@ -405,7 +406,7 @@ BEGIN
 		BEGIN
 			SELECT	rm.transdate,
 					rm.transid,
-					CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup,
+					CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup,
 					rm.Username,
 					mc.level,
 					rm.odds2 * rm.TotalBet AS odds,

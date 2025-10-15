@@ -44,6 +44,7 @@ AS
 		- 20241212@Cherry: Separate Cricket (#214664)
 		- 20250306@Cherry: Remove @ToHouseAmt (#218958)
 		- 20250410@Cherry: Upgrade ExchangeID (#222189)
+		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
 
 	Parameter's Explanation:
 		- @selection:
@@ -99,7 +100,7 @@ BEGIN
 		CREATE TABLE #SiteTab (SiteName NVARCHAR(50), IsDeposit BIT)
 
 		INSERT INTO #SiteTab(SiteName, IsDeposit)
-		SELECT Site, CASE WHEN Site = 'Saba789'  THEN 0 ELSE isDeposit END
+		SELECT Site, CASE WHEN Site IN ('Saba789','NovaCasino','SEAL888')  THEN 0 ELSE isDeposit END
 		FROM bodb02.dbo.Site (NOLOCK)
 	END
 
@@ -268,7 +269,7 @@ BEGIN
 					,b.transid
 					,b.refno
 					,b.custid
-					,CASE WHEN st.isDeposit = 0 OR st.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+					,CASE WHEN st.isDeposit = 0 OR st.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 					,b.Username
 					,b.bettype
 					,(b.winlost - b.actual_stake) / b.stake AS odds
@@ -347,7 +348,7 @@ BEGIN
 					,b.transid
 					,b.refno
 					,b.custid
-					,CASE WHEN st.isDeposit = 0 OR st.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+					,CASE WHEN st.isDeposit = 0 OR st.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 					,b.Username
 					,b.bettype
 					,(b.winlost - b.actual_stake) / b.stake AS odds

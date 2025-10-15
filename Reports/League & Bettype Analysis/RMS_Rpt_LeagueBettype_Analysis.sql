@@ -25,6 +25,7 @@ AS
 		- 20240315@Cherry: Enhancement (#197684)
 		- 20240815@Cherry: Get None League Group (#204375)
 		- 20250314@Cherry: Add filter by Username (#214662)
+		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
 
 	Param's Explanation:
 		. @ParlayType: '1,2'
@@ -62,7 +63,7 @@ BEGIN
 		FROM	bodb02.dbo.custInfo WITH(NOLOCK)
 		WHERE  username = @UserName
 
-		SELECT @SiteGroup = CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END 
+		SELECT @SiteGroup = CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END 
 		FROM bodb02.dbo.Customer c WITH(NOLOCK)
 			INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		WHERE c.custid = @CustID

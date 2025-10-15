@@ -37,6 +37,7 @@ AS
 			- 20240312@Cherry: Change SQL account in metadata (#202012)
 			- 20241212@Cherry: Separate Cricket (#214664)
 			- 20250306@Cherry: Add @HouseWL (#218958)
+			- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
 
 	Parameter's Explanation:
 		- @sporttype:
@@ -68,7 +69,7 @@ BEGIN
 
 	SELECT @CustomerClass = CustomerClass FROM bodb02.dbo.custInfo WITH(NOLOCK) WHERE custid = @custid
 
-	SELECT @SiteGroup = CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END 
+	SELECT @SiteGroup = CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END 
 	FROM bodb02.dbo.Customer c WITH(NOLOCK)
 		INNER JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 	WHERE c.custid = @custid

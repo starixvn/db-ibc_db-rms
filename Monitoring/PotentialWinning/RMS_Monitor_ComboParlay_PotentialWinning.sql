@@ -37,6 +37,7 @@ AS
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241212@Cherry: Separate Cricket (#214664)
+		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
 
 	Parameter's Explanation:
 		- @selection:
@@ -384,7 +385,7 @@ BEGIN
 			SELECT TOP(@limitRowcount) 
 				MAX(b.transdate) AS transdate
 				,b.custid
-				,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+				,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 				,b.username
 				,AVG(b.Odds) AS Odds
 				,SUM(b.stake) AS stake
@@ -405,7 +406,7 @@ BEGIN
 				,b.level 
 				,b.CurrencyName
 				,b.CustomerClass
-				,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
+				,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
 			HAVING SUM(b.WinningAmount) >= CASE WHEN @Recommend >0 THEN 0 ELSE @WinningAmount END
 			ORDER BY WinningAmount DESC
 
@@ -414,7 +415,7 @@ BEGIN
 		ELSE
 		BEGIN
 			SELECT TOP (@limitRowcount)
-				CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+				CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 				,mc.username AgentName
 				,SUM(stake) TotalStake
 				,SUM(b.WinningAmount) AS WinningAmount
@@ -425,7 +426,7 @@ BEGIN
 				LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.recommend = c.custid
 				LEFT JOIN bodb02.dbo.Site s WITH(NOLOCK) ON c.site = s.site
 			GROUP BY
-				CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END 
+				CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END 
 				,mc.username
 				,b.recommend
 			HAVING SUM(b.WinningAmount) >= @WinningAmount
