@@ -407,7 +407,7 @@ BEGIN
 				WHEN parlaytype = 6 THEN 'Parlay Generator'
 				WHEN parlaytype = 7 THEN 'Parlay Boost'
 				WHEN parlaytype = 77 THEN 'Parlay Boost & Generator'
-				END
+				END ASC
 	
 	DROP TABLE #bettype
 	DROP TABLE #rptWinloss
