@@ -384,7 +384,7 @@ BEGIN
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		GROUP BY CONVERT(VARCHAR(7), b.winlostdate, 120), b.username, b.CustomerClass,
 			CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
-		ORDER BY CONVERT(VARCHAR(7), b.winlostdate, 120), b.username
+		ORDER BY CONVERT(VARCHAR(7), b.winlostdate, 120) ASC, b.username ASC
 	END
 	ELSE
 	BEGIN
@@ -407,7 +407,7 @@ BEGIN
 		GROUP BY CONVERT(VARCHAR(7), b.winlostdate, 120), b.username, b.CustomerClass,
 			CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
 		HAVING SUM(b.ourPT_won) + SUM(b.ourPT_lose) <= @HouseWL
-		ORDER BY CONVERT(VARCHAR(7), b.winlostdate, 120), b.username
+		ORDER BY CONVERT(VARCHAR(7), b.winlostdate, 120) ASC, b.username ASC
 	END
 
 	IF @ReportBy = 2
@@ -431,7 +431,7 @@ BEGIN
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		GROUP BY b.winlostdate, b.username, b.CustomerClass,
 			CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
-		ORDER BY b.winlostdate, b.username
+		ORDER BY b.winlostdate ASC, b.username ASC
 	END
 	ELSE
 	BEGIN
@@ -454,7 +454,7 @@ BEGIN
 		GROUP BY b.winlostdate, b.username, b.CustomerClass,
 			CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
 		HAVING SUM(b.ourPT_won) + SUM(b.ourPT_lose) <= @HouseWL
-		ORDER BY b.winlostdate, b.username
+		ORDER BY b.winlostdate ASC, b.username ASC
 	END
 
 	DROP TABLE #bettype

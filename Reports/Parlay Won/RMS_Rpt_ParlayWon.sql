@@ -153,7 +153,7 @@ BEGIN
 
 	-- League Group
 	CREATE TABLE #tmpLeagueGroup (LeagueGroupId INT)
-	INSERT INTO #tmpLeagueGroup
+	INSERT INTO #tmpLeagueGroup (LeagueGroupId)
 	SELECT value FROM STRING_SPLIT(@LeagueGroup, ',')
 
 	CREATE TABLE #tmpLeague (LeagueID INT)
@@ -501,7 +501,7 @@ BEGIN
 							) b
 							WHERE rn BETWEEN ' + CONVERT(VARCHAR(10), @RowStart) + ' AND ' + CONVERT(VARCHAR(10), @RowEnd)
 
-		EXEC (@SQL)
+		EXECUTE sp_executesql @SQL
 	END
 
 	DROP TABLE #level

@@ -337,7 +337,7 @@ BEGIN
 			,sum(betcount) as TotalBets
 		FROM #tmpSum
 		GROUP BY CONVERT(VARCHAR(7), winlostdate, 120)		
-		ORDER BY CONVERT(VARCHAR(7), winlostdate, 120)
+		ORDER BY CONVERT(VARCHAR(7), winlostdate, 120) ASC
 	END
 	ELSE
 	BEGIN
@@ -357,7 +357,7 @@ BEGIN
 		FROM #tmpSum
 		GROUP BY CONVERT(VARCHAR(7), winlostdate, 120)	
 		HAVING sum(ourPT_won) + sum(ourPT_lose) <= @HouseWL
-		ORDER BY CONVERT(VARCHAR(7), winlostdate, 120)
+		ORDER BY CONVERT(VARCHAR(7), winlostdate, 120) ASC
 	END
 
 	IF @ReportBy = 2 
@@ -378,7 +378,7 @@ BEGIN
 			,sum(betcount) as TotalBets
 		FROM #tmpSum
 		GROUP BY winlostdate		
-		ORDER BY winlostdate
+		ORDER BY winlostdate ASC
 	END
 	ELSE
 	BEGIN
@@ -398,7 +398,7 @@ BEGIN
 		FROM #tmpSum
 		GROUP BY winlostdate		
 		HAVING sum(ourPT_won) + sum(ourPT_lose) <= @HouseWL
-		ORDER BY winlostdate
+		ORDER BY winlostdate ASC
 	END
 
 	DROP TABLE #bettype

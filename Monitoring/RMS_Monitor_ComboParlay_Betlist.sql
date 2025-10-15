@@ -196,7 +196,7 @@ BEGIN
 	
 	-- League 
 	DECLARE @leagueGroupIdTab TABLE (LeagueGroupId INT)
-	INSERT INTO @leagueGroupIdTab
+	INSERT INTO @leagueGroupIdTab (LeagueGroupId)
 	SELECT value FROM STRING_SPLIT(@leagueGroupId, ',')
 
 	CREATE TABLE #League (LeagueID INT)

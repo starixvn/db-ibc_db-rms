@@ -22,7 +22,7 @@ BEGIN
 	FROM bodb02.dbo.Site WITH(NOLOCK)
 	WHERE isDeposit = CASE WHEN @IsDeposit= '' THEN isDeposit ELSE @IsDeposit END
 	AND isActive = 1
-	ORDER BY isDeposit, Site
+	ORDER BY isDeposit ASC, Site ASC
 
 END
 GO
