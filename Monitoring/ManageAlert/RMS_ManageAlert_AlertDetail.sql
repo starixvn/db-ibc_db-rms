@@ -20,6 +20,7 @@ AS
 		20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		20240312@Cherry: Change SQL account in metadata (#202012)
 		20250604@Cherry: Show Total Selection as INT (#229589)
+		20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
 
 	Param:
 		@TicketStatus = 112: Won
@@ -133,7 +134,7 @@ BEGIN
 			p.RefNo,
 			p.CustID,
 			p.BetType,
-			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup,
+			CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup,
 			p.username,
 			ci.CustomerClass,
 			(p.stake * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END) AS stake,
@@ -173,7 +174,7 @@ BEGIN
 			p.RefNo,
 			p.CustID,
 			p.BetType,
-			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup,
+			CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup,
 			p.username,
 			ci.CustomerClass,
 			(p.stake * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END) AS stake,
