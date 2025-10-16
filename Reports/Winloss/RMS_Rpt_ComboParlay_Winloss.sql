@@ -233,7 +233,7 @@ BEGIN
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 					)		
 				AND (@Site = 2 OR
-					EXISTS(SELECT 1 FROM bodb02.dbo.vw_customer c WITH(NOLOCK) 
+					EXISTS(SELECT 1 FROM bodb02.dbo.customer c WITH(NOLOCK) 
                                 INNER JOIN bodb02.dbo.Site s (NOLOCK) ON c.site = s.site
                         WHERE c.custid = b.custid 
 							AND CASE WHEN s.Site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END = @Site))						
@@ -284,7 +284,7 @@ BEGIN
 				AND EXISTS(SELECT 1 FROM #tmpSelection s WHERE a.combo = s.selection)
                 AND EXISTS(SELECT 1 FROM #tmpSport sp WHERE a.sporttype = sp.sporttype)
                 AND (@Site = 2 OR
-					EXISTS(SELECT 1 FROM bodb02.dbo.vw_customer c WITH(NOLOCK) 
+					EXISTS(SELECT 1 FROM bodb02.dbo.customer c WITH(NOLOCK) 
                                 INNER JOIN bodb02.dbo.Site s (NOLOCK) ON c.site = s.site
 							WHERE c.custid = a.custid 
 								AND CASE WHEN s.Site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END = @Site))
@@ -326,7 +326,7 @@ BEGIN
 				AND EXISTS(SELECT 1 FROM #tmpSelection s WHERE a.combo = s.selection)
                 AND EXISTS(SELECT 1 FROM #tmpSport sp WHERE a.sporttype = sp.sporttype)
                 AND (@Site = 2 OR
-					EXISTS(SELECT 1 FROM bodb02.dbo.vw_customer c WITH(NOLOCK) 
+					EXISTS(SELECT 1 FROM bodb02.dbo.customer c WITH(NOLOCK) 
                                 INNER JOIN bodb02.dbo.Site s (NOLOCK) ON c.site = s.site
 							WHERE c.custid = a.custid 
 								AND CASE WHEN s.Site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END = @Site))						
