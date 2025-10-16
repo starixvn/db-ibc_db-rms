@@ -35,6 +35,7 @@ AS
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241212@Cherry: Separate Cricket (#214664)
 		- 20250716@Cherry: Report by Parlay Type (#232923)
+		- 20251015@Cherry: Tuning performance (#241737)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -66,15 +67,6 @@ AS
 
 BEGIN
 	SET NOCOUNT ON
-
-	--Site
-	BEGIN
-		CREATE TABLE #SiteTab (SiteName NVARCHAR(50), IsDeposit BIT)
-
-		INSERT INTO #SiteTab(SiteName, IsDeposit)
-		SELECT Site, CASE WHEN Site = 'Saba789'  THEN 0 ELSE isDeposit END
-		FROM bodb02.dbo.Site (NOLOCK)
-	END
 
 	-- selections
 	BEGIN
@@ -175,28 +167,13 @@ BEGIN
 			ourPT_lose MONEY,
 			sporttype INT,
 			parlaytype INT
-		)
-
-		CREATE TABLE #tmpCust(CustID INT)
+		)		
 
 		-- rmBettrans
 		IF @ToDate > @MoveBetsDay
 		BEGIN
 			SELECT	@f_date = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END
-					,@t_date = @ToDate
-
-			INSERT INTO #tmpCust(CustID)
-			SELECT DISTINCT custid
-			FROM dbo.rmBettrans WITH (NOLOCK)
-			WHERE winlostdate BETWEEN @f_date AND @t_date
-				AND statusID IN (112, 113)
-				AND currency <> 20
-
-			DELETE t
-			FROM #tmpCust t
-				LEFT JOIN bodb02.dbo.customer c WITH(NOLOCK) ON t.custid = c.custid
-					AND c.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
-			WHERE c.custid IS NULL
+					,@t_date = @ToDate			
 
 			INSERT INTO #tmpBettrans(transid, bac)
 			SELECT transid,
@@ -254,7 +231,11 @@ BEGIN
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 					)		
-				AND EXISTS(SELECT TOP 1 1 FROM #tmpCust ct WHERE b.custid = ct.custid)						
+				AND (@Site = 2 OR
+					EXISTS(SELECT 1 FROM bodb02.dbo.vw_customer c WITH(NOLOCK) 
+                                INNER JOIN bodb02.dbo.Site s (NOLOCK) ON c.site = s.site
+                        WHERE c.custid = b.custid 
+							AND CASE WHEN s.Site = 'Saba789' THEN 0 ELSE s.isDeposit END = @Site))						
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY b.winlostdate, b.hdp2, b.transid2,
 				CASE WHEN b.bettype = 38 THEN 3
@@ -268,7 +249,6 @@ BEGIN
 				END
 			OPTION (RECOMPILE)
 
-			DELETE FROM #tmpCust
 		END
 
 		-- rmSumWinloss
@@ -276,19 +256,6 @@ BEGIN
 		BEGIN
 			SELECT	@f_date = CASE WHEN @FromDate < @BalanceUpDay THEN @BalanceUpDay ELSE @FromDate END
 					,@t_date = CASE WHEN @ToDate > @MoveBetsDay THEN @MoveBetsDay ELSE @ToDate END
-			
-			INSERT INTO #tmpCust(CustID)
-			SELECT DISTINCT custid
-			FROM dbo.rmSumWinloss WITH (NOLOCK)
-			WHERE winlostdate BETWEEN @f_date AND @t_date				
-				AND statusID IN (112, 113)
-				AND currency <> 20
-
-			DELETE t
-			FROM #tmpCust t
-				LEFT JOIN bodb02.dbo.customer c WITH(NOLOCK) ON t.custid = c.custid
-					AND c.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
-			WHERE c.custid IS NULL
 
 			INSERT INTO #rptWinloss
 			(
@@ -309,18 +276,21 @@ BEGIN
 				,SUM(CASE WHEN statusID = 113 THEN (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) * actualrate ELSE 0 END) AS ourPT_lose		
 				,a.parlaytype - 1
 			FROM dbo.rmSumWinloss a WITH (NOLOCK)
-				INNER JOIN #tmpSelection s ON a.combo = s.selection
-				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 				AND a.statusID IN (112, 113)
 				AND a.currency <> 20
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
-				AND EXISTS(SELECT TOP 1 1 FROM #tmpCust ct WHERE a.custid = ct.custid) 
+				AND EXISTS(SELECT 1 FROM #tmpSelection s WHERE a.combo = s.selection)
+                AND EXISTS(SELECT 1 FROM #tmpSport sp WHERE a.sporttype = sp.sporttype)
+                AND (@Site = 2 OR
+					EXISTS(SELECT 1 FROM bodb02.dbo.vw_customer c WITH(NOLOCK) 
+                                INNER JOIN bodb02.dbo.Site s (NOLOCK) ON c.site = s.site
+							WHERE c.custid = a.custid 
+								AND CASE WHEN s.Site = 'Saba789' THEN 0 ELSE s.isDeposit END = @Site))
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY a.winlostdate, a.combo, a.sporttype,a.parlaytype - 1
 			OPTION (RECOMPILE)
 
-			DELETE FROM #tmpCust
 		END
 
 		-- rmSumWinloss_Old
@@ -328,19 +298,6 @@ BEGIN
 		BEGIN
 			SELECT	@f_date = @FromDate
 					,@t_date = CASE WHEN @ToDate >= @BalanceUpDay THEN DATEADD(DAY, -1, @BalanceUpDay) ELSE @ToDate END
-			
-			INSERT INTO #tmpCust(CustID)
-			SELECT DISTINCT custid
-			FROM dbo.rmSumWinloss_Old WITH (NOLOCK)
-			WHERE winlostdate BETWEEN @f_date AND @t_date				
-				AND statusID IN (112, 113)
-				AND currency <> 20
-
-			DELETE t
-			FROM #tmpCust t
-				LEFT JOIN bodb02.dbo.customer c WITH(NOLOCK) ON t.custid = c.custid
-					AND c.Site IN (SELECT SiteName FROM #SiteTab WHERE IsDeposit = CASE WHEN @Site = 2 THEN IsDeposit ELSE @Site END)
-			WHERE c.custid IS NULL
 
 			INSERT INTO #rptWinloss
 			(
@@ -361,18 +318,21 @@ BEGIN
 				,SUM(CASE WHEN statusID = 113 THEN (company_winlost - ISNULL(a.Extra_winlost, 0) - ISNULL(a.scomm, 0) + ISNULL(a.Extra_comm, 0)) * actualrate ELSE 0 END) AS ourPT_lose		
 				,a.parlaytype - 1
 			FROM dbo.rmSumWinloss_Old a WITH (NOLOCK)
-				INNER JOIN #tmpSelection s ON a.combo = s.selection
-				INNER JOIN #tmpSport sp ON a.sporttype = sp.sporttype
 			WHERE a.winlostdate BETWEEN @f_date AND @t_date				
 				AND a.statusID IN (112, 113)
 				AND a.currency <> 20
 				AND EXISTS(SELECT TOP 1 1 FROM #ParlayType t WHERE a.parlaytype - 1 = t.ParlayType)
-				AND EXISTS(SELECT TOP 1 1 FROM #tmpCust ct WHERE a.custid = ct.custid) 						
+				AND EXISTS(SELECT 1 FROM #tmpSelection s WHERE a.combo = s.selection)
+                AND EXISTS(SELECT 1 FROM #tmpSport sp WHERE a.sporttype = sp.sporttype)
+                AND (@Site = 2 OR
+					EXISTS(SELECT 1 FROM bodb02.dbo.vw_customer c WITH(NOLOCK) 
+                                INNER JOIN bodb02.dbo.Site s (NOLOCK) ON c.site = s.site
+							WHERE c.custid = a.custid 
+								AND CASE WHEN s.Site = 'Saba789' THEN 0 ELSE s.isDeposit END = @Site))						
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY a.winlostdate, a.combo, a.sporttype,a.parlaytype - 1
 			OPTION (RECOMPILE)
 
-			DELETE FROM #tmpCust
 		END
 	END
 
@@ -447,7 +407,7 @@ BEGIN
 				WHEN parlaytype = 6 THEN 'Parlay Generator'
 				WHEN parlaytype = 7 THEN 'Parlay Boost'
 				WHEN parlaytype = 77 THEN 'Parlay Boost & Generator'
-				END
+				END ASC
 	
 	DROP TABLE #bettype
 	DROP TABLE #rptWinloss
@@ -455,7 +415,6 @@ BEGIN
 	DROP TABLE #tmpSport
 	DROP TABLE #ParlayType
 	DROP TABLE #tmpBettrans
-	DROP TABLE #SiteTab
-	DROP TABLE #tmpCust
+
 END
 GO
