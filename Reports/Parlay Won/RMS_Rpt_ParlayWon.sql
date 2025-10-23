@@ -487,7 +487,7 @@ BEGIN
 									WHEN 7 THEN 'odds'
 									ELSE 'transdate' END
 
-		DECLARE @SQL VARCHAR(MAX)
+		DECLARE @SQL NVARCHAR(MAX)
 		SELECT  @SQL = 'CREATE INDEX IX_Index ON #rmBettrans (' + @sortedColumn + ')' + CHAR(13)
 		SELECT  @SQL = @SQL
 						+  'SELECT transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName, CustomerClass, IsParlayGenerator, IsBoostBonus
