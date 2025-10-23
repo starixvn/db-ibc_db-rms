@@ -237,7 +237,7 @@ BEGIN
 				'
 
 				INSERT INTO #sporttype (refno, sporttype, Saba, odds, stake, matchid)
-				EXEC(@sql_bettransmBK)
+				EXECUTE sp_executesql @sql_bettransmBK
 
 				SELECT @i = @i + 200
 			END
@@ -310,7 +310,7 @@ BEGIN
 
 			INSERT INTO #tmp2 (transid, stake, N, bitmapR, odds, SetStake, RN)
 			SELECT b.transid, b.stake, b.hdp2, b.betteam, bm.odds, bm.stake AS SetStake
-				,ROW_NUMBER() OVER(PARTITION BY b.transid ORDER BY bm.matchid) AS RN
+				,ROW_NUMBER() OVER(PARTITION BY b.transid ORDER BY bm.matchid ASC) AS RN
 			FROM #rmBettrans b
 				CROSS APPLY (
 					SELECT bm.odds, bm.stake, bm.matchid
@@ -359,7 +359,7 @@ BEGIN
 			DROP TABLE #tmp2
 
 			CREATE TABLE #tmpBoost (transid BIGINT, bbp DECIMAL(19,6))
-			CREATE CLUSTERED INDEX CX_transid ON #tmpBoost (transid)
+			CREATE CLUSTERED INDEX IX_transid ON #tmpBoost (transid)
 
 			INSERT INTO #tmpBoost(transid, bbp)
 			SELECT transid, TRY_CAST(TRY_CAST(ExtraInfo AS XML).value('(/p1/@bbp)[1]', 'VARCHAR(50)') AS DECIMAL(19,6)) bbp
