@@ -17,7 +17,7 @@ AS
 		- 20250214@Cherry: Support direct member (#215427)
 		- 20250310@Cherry: Get Selection type of SMP (#214662)
 		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
-
+		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
 */
 
 BEGIN
@@ -73,6 +73,7 @@ BEGIN
 			END refno, 
 			bettype,
 			CASE WHEN bettype = 38 THEN 4 --Single Match Parlay
+				WHEN betteam = N'1' AND oddsspread = 3 THEN 9 --Hybrid Parlay
 				WHEN betteam = N'1' THEN 2 --Mix Parlay
 				ELSE 3 --Combo Parlay
 			END ParlayType, 
@@ -97,6 +98,7 @@ BEGIN
 			END refno,  
 			r.bettype, 
 			CASE WHEN r.bettype = 38 THEN 4 --Single Match Parlay
+				WHEN r.betteam = N'1' AND r.oddsspread = 3 THEN 9 --Hybrid Parlay
 				WHEN r.betteam = N'1' THEN 2 --Mix Parlay
 				ELSE 3 --Combo Parlay
 			END ParlayType, 
@@ -170,8 +172,6 @@ BEGIN
 			ROW_NUMBER() OVER(PARTITION BY refno, bettype, LeagueId, matchId, betteam ORDER BY (SELECT NULL)) AS RowNum
 	FROM  #bettransm
 
-	CREATE CLUSTERED INDEX CIX_tmp1 ON #tmp1 (refno)
-
 	BEGIN
 		INSERT INTO #rmSumByEventBettype (bettype, ParlayType, LeagueId, MatchId, Betteam, IsDeposit, TransList, BetCount, WonCount, LoseCount, DrawCount, MainBetCount, MainWonCount, MainLoseCount, MainDrawCount, MainStake, MainTurnover, MainTurnoverNoDraw, MainMemberWinloss, MainMemberComm, MainHouseWinloss)
 		SELECT
@@ -220,8 +220,6 @@ BEGIN
 				ROW_NUMBER() OVER(PARTITION BY refno, bettype, LeagueId, matchId ORDER BY (SELECT NULL)) AS RowNum
 		FROM  #bettransm	
 
-		CREATE CLUSTERED INDEX CIX_tmp2 ON #tmp2 (refno)
-
 		-- SMP sum by Event
 		INSERT INTO #rmSumByEventBettype (bettype, ParlayType, LeagueId, MatchId, Betteam, IsDeposit, TransList, BetCount, WonCount, LoseCount, DrawCount, MainBetCount, MainWonCount, MainLoseCount, MainDrawCount, MainStake, MainTurnover, MainTurnoverNoDraw, MainMemberWinloss, MainMemberComm, MainHouseWinloss)
 		SELECT t.bettype,
@@ -233,8 +231,8 @@ BEGIN
 			COMPRESS((SELECT STRING_AGG(CASE WHEN b.statusID = 112 THEN CAST(b.transid AS VARCHAR(MAX)) 
 							ELSE NULL END
 						, ',') AS 'tl'
-							 FOR JSON PATH
-							,INCLUDE_NULL_VALUES))  TransList,
+						FOR JSON PATH
+					,INCLUDE_NULL_VALUES))  TransList,
 			BetCount			= SUM(1),
 			WonCount			= SUM(CASE WHEN t.statusID = 112 THEN 1 ELSE 0 END),
 			LoseCount			= SUM(CASE WHEN t.statusID = 113 THEN 1 ELSE 0 END),
