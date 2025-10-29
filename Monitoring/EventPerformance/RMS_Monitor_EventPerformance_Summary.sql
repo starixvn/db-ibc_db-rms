@@ -318,7 +318,7 @@ BEGIN
 		SELECT leagueID, leaguename , HomeTotalStake, HomeTotalTicket, AwayTotalStake, AwayTotalTicket, OtherTotalStake, OtherTotalTicket
 		FROM cte
 		WHERE ( rn <= @limitRowCount OR @limitRowCount = 0)
-		ORDER BY rn
+		ORDER BY rn ASC
 	END
 	ELSE
 	BEGIN

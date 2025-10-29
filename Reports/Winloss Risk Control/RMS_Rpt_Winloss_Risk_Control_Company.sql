@@ -71,7 +71,8 @@ BEGIN
 		balanceUpday	DATETIME ,
 		movebetsday	DATETIME
 		)
-		insert into #MBU  exec bodb02.dbo.Age_SelBalanceUpDay
+		insert into #MBU (balanceUpday,movebetsday)
+		exec bodb02.dbo.Age_SelBalanceUpDay
 
 		select @movebetsday = movebetsday, @balanceUpday = balanceUpday FROM #MBU
 
@@ -420,7 +421,7 @@ BEGIN
 			RealTurnover,
 			@company as Site
 	FROM #rptRiskWLControl_Summary
-	ORDER BY UserName
+	ORDER BY UserName ASC
 	
 	DROP TABLE #CustList
 	DROP TABLE #MBU

@@ -78,7 +78,8 @@ BEGIN
 		balanceUpday	DATETIME ,
 		movebetsday		DATETIME
 		)
-		insert into #MBU  exec bodb02.dbo.Age_SelBalanceUpDay
+		insert into #MBU (balanceUpday,movebetsday) 
+		exec bodb02.dbo.Age_SelBalanceUpDay
 
 		select @movebetsday = movebetsday, @balanceUpday = balanceUpday FROM #MBU
 
@@ -522,7 +523,7 @@ BEGIN
 				RealTurnover,
 				CustomerClass
 			FROM #rptRiskWLControl_Summary
-			ORDER BY UserName
+			ORDER BY UserName ASC
 
 			RETURN
 		END
@@ -540,7 +541,20 @@ BEGIN
 				@RowStart = @PageSize * @PageIndex + 1,
 				@RowEnd = @RowStart + @PageSize - 1;
 
-		SELECT wl.*
+		SELECT CustID,
+				UserName,
+				RoleID, 
+				NoMember, 
+				BetCount, 
+				MemberWinloss, 
+				SMAwinloss, 
+				ExtraPT, 
+				Commission, 
+				RealIncome, 
+				RealTurnover,
+				CustomerClass,
+				RowNum,
+				Site
 		FROM (
 			SELECT	CustID,
 					UserName,
@@ -554,7 +568,7 @@ BEGIN
 					RealIncome, 
 					RealTurnover,
 					CustomerClass,
-					ROW_NUMBER() over(order by UserName) as RowNum,
+					ROW_NUMBER() over(order by UserName ASC) as RowNum,
 					@Site as Site
 				FROM #rptRiskWLControl_Summary
 		) wl
@@ -580,7 +594,7 @@ BEGIN
 			@Site as Site,
 			CustomerClass
 	FROM #rptRiskWLControl_Summary
-	ORDER BY UserName
+	ORDER BY UserName ASC
 	
 	DROP TABLE #CustList
 	DROP TABLE #MBU
