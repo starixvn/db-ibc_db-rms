@@ -1,9 +1,10 @@
-
 /*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" viewers="" isFunction="0" isNested="0"></info>*/
 
-ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_PotentialWinningAlert] @IsTest              BIT            = 0, 
-                                                                 @IsSMP       BIT            = 0, 
-                                                                 @MinPotentialWinning MONEY  = 500000
+ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_PotentialWinningAlert]
+	@IsTest BIT = 0, 
+    @IsSMP BIT = 0, 
+	@IsHP BIT = 0,
+    @MinPotentialWinning MONEY  = 500000
 AS
 
 /*
@@ -19,6 +20,7 @@ Revisions:
 	- 20230809@Cherry: Duplicate data
 	- 20230830@Cherry: Enhance (#192682)
 	- 20240312@Cherry: Change SQL account in metadata (#202012)
+	- 20251030@Cherry: Add Hybrid Parlay (#242165)
 */
 
      SET NOCOUNT ON;
@@ -134,7 +136,8 @@ Revisions:
             ) m
             INNER JOIN rmPotentialWinningAlert p WITH(NOLOCK) ON m.CustId = p.CustId
                                                                  AND m.alerttime = p.AlertTime
-            WHERE p.IsSMP = @IsSMP;
+            WHERE p.IsSMP = @IsSMP
+				AND p.IsHP = @IsHP;
 
      -- #sumtotalfromlastalert
      CREATE TABLE #sumtotalfromlastalert
@@ -178,7 +181,8 @@ Revisions:
             ISNULL(p.AlertAmount, 0) LastAlertAmount, 
             ISNULL(r.WinningAmount, 0) AS AmountFromLastAlert,
 			COMPRESS((SELECT TransList AS 'tl',
-					CASE WHEN @IsSMP = 1 THEN 'Single Match Parlay' ELSE
+					CASE WHEN @IsSMP = 1 THEN 'Single Match Parlay' 
+						WHEN @IsHP = 1 THEN 'Hybrid Parlay' ELSE
 						CASE WHEN WinningAmount >= 1000000 AND WinningAmount < 2000000 AND @IsTest = 0 THEN 'Orange Level' 
 							 WHEN WinningAmount >= 2000000 AND WinningAmount < 3000000 AND @IsTest = 0 THEN 'Yellow Level'
 							 WHEN WinningAmount >= 3000000 AND WinningAmount < 4000000 AND @IsTest = 0 THEN 'Red 1 Level'
