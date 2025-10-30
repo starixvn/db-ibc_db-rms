@@ -24,6 +24,7 @@ AS
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241212@Cherry: Separate Cricket (#214664)
+		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -60,7 +61,8 @@ BEGIN
 	balanceUpday	DATETIME ,
 	movebetsday	DATETIME
 	)
-	insert into #MBU  exec bodb02.dbo.Age_SelBalanceUpDay
+	insert into #MBU (balanceUpday,movebetsday)
+	exec bodb02.dbo.Age_SelBalanceUpDay
 
 	select @movebetsday = movebetsday, @balanceUpday = balanceUpday FROM #MBU
 
@@ -338,7 +340,7 @@ BEGIN
 
 		INSERT INTO #rptRiskWLControl_Summary(Site, IsDeposit, NoMember, BetCount, MemberWinloss, SMAwinloss, ExtraPT, Commission, RealIncome, RealTurnover)
 			SELECT		s.site,
-						CASE WHEN s.site = 'Saba789' THEN 0 ELSE s.isDeposit END,
+						CASE WHEN s.site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END,
 						COUNT(distinct b.custid) noMember,
 						SUM(betCount)  betCount,
 						SUM(member_Winloss) member_Winloss,
@@ -350,7 +352,7 @@ BEGIN
 			FROM #rptRiskWLControl b
 			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.CustID = c.custid
 			INNER JOIN bodb02.dbo.Site s  WITH(NOLOCK) ON  c.site = s.site
-			GROUP BY s.site, CASE WHEN s.site = 'Saba789' THEN 0 ELSE s.isDeposit END
+			GROUP BY s.site, CASE WHEN s.site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END
 
 	
 	END
@@ -372,7 +374,7 @@ BEGIN
 			t.RealTurnover
 	FROM #rptRiskWLControl_Summary t
 	INNER JOIN #company c ON t.Site = c.Site
-	ORDER BY t. IsDeposit
+	ORDER BY t. IsDeposit ASC
 
 	DROP TABLE #company
 	DROP TABLE #MBU

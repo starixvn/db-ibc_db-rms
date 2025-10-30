@@ -17,6 +17,7 @@ AS
 		- 20231115@Cherry: Add param TicketStatus, output column (#196550)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241206@Cherry: Sporttype of Betbuilder (#213805)
+		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
 	
 	Parameter's Explanation:
 		@TicketStatus: 
@@ -38,7 +39,7 @@ BEGIN
 	
 	SELECT
 		b.custid
-		,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+		,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 		,b.username
 		,SUM(CASE WHEN b.liveawayscore = 1 AND b.bettype = 29 THEN 1 
 				WHEN b.bettype <> 29 AND m.sporttype = 1 THEN 1
@@ -63,7 +64,7 @@ BEGIN
 			EXISTS (SELECT TOP 1 1 FROM #tmpStatus t WHERE b.statusID = t.statusid)
 			)
 	GROUP BY b.custid, b.username,
-			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
+			CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
 
 	DROP TABLE #tmpStatus
 END

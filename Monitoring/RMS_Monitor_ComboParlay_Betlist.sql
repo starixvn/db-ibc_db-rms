@@ -52,6 +52,7 @@ AS
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241212@Cherry: Separate Cricket (#214664)
+		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
 
 	Parameter's Explanation:
 		- @selection:
@@ -195,7 +196,7 @@ BEGIN
 	
 	-- League 
 	DECLARE @leagueGroupIdTab TABLE (LeagueGroupId INT)
-	INSERT INTO @leagueGroupIdTab
+	INSERT INTO @leagueGroupIdTab (LeagueGroupId)
 	SELECT value FROM STRING_SPLIT(@leagueGroupId, ',')
 
 	CREATE TABLE #League (LeagueID INT)
@@ -464,7 +465,7 @@ BEGIN
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
 			,rb.transid
 			,rb.refno
-			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
+			,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
 			,rb.username
 			,CASE WHEN transid2 NOT IN (-1,-3,1,2,3,4,5,6,7,8,9,11,43,44,-4,-5,50) THEN -2 ELSE transid2 END AS Sporttype
 			,rb.odds2 * rb.TotalBet AS odds

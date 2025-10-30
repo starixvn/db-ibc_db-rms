@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="bodbRMSNet" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_CustomerSel]
 	@username	nvarchar(100) = null,
 	@level		int	= null
@@ -11,6 +11,7 @@ AS
 		
 		Revisions:
 			- 20230420@Cherry: Add Site column (#186735)
+			- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
 		
 		Parameter's Explanation:
 	*/ 
@@ -18,7 +19,7 @@ SET NOCOUNT ON
 
 	SELECT 
 		mc.custid
-		,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+		,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 		,mc.username
 		,mc.[level]		
 	FROM rmCustomer mc WITH(NOLOCK)

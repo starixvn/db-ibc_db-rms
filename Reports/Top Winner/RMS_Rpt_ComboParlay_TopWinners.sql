@@ -40,6 +40,7 @@ AS
 		- 20241204@Cherry: Add level (#212544)
 		- 20241212@Cherry: Separate Cricket (#214664)
 		- 20250410@Cherry: Upgrade ExchangeID (#222189)
+		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -78,7 +79,7 @@ BEGIN
 		DECLARE @SiteTab TABLE (SiteName NVARCHAR(50), IsDeposit BIT)
 
 		INSERT INTO @SiteTab(SiteName, IsDeposit)
-		SELECT Site, CASE WHEN Site = 'Saba789'  THEN 0 ELSE isDeposit END
+		SELECT Site, CASE WHEN Site IN ('Saba789','NovaCasino','SEAL888')  THEN 0 ELSE isDeposit END
 		FROM bodb02.dbo.Site (NOLOCK)
 	END
 
@@ -328,7 +329,7 @@ BEGIN
 	)
 	SELECT
 		r.custid
-		,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+		,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 		,r.username		
 		,e.currency
 		,stake

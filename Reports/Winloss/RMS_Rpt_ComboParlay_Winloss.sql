@@ -36,6 +36,7 @@ AS
 		- 20241212@Cherry: Separate Cricket (#214664)
 		- 20250716@Cherry: Report by Parlay Type (#232923)
 		- 20251015@Cherry: Tuning performance (#241737)
+		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -232,10 +233,10 @@ BEGIN
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
 					)		
 				AND (@Site = 2 OR
-					EXISTS(SELECT 1 FROM bodb02.dbo.vw_customer c WITH(NOLOCK) 
+					EXISTS(SELECT 1 FROM bodb02.dbo.customer c WITH(NOLOCK) 
                                 INNER JOIN bodb02.dbo.Site s (NOLOCK) ON c.site = s.site
                         WHERE c.custid = b.custid 
-							AND CASE WHEN s.Site = 'Saba789' THEN 0 ELSE s.isDeposit END = @Site))						
+							AND CASE WHEN s.Site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END = @Site))						
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY b.winlostdate, b.hdp2, b.transid2,
 				CASE WHEN b.bettype = 38 THEN 3
@@ -283,10 +284,10 @@ BEGIN
 				AND EXISTS(SELECT 1 FROM #tmpSelection s WHERE a.combo = s.selection)
                 AND EXISTS(SELECT 1 FROM #tmpSport sp WHERE a.sporttype = sp.sporttype)
                 AND (@Site = 2 OR
-					EXISTS(SELECT 1 FROM bodb02.dbo.vw_customer c WITH(NOLOCK) 
+					EXISTS(SELECT 1 FROM bodb02.dbo.customer c WITH(NOLOCK) 
                                 INNER JOIN bodb02.dbo.Site s (NOLOCK) ON c.site = s.site
 							WHERE c.custid = a.custid 
-								AND CASE WHEN s.Site = 'Saba789' THEN 0 ELSE s.isDeposit END = @Site))
+								AND CASE WHEN s.Site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END = @Site))
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY a.winlostdate, a.combo, a.sporttype,a.parlaytype - 1
 			OPTION (RECOMPILE)
@@ -325,10 +326,10 @@ BEGIN
 				AND EXISTS(SELECT 1 FROM #tmpSelection s WHERE a.combo = s.selection)
                 AND EXISTS(SELECT 1 FROM #tmpSport sp WHERE a.sporttype = sp.sporttype)
                 AND (@Site = 2 OR
-					EXISTS(SELECT 1 FROM bodb02.dbo.vw_customer c WITH(NOLOCK) 
+					EXISTS(SELECT 1 FROM bodb02.dbo.customer c WITH(NOLOCK) 
                                 INNER JOIN bodb02.dbo.Site s (NOLOCK) ON c.site = s.site
 							WHERE c.custid = a.custid 
-								AND CASE WHEN s.Site = 'Saba789' THEN 0 ELSE s.isDeposit END = @Site))						
+								AND CASE WHEN s.Site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END = @Site))						
 				AND (a.LiveIndicator = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY a.winlostdate, a.combo, a.sporttype,a.parlaytype - 1
 			OPTION (RECOMPILE)

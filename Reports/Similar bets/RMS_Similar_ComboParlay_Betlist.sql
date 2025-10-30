@@ -32,6 +32,7 @@ AS
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241204@Cherry: Show tracking user (#212544)
 		- 20241212@Cherry: Separate Cricket (#214664)
+		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
 */
 
 BEGIN
@@ -303,7 +304,7 @@ BEGIN
 			p.transdate
 			,p.transid
 			,p.refno
-			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+			,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 			,p.username
 			,p.custid
 			,p.bettype
@@ -336,7 +337,7 @@ BEGIN
 		SELECT
 			p.transid
 			,p.refno
-			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+			,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 			,p.username
 			,p.custid
 			,ISNULL(rc.level, 0) AS level
@@ -363,7 +364,7 @@ BEGIN
 			p.transdate
 			,p.transid
 			,p.refno
-			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+			,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 			,p.username
 			,p.custid
 			,p.bettype
@@ -399,7 +400,7 @@ BEGIN
 			p.transdate
 			,p.transid
 			,p.refno
-			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+			,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 			,p.username
 			,p.custid
 			,p.bettype
@@ -432,7 +433,7 @@ BEGIN
 		SELECT
 			p.transid
 			,p.refno
-			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+			,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 			,p.username
 			,p.custid
 			,ISNULL(rc.level, 0) AS level
@@ -455,7 +456,7 @@ BEGIN
 		SELECT
 			p.transid
 			,p.refno
-			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+			,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 			,p.username
 			,p.custid
 			,ISNULL(rc.level, 0) AS level

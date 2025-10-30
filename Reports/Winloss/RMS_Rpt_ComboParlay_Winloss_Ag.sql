@@ -41,6 +41,7 @@ AS
 		- 20250115@Cherry: Support direct member (#215427)
 		- 20250227@Cherry: Hot fix (#218639)
 		- 20250306@Cherry: Add @HouseWL (#218958)
+		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -366,7 +367,7 @@ BEGIN
 	IF @HouseWL IS NULL
 	BEGIN
 		SELECT CONVERT(VARCHAR(7), b.winlostdate, 120)  [Month]
-			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+			,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 			,b.username
 			,SUM(b.tickets_won)	AS tickets_won
 			,SUM(b.tickets_lose)	AS tickets_lose
@@ -382,13 +383,13 @@ BEGIN
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		GROUP BY CONVERT(VARCHAR(7), b.winlostdate, 120), b.username, b.CustomerClass,
-			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
-		ORDER BY CONVERT(VARCHAR(7), b.winlostdate, 120), b.username
+			CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
+		ORDER BY CONVERT(VARCHAR(7), b.winlostdate, 120) ASC, b.username ASC
 	END
 	ELSE
 	BEGIN
 		SELECT CONVERT(VARCHAR(7), b.winlostdate, 120)  [Month]
-			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+			,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 			,b.username
 			,SUM(b.tickets_won)	AS tickets_won
 			,SUM(b.tickets_lose)	AS tickets_lose
@@ -404,16 +405,16 @@ BEGIN
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		GROUP BY CONVERT(VARCHAR(7), b.winlostdate, 120), b.username, b.CustomerClass,
-			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
+			CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
 		HAVING SUM(b.ourPT_won) + SUM(b.ourPT_lose) <= @HouseWL
-		ORDER BY CONVERT(VARCHAR(7), b.winlostdate, 120), b.username
+		ORDER BY CONVERT(VARCHAR(7), b.winlostdate, 120) ASC, b.username ASC
 	END
 
 	IF @ReportBy = 2
 	IF @HouseWL IS NULL
 	BEGIN
 		SELECT b.winlostdate [Date]
-			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+			,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 			,b.username
 			,SUM(b.tickets_won)	AS tickets_won
 			,SUM(b.tickets_lose)	AS tickets_lose
@@ -429,13 +430,13 @@ BEGIN
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		GROUP BY b.winlostdate, b.username, b.CustomerClass,
-			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
-		ORDER BY b.winlostdate, b.username
+			CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
+		ORDER BY b.winlostdate ASC, b.username ASC
 	END
 	ELSE
 	BEGIN
 		SELECT b.winlostdate [Date]
-			,CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END SiteGroup
+			,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 			,b.username
 			,SUM(b.tickets_won)	AS tickets_won
 			,SUM(b.tickets_lose)	AS tickets_lose
@@ -451,9 +452,9 @@ BEGIN
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON b.custid = c.custid
 			LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 		GROUP BY b.winlostdate, b.username, b.CustomerClass,
-			CASE WHEN s.isDeposit = 0 OR s.site = 'Saba789' THEN 'C' ELSE 'L' END
+			CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
 		HAVING SUM(b.ourPT_won) + SUM(b.ourPT_lose) <= @HouseWL
-		ORDER BY b.winlostdate, b.username
+		ORDER BY b.winlostdate ASC, b.username ASC
 	END
 
 	DROP TABLE #bettype
