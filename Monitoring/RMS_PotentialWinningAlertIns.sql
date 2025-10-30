@@ -5,7 +5,7 @@ ALTER PROCEDURE [dbo].[RMS_PotentialWinningAlertIns]
 	@CustId INT, 
     @AlertAmount MONEY, 
     @IsSMP BIT = 0,
-	@IsHP BIT = 0,
+	@IsHP BIT = 0
 
 													 
 /*
