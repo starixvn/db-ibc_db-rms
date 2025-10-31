@@ -3,7 +3,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_ComboParlay_BetsStatisticsByIP_Sporttype]
 	@fromdate  DATETIME,
 	@IP        VARCHAR(45),
 	@custid    INT,
-	@sporttype TINYINT,
+	@sporttype INT,
 	@TicketStatus	VARCHAR(50) = '-1'
 AS
 
@@ -23,6 +23,7 @@ AS
 		- 20240109@Cherry: Change Original Odds from ExtraInfo
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241206@Cherry: Sporttype of Betbuilder (#213805)
+		- 20251020@Cherry: Upgrade Sporttype (#242167)
 
 	Parameter's Explanation:
 		@sporttype = '1': soccer only

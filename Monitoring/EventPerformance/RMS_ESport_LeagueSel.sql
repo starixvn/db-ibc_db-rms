@@ -1,6 +1,6 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0"></info>*/
 CREATE PROCEDURE [dbo].[RMS_ESport_LeagueSel]
-	@SportType TINYINT = 43 -- E-sport
+	@SportType INT = 43 -- E-sport
 AS
 
 /*
@@ -11,6 +11,7 @@ AS
 	Revisions:
 		- 20211221@Danny: Init SP #165096
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20251020@Cherry: Upgrade Sporttype (#242167)
 
 		EXEC dbo.RMS_ESport_LeagueSel
 
