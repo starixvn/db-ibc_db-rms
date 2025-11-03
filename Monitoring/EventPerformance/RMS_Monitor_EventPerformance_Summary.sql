@@ -237,7 +237,7 @@ BEGIN
 		AND ISNULL(mc.level, 0) IN (SELECT level FROM #level)
 		AND ( rm.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
 		AND ((EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-				AND rm.bettype = 29 AND rm.betteam = N'1')
+				AND rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread <> 3)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 				AND rm.bettype = 29 AND rm.betteam <> N'1')
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)

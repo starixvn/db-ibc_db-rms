@@ -181,7 +181,7 @@ BEGIN
 				AND statusid = 0
 				AND (rb.bettype <> 29
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND rb.bettype = 29 AND rb.betteam = N'1')
+						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread <> 3)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND rb.bettype = 29 AND rb.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
@@ -218,7 +218,7 @@ BEGIN
 				AND statusid = 0
 				AND (rb.bettype <> 29
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND rb.bettype = 29 AND rb.betteam = N'1')
+						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread <> 3)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND rb.bettype = 29 AND rb.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
