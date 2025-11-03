@@ -17,7 +17,8 @@ AS
 		- 20250214@Cherry: Support direct member (#215427)
 		- 20250310@Cherry: Get Selection type of SMP (#214662)
 		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
-		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
+		- 20251103@Cherry: Tuning performance
+		- 20251120@Cherry: Integrate Hybrid Parlay (#242165)
 */
 
 BEGIN
@@ -212,7 +213,9 @@ BEGIN
 			b.IsDeposit,
 			t.LeagueId,
 			t.matchid,
-			t.betteam				
+			t.betteam		
+			
+		OPTION (RECOMPILE, MAX_GRANT_PERCENT = 25)
 			
 		CREATE TABLE #tmp2 (refno BIGINT, bettype SMALLINT, leagueid INT, matchid INT, statusID TINYINT, RowNum BIGINT)
 		INSERT INTO #tmp2 (refno, bettype, leagueid, matchid, statusID, RowNum)
@@ -260,6 +263,7 @@ BEGIN
 			t.matchid, 
 			b.IsDeposit
 		-- End SMP
+		OPTION (RECOMPILE, MAX_GRANT_PERCENT = 25)
 	END
 
 	BEGIN TRY

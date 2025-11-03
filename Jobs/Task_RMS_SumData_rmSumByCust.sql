@@ -13,7 +13,8 @@ AS
 	Revisions:
 		- 20250310@Cherry: Initialize SP [RedmineID: #214662]	
 		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
-		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
+		- 20251103@Cherry: Tuning performance
+		- 20251120@Cherry: Integrate Hybrid Parlay (#242165)
 
 */
 
@@ -214,6 +215,8 @@ BEGIN
 		t.betteam,
 		b.custid,
         b.TotalSelection
+
+	OPTION (RECOMPILE, MAX_GRANT_PERCENT = 25)
 			
 	CREATE TABLE #tmp2 (refno BIGINT, bettype SMALLINT, leagueid INT, matchid INT, statusID TINYINT, RowNum BIGINT)
 	INSERT INTO #tmp2 (refno, bettype, leagueid, matchid, statusID, RowNum)
@@ -260,6 +263,8 @@ BEGIN
 		b.IsDeposit,
 		b.custid,
         b.TotalSelection
+
+	OPTION (RECOMPILE, MAX_GRANT_PERCENT = 25)
 
 	BEGIN TRY
 		DELETE dbo.rmSumByCust WITH (ROWLOCK, UPDLOCK) WHERE winlostdate = @WLDate
