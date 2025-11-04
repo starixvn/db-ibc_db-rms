@@ -172,9 +172,9 @@ BEGIN
         FROM bodb02.dbo.strSplit(@TicketStatus, ',')
 	END
 
-	CREATE UNIQUE CLUSTERED INDEX CX_selection ON #tmpSelection(selection)
-    CREATE UNIQUE CLUSTERED INDEX CX_sporttype ON #tmpSport(sporttype)
-    CREATE UNIQUE CLUSTERED INDEX CX_StatusID ON #tmpStatusID(StatusID)
+	CREATE UNIQUE CLUSTERED INDEX CIX_selection ON #tmpSelection(selection)
+    CREATE UNIQUE CLUSTERED INDEX CIX_sporttype ON #tmpSport(sporttype)
+    CREATE UNIQUE CLUSTERED INDEX CIX_StatusID ON #tmpStatusID(StatusID)
 
 	DECLARE @IsTest BIT = 0
 
@@ -241,8 +241,8 @@ BEGIN
     SELECT DISTINCT d.RefValInt TransID
     FROM #tmprmAlertDetail d WITH(NOLOCK)
 
-	CREATE UNIQUE CLUSTERED INDEX CX_TransID ON #tmpListTransID(TransID)
-	CREATE CLUSTERED INDEX CX_AlertID ON #tmprmAlertDetail(AlertID)
+	CREATE UNIQUE CLUSTERED INDEX CIX_TransID ON #tmpListTransID(TransID)
+	CREATE CLUSTERED INDEX CIX_AlertID ON #tmprmAlertDetail(AlertID)
 	
 	INSERT INTO #tmprmBettrans
 	(
@@ -270,7 +270,7 @@ BEGIN
 	FROM dbo.rmBettrans b WITH(NOLOCK)
 	WHERE transid IN (SELECT TransID FROM #tmpListTransID)
 
-	CREATE UNIQUE CLUSTERED INDEX CX_TransID ON #tmprmBettrans(transid)
+	CREATE UNIQUE CLUSTERED INDEX CIX_TransID ON #tmprmBettrans(transid)
 
 	INSERT INTO #tmpDetail
 	(	
@@ -330,7 +330,7 @@ BEGIN
     FROM dbo.rmBettrans_Old b WITH(NOLOCK)
     WHERE transid IN (SELECT TransID FROM #tmpListTransID)
 
-	CREATE UNIQUE CLUSTERED INDEX CX_TransID ON #tmprmBettrans_OLD(transid)
+	CREATE UNIQUE CLUSTERED INDEX CIX_TransID ON #tmprmBettrans_OLD(transid)
 
 	INSERT INTO #tmpDetail
 	(	
