@@ -226,6 +226,7 @@ BEGIN
 			,SiteGroup			VARCHAR(10)
 			,username			NVARCHAR(50)
 			,bettype			SMALLINT
+			,ParlayType			TINYINT
 			,odds				SMALLMONEY
 			,Stake				MONEY
 			,StakeAfterPT		MONEY
@@ -260,10 +261,10 @@ BEGIN
 		
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus,matchid
+				transdate,transid,refno,custid,SiteGroup,username,bettype,ParlayType,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus,matchid
 			)
 			SELECT
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus,matchid
+				transdate,transid,refno,custid,SiteGroup,username,bettype,ParlayType,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus,matchid
 			FROM
 			(
 				SELECT
@@ -274,6 +275,13 @@ BEGIN
 					,CASE WHEN st.isDeposit = 0 OR st.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 					,b.Username
 					,b.bettype
+					,CASE
+						WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3 THEN 8
+						WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
+						WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 2
+						WHEN b.bettype = 38 THEN 3
+						WHEN b.bettype = 376 THEN 4
+					ELSE 0 END AS ParlayType
 					,(b.winlost - b.actual_stake) / b.stake AS odds
 					,b.stake * b.actualrate AS Stake
 					,b.stake * (1 - b.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0))) * b.actualrate AS StakeAfterPT
@@ -341,10 +349,10 @@ BEGIN
 			
 			INSERT INTO #rmBettrans
 			(
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus,matchid
+				transdate,transid,refno,custid,SiteGroup,username,bettype,ParlayType,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus,matchid
 			)
 			SELECT
-				transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus,matchid
+				transdate,transid,refno,custid,SiteGroup,username,bettype,ParlayType,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP,currencyName,CustomerClass,IsParlayGenerator,IsBoostBonus,matchid
 			FROM
 			(
 				SELECT
@@ -355,6 +363,13 @@ BEGIN
 					,CASE WHEN st.isDeposit = 0 OR st.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup
 					,b.Username
 					,b.bettype
+					,CASE
+						WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3 THEN 8
+						WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
+						WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 2
+						WHEN b.bettype = 38 THEN 3
+						WHEN b.bettype = 376 THEN 4
+					ELSE 0 END AS ParlayType
 					,(b.winlost - b.actual_stake) / b.stake AS odds
 					,b.stake * b.actualrate AS Stake
 					,b.stake * (1 - b.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(b.epositiontaking, 0))) * b.actualrate AS StakeAfterPT
@@ -496,11 +511,11 @@ BEGIN
 		DECLARE @SQL NVARCHAR(MAX)
 		SELECT  @SQL = 'CREATE INDEX IX_Index ON #rmBettrans (' + @sortedColumn + ')' + CHAR(13)
 		SELECT  @SQL = @SQL
-						+  'SELECT transdate,transid,refno,custid,SiteGroup,username,bettype,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName, CustomerClass, IsParlayGenerator, IsBoostBonus
+						+  'SELECT transdate,transid,refno,custid,SiteGroup,username,bettype,ParlayType,odds,Stake,StakeAfterPT,WinningAmount,HouseLoseAmount,TotalBet,TotalSelection,SportType,IP, currencyName, CustomerClass, IsParlayGenerator, IsBoostBonus
 							FROM
 							(
 								SELECT ROW_NUMBER() OVER(ORDER BY b.' + @sortedColumn + CASE WHEN @IsSortAsc = 0 THEN ' DESC' ELSE ' ' END + ',transdate) AS rn,
-									b.transdate,b.transid,b.refno,b.custid,b.SiteGroup,b.username,b.bettype,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName, b.CustomerClass, b.IsParlayGenerator, b.IsBoostBonus								
+									b.transdate,b.transid,b.refno,b.custid,b.SiteGroup,b.username,b.bettype,b.ParlayType,b.odds,b.Stake,b.StakeAfterPT,b.WinningAmount,b.HouseLoseAmount,b.TotalBet,b.TotalSelection,b.SportType,b.IP, b.currencyName, b.CustomerClass, b.IsParlayGenerator, b.IsBoostBonus								
 								FROM #rmBettrans b
 									LEFT JOIN dbo.rmCustomer c WITH (NOLOCK) ON b.custid = c.custid
 								WHERE ISNULL(c.level, 0) IN (SELECT level FROM #level)
