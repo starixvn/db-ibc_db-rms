@@ -27,6 +27,7 @@ AS
 		20240312@Cherry: Change SQL account in metadata (#202012)
 		20240625@Cherry: Enhancement (#207024)
 		20241212@Cherry: Separate Cricket (#214664)
+		20251020@Cherry: Integrate Hybrid Parlay (#242165)
 
 	Param:
 		@AlertType = 1: Similar Bet
@@ -109,7 +110,8 @@ BEGIN
 		bettype INT,
 		statusID TINYINT,
 		hdp2 SMALLMONEY,		
-		transid2 BIGINT
+		transid2 BIGINT,
+		ParlayType TINYINT
 	)	
 
 	CREATE TABLE #tmprmBettrans_Old
@@ -119,7 +121,8 @@ BEGIN
 		bettype INT,
 		statusID TINYINT,
 		hdp2 SMALLMONEY,		
-		transid2 BIGINT
+		transid2 BIGINT,
+		ParlayType TINYINT
 	)	
 
 	CREATE TABLE #tmpAlert
@@ -134,7 +137,8 @@ BEGIN
 		CheckBy INT,
 		AlertAction SMALLINT,
 		TransInfo VARBINARY(MAX),
-		IsSettled BIT DEFAULT(0)
+		IsSettled BIT DEFAULT(0),
+		ParlayType TINYINT
 	)
 
 	CREATE TABLE #tmpDetail
@@ -143,7 +147,8 @@ BEGIN
 		TransID BIGINT,
 		RefNo BIGINT,
 		BetType SMALLINT,
-		StatusID TINYINT
+		StatusID TINYINT,
+		ParlayType TINYINT
 	)
 
 	IF @AlertType <> '-1' 
@@ -246,14 +251,22 @@ BEGIN
 		bettype,
 		statusID, 
 		hdp2,		
-		transid2
+		transid2,
+		ParlayType
 	)
 	SELECT b.transid,
 		b.refno,
 		b.bettype,
 		b.statusID, 
 		b.hdp2,		
-		b.transid2
+		b.transid2,
+		CASE
+			WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3 THEN 8
+			WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
+			WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 2
+			WHEN b.bettype = 38 THEN 3
+			WHEN b.bettype = 376 THEN 4
+		ELSE 0 END AS ParlayType
 	FROM dbo.rmBettrans b WITH(NOLOCK)
 	WHERE transid IN (SELECT TransID FROM #tmpListTransID)
 
@@ -265,14 +278,16 @@ BEGIN
 		TransID,
 		RefNo,
 		BetType,
-		StatusID
+		StatusID,
+		ParlayType
 	)
 	SELECT 
 		d.AlertID,
 		d.RefValInt,
 		b.refno,
 		b.bettype,
-		b.statusID
+		b.statusID,
+		b.ParlayType
 	FROM #tmprmAlertDetail d WITH(NOLOCK)
 		INNER JOIN #tmprmBettrans b WITH(NOLOCK) ON d.RefValInt = b.transid
 	WHERE d.RefType = 1
@@ -296,14 +311,22 @@ BEGIN
         bettype,
         statusID, 
         hdp2,       
-        transid2
+        transid2,
+		ParlayType
     )
     SELECT b.transid,
         b.refno,
         b.bettype,
         b.statusID, 
         b.hdp2,     
-        b.transid2
+        b.transid2,
+		CASE
+			WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3 THEN 8
+			WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
+			WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 2
+			WHEN b.bettype = 38 THEN 3
+			WHEN b.bettype = 376 THEN 4
+		ELSE 0 END AS ParlayType
     FROM dbo.rmBettrans_Old b WITH(NOLOCK)
     WHERE transid IN (SELECT TransID FROM #tmpListTransID)
 
@@ -315,14 +338,16 @@ BEGIN
 		TransID,
 		RefNo,
 		BetType,
-		StatusID
+		StatusID,
+		ParlayType
 	)
 	SELECT 
 		d.AlertID,
 		d.RefValInt,
 		b.refno,
 		b.bettype,
-		b.statusID
+		b.statusID,
+		b.ParlayType
 	FROM #tmprmAlertDetail d WITH(NOLOCK)
 		INNER JOIN #tmprmBettrans_OLD b WITH(NOLOCK) ON d.RefValInt = b.transid
 	WHERE d.RefType = 1
@@ -348,7 +373,8 @@ BEGIN
 
 	UPDATE a
 	SET a.RefNo = d.RefNo,
-		a.BetType = d.BetType
+		a.BetType = d.BetType,
+		a.ParlayType = d.ParlayType
 	FROM #tmpAlert a
 		INNER JOIN #tmpDetail d ON a.AlertID = d.AlertID AND a.TransID = d.TransID
 	
@@ -366,6 +392,7 @@ BEGIN
 		i.si SimilarTickets,
 		i.sl Selection,
 		i.od Odds,
+		d.ParlayType ParlayType,
 		i.tb TotalBets,
 		i.ms MemberStake,
 		i.pw PotentialWinning,
@@ -406,6 +433,7 @@ BEGIN
 		SimilarTickets,
 		Selection,
 		Odds,
+		ParlayType,
 		TotalBets,
 		MemberStake,
 		PotentialWinning,
@@ -428,6 +456,7 @@ BEGIN
 		SimilarTickets,
 		Selection,
 		Odds,
+		ParlayType,
 		TotalBets,
 		MemberStake,
 		PotentialWinning,
