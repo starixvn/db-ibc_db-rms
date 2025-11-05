@@ -266,7 +266,7 @@ BEGIN
 				AND	ISNULL(mc.level,0) IN (SELECT l.level FROM #level l)
 				AND (b.bettype <> 29
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread <> 3)
+						AND b.bettype = 29 AND b.betteam = N'1' AND ISNULL(b.oddsspread,0) <> 3)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
@@ -317,7 +317,7 @@ BEGIN
 				AND	ISNULL(mc.level,0) IN(SELECT l.level FROM #level l)
 				AND (b.bettype <> 29
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread <> 3)
+						AND b.bettype = 29 AND b.betteam = N'1' AND ISNULL(b.oddsspread,0) <> 3)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)

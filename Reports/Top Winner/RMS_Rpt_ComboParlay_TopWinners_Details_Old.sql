@@ -29,6 +29,7 @@ AS
 		- 20240102@Cherry: Parlay Type for Parlay Boost (#199217)
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
 	
 	Parameter's Explanation:
 		- @ParlayType:
@@ -115,7 +116,7 @@ BEGIN
 				INSERT INTO #ParlayType (ParlayType) VALUES (7)
 		END
 	
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%' OR ',' + @ParlayType + ',' LIKE '%,8,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)			
@@ -217,6 +218,7 @@ BEGIN
 			,hdp2 AS combo
 			,CASE WHEN (bettype=29 AND betteam = N'1') OR bettype IN (38, 376) THEN 1 ELSE 0 END AS TotalCombo
 			,CASE
+				WHEN b.bettype = 29 AND betteam = N'1' AND b.oddsspread = 3 THEN 8
 				WHEN bettype = 29 AND betteam = N'1' THEN 1
 				WHEN bettype = 29 AND betteam <> N'1' THEN 2
 				WHEN bettype = 38 THEN 3
@@ -241,7 +243,7 @@ BEGIN
 			AND EXISTS (SELECT 1 FROM #bettype bt WHERE b.bettype = bt.bettype)
 			AND (b.bettype <> 29
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-					AND b.bettype = 29 AND b.betteam = N'1')
+					AND b.bettype = 29 AND b.betteam = N'1' AND ISNULL(b.oddsspread,0) <> 3)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 					AND b.bettype = 29 AND b.betteam <> N'1')
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
@@ -250,6 +252,8 @@ BEGIN
 					AND b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 8)
+					AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3)
 				)		
 
 		IF EXISTS (SELECT 1 FROM #tmpBettrans WHERE bettype = 29 AND sporttype = 0)
