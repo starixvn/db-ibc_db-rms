@@ -457,11 +457,13 @@ BEGIN
 			,potentialWinningAmt MONEY
 			,CustomerClass SMALLINT
 			,TrackingUser NVARCHAR(50)
+			,ParlayType TINYINT
 		)
 		INSERT INTO #Result
 		(
 			custid, transdate, IsBoostBonus, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
-			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF, IsParlayGenerator, potentialWinningAmt, CustomerClass , TrackingUser
+			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF, 
+			IsParlayGenerator, potentialWinningAmt, CustomerClass , TrackingUser,ParlayType
 		)
 		SELECT
 			rb.custid
@@ -491,6 +493,13 @@ BEGIN
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate
 			,ci.CustomerClass
 			,l.username AS TrackingUser
+			,CASE
+				WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 3 THEN 8
+				WHEN rb.bettype = 29 AND rb.betteam = N'1' THEN 1
+				WHEN rb.bettype = 29 AND rb.betteam <> N'1' THEN 2
+				WHEN rb.bettype = 38 THEN 3
+				WHEN rb.bettype = 376 THEN 4
+			ELSE 0 END AS ParlayType
 		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN #bettrans b ON rb.transid = b.transid AND b.isSelected = 1
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rb.custid = ci.custid
@@ -513,7 +522,8 @@ BEGIN
 			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, IsParlayGenerator, potentialWinningAmt, CustomerClass, TrackingUser
 		FROM (
 				SELECT custid, transdate, IsBoostBonus, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
-					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, IsParlayGenerator, potentialWinningAmt, CustomerClass, TrackingUser
+					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, IsParlayGenerator, 
+					potentialWinningAmt, CustomerClass, TrackingUser, ParlayType
 					,ROW_NUMBER() OVER(ORDER BY transid DESC) AS rn
 				FROM #Result
 			) r
