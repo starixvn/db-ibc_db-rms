@@ -368,17 +368,25 @@ BEGIN
 						SUM(rm.stake* rm.actualrate) AS totalStake, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate) AS totalWinningAmt, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking)) AS companyLoseAmt, 
-						COUNT(1) AS totalTicket 
-				FROM	#Result r
-				INNER JOIN rmBettrans rm ON r.transid = rm.transid
-				INNER JOIN bodb02.dbo.League l ON r.leagueid = l.leagueid
+						COUNT(1) AS totalTicket,
+						CASE
+							WHEN rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 3 THEN 8
+							WHEN rm.bettype = 29 AND rm.betteam = N'1' THEN 1
+							WHEN rm.bettype = 29 AND rm.betteam <> N'1' THEN 2
+							WHEN rm.bettype = 38 THEN 3
+							WHEN rm.bettype = 376 THEN 4
+						ELSE 0 END AS ParlayType						
+				FROM #Result r
+					INNER JOIN rmBettrans rm ON r.transid = rm.transid
+					INNER JOIN bodb02.dbo.League l ON r.leagueid = l.leagueid
 				GROUP BY r.leagueid, l.leagueName
 			), u AS
 			(
-				SELECT leagueid, leagueName, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
+				SELECT leagueid, leagueName, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ParlayType,
+					ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
 				FROM t
 			)
-			SELECT leagueid, leagueName, totalStake, totalWinningAmt, companyLoseAmt, totalTicket
+			SELECT leagueid, leagueName, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ParlayType
 			FROM u WHERE rn <= @limitRowCount
 		END
 
@@ -392,7 +400,14 @@ BEGIN
 						SUM(rm.stake * rm.actualrate)  AS totalStake, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate) AS totalWinningAmt, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking)) AS companyLoseAmt, 
-						COUNT(1) AS totalTicket 
+						COUNT(1) AS totalTicket,
+						CASE
+							WHEN rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 3 THEN 8
+							WHEN rm.bettype = 29 AND rm.betteam = N'1' THEN 1
+							WHEN rm.bettype = 29 AND rm.betteam <> N'1' THEN 2
+							WHEN rm.bettype = 38 THEN 3
+							WHEN rm.bettype = 376 THEN 4
+						ELSE 0 END AS ParlayType
 				FROM	#Result r
 					INNER JOIN rmBettrans rm WITH(NOLOCK) ON r.transid = rm.transid
 					LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.custid = r.custid
@@ -401,10 +416,11 @@ BEGIN
 						CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END 
 			), u AS
 			(
-				SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
+				SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ParlayType,
+					ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
 				FROM t
 			)
-			SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket
+			SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ParlayType
 			FROM u WHERE rn <= @limitRowCount
 		END
 
@@ -427,7 +443,14 @@ BEGIN
 					rm.refno,
 					rm.bettype, 
 					r.IsParlayGenerator,
-					CAST(CASE WHEN rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
+					CAST(CASE WHEN rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus,
+					CASE
+						WHEN rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 3 THEN 8
+						WHEN rm.bettype = 29 AND rm.betteam = N'1' THEN 1
+						WHEN rm.bettype = 29 AND rm.betteam <> N'1' THEN 2
+						WHEN rm.bettype = 38 THEN 3
+						WHEN rm.bettype = 376 THEN 4
+					ELSE 0 END AS ParlayType
 			FROM	#Result r
 				INNER JOIN rmBettrans rm WITH(NOLOCK) ON r.transid = rm.transid
 				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON r.custid = mc.custid

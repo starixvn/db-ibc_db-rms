@@ -243,6 +243,13 @@ BEGIN
 		,rb.IsParlayGenerator
 		,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 		,l.username AS TrackingUser
+		,CASE
+			WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3 THEN 8
+			WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
+			WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 2
+			WHEN b.bettype = 38 THEN 3
+			WHEN b.bettype = 376 THEN 4
+		ELSE 0 END AS ParlayType
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN #bettrans rb ON rb.transid = b.transid
 		LEFT JOIN #NumberWon n ON b.refno = n.refno

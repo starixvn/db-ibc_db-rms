@@ -326,6 +326,13 @@ BEGIN
 			,(p.odds2 - 1) * p.stake * p.actualrate AS potentialWinningAmt
 			,ci.CustomerClass
 			,l.username AS TrackingUser
+			,CASE
+				WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 3 THEN 8
+				WHEN p.bettype = 29 AND p.betteam = N'1' THEN 1
+				WHEN p.bettype = 29 AND p.betteam <> N'1' THEN 2
+				WHEN p.bettype = 38 THEN 3
+				WHEN p.bettype = 376 THEN 4
+			ELSE 0 END AS ParlayType
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer r WITH (NOLOCK) ON p.custid = r.custid
@@ -348,6 +355,13 @@ BEGIN
 			,(p.odds2 - 1) * p.stake * p.actualrate AS potentialWinningAmt
 			, p.ip IP
 			,l.username AS TrackingUser
+			,CASE
+				WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 3 THEN 8
+				WHEN p.bettype = 29 AND p.betteam = N'1' THEN 1
+				WHEN p.bettype = 29 AND p.betteam <> N'1' THEN 2
+				WHEN p.bettype = 38 THEN 3
+				WHEN p.bettype = 376 THEN 4
+			ELSE 0 END AS ParlayType
 		FROM @result r
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
@@ -386,6 +400,13 @@ BEGIN
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate  AS houseLoseAmt
 			,ci.CustomerClass
 			,l.username AS TrackingUser
+			,CASE
+				WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 3 THEN 8
+				WHEN p.bettype = 29 AND p.betteam = N'1' THEN 1
+				WHEN p.bettype = 29 AND p.betteam <> N'1' THEN 2
+				WHEN p.bettype = 38 THEN 3
+				WHEN p.bettype = 376 THEN 4
+			ELSE 0 END AS ParlayType
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
@@ -422,6 +443,13 @@ BEGIN
 			,((winlost - actual_stake) * (1 - p.tpositiontaking - CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0))) + scomm - CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm * CONVERT(DECIMAL(9, 8), ISNULL(p.epositiontaking, 0)) / (1 - tpositiontaking) END) * actualrate  AS houseLoseAmt
 			,ci.CustomerClass
 			,l.username AS TrackingUser
+			,CASE
+				WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 3 THEN 8
+				WHEN p.bettype = 29 AND p.betteam = N'1' THEN 1
+				WHEN p.bettype = 29 AND p.betteam <> N'1' THEN 2
+				WHEN p.bettype = 38 THEN 3
+				WHEN p.bettype = 376 THEN 4
+			ELSE 0 END AS ParlayType
 		FROM dbo.rmBettrans_Old p WITH (NOLOCK) 
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
 			LEFT JOIN rmCustomer rc WITH (NOLOCK) ON p.custid = rc.custid
@@ -444,6 +472,13 @@ BEGIN
 			,ci.CustomerClass
 			,p.ip IP
 			,l.username AS TrackingUser
+			,CASE
+				WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 3 THEN 8
+				WHEN p.bettype = 29 AND p.betteam = N'1' THEN 1
+				WHEN p.bettype = 29 AND p.betteam <> N'1' THEN 2
+				WHEN p.bettype = 38 THEN 3
+				WHEN p.bettype = 376 THEN 4
+			ELSE 0 END AS ParlayType
 		FROM @result r
 			INNER JOIN dbo.rmBettrans p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid
@@ -467,6 +502,13 @@ BEGIN
 			,ci.CustomerClass
 			,p.ip IP
 			,l.username AS TrackingUser
+			,CASE
+				WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 3 THEN 8
+				WHEN p.bettype = 29 AND p.betteam = N'1' THEN 1
+				WHEN p.bettype = 29 AND p.betteam <> N'1' THEN 2
+				WHEN p.bettype = 38 THEN 3
+				WHEN p.bettype = 376 THEN 4
+			ELSE 0 END AS ParlayType
 		FROM @result r
 			INNER JOIN dbo.rmBettrans_Old p WITH (NOLOCK) ON r.transid = p.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON p.custid = ci.custid

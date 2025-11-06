@@ -244,6 +244,13 @@ BEGIN
 			,CAST(CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate  AS potentialWinningAmt
 			,ci.CustomerClass
+			,CASE
+				WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 3 THEN 8
+				WHEN rb.bettype = 29 AND rb.betteam = N'1' THEN 1
+				WHEN rb.bettype = 29 AND rb.betteam <> N'1' THEN 2
+				WHEN rb.bettype = 38 THEN 3
+				WHEN rb.bettype = 376 THEN 4
+			ELSE 0 END AS ParlayType
 		FROM rmBettrans rb WITH(NOLOCK)
 			INNER JOIN #bettrans b ON rb.transid = b.transid
 			INNER JOIN bodb02.dbo.custInfo ci WITH(NOLOCK) ON ci.custID = rb.custid
