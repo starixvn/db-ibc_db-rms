@@ -379,7 +379,14 @@ BEGIN
 				FROM #Result r
 					INNER JOIN rmBettrans rm ON r.transid = rm.transid
 					INNER JOIN bodb02.dbo.League l ON r.leagueid = l.leagueid
-				GROUP BY r.leagueid, l.leagueName
+				GROUP BY r.leagueid, l.leagueName,
+					CASE
+						WHEN rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 3 THEN 8
+						WHEN rm.bettype = 29 AND rm.betteam = N'1' THEN 1
+						WHEN rm.bettype = 29 AND rm.betteam <> N'1' THEN 2
+						WHEN rm.bettype = 38 THEN 3
+						WHEN rm.bettype = 376 THEN 4
+					ELSE 0 END
 			), u AS
 			(
 				SELECT leagueid, leagueName, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ParlayType,
@@ -413,7 +420,14 @@ BEGIN
 					LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.custid = r.custid
 					LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 				GROUP BY r.custid, c.username,
-						CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END 
+						CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END,
+						CASE
+							WHEN rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 3 THEN 8
+							WHEN rm.bettype = 29 AND rm.betteam = N'1' THEN 1
+							WHEN rm.bettype = 29 AND rm.betteam <> N'1' THEN 2
+							WHEN rm.bettype = 38 THEN 3
+							WHEN rm.bettype = 376 THEN 4
+						ELSE 0 END
 			), u AS
 			(
 				SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ParlayType,
