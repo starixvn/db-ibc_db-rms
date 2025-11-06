@@ -519,7 +519,8 @@ BEGIN
 		CREATE INDEX IX_Index ON #Result (transid)
 		
 		SELECT custid, transdate, IsBoostBonus, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
-			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, IsParlayGenerator, potentialWinningAmt, CustomerClass, TrackingUser
+			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, 
+			IsParlayGenerator, potentialWinningAmt, CustomerClass, TrackingUser, ParlayType
 		FROM (
 				SELECT custid, transdate, IsBoostBonus, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
 					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, IsParlayGenerator, 
