@@ -375,11 +375,11 @@ BEGIN
 				GROUP BY r.leagueid, l.leagueName
 			), u AS
 			(
-				SELECT leagueid, leagueName, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ParlayType,
+				SELECT leagueid, leagueName, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, 
 					ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
 				FROM t
 			)
-			SELECT leagueid, leagueName, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ParlayType
+			SELECT leagueid, leagueName, totalStake, totalWinningAmt, companyLoseAmt, totalTicket
 			FROM u WHERE rn <= @limitRowCount
 		END
 
@@ -402,11 +402,11 @@ BEGIN
 						CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
 			), u AS
 			(
-				SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ParlayType,
+				SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, 
 					ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
 				FROM t
 			)
-			SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ParlayType
+			SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket
 			FROM u WHERE rn <= @limitRowCount
 		END
 
