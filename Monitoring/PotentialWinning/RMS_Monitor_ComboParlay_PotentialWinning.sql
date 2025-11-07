@@ -251,7 +251,7 @@ BEGIN
 					b.oddsspread,
 					ci.CustomerClass
 			FROM #rmTransRecommend tmp
-				INNER JOIN dbo.rmBettrans b WITH (NOLOCK, INDEX = CIX_bettransParlay, FORCESEEK) ON tmp.transid = b.transid
+				INNER JOIN dbo.rmBettrans b WITH (NOLOCK) ON tmp.transid = b.transid
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
@@ -332,7 +332,6 @@ BEGIN
 				AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
 		END
 
-
 		IF @IsCornerParlay = 1
 		BEGIN
 			CREATE TABLE #bettransm(
@@ -343,7 +342,7 @@ BEGIN
 			INSERT INTO #bettransm (transid, CornerParlay)
 			SELECT b.transid, COUNT(1) AS CornerParlay
 			FROM #bettrans_details b WITH(NOLOCK)
-			INNER JOIN  bodb02.dbo.bettransm bm WITH (NOLOCK, INDEX = IX_bettransm) ON b.refno = bm.refno
+			INNER JOIN  bodb02.dbo.bettransm bm WITH (NOLOCK) ON b.refno = bm.refno
 			INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 			WHERE m.ChildMatchType = 204
 			GROUP BY b.transid 	 	
@@ -352,7 +351,7 @@ BEGIN
 			INSERT INTO #bettransm (transid, CornerParlay)
 			SELECT  b.transid, COUNT(1) AS CornerParlay
 			FROM #bettrans_details b WITH(NOLOCK)
-			INNER JOIN  bodb02.dbo.bettransm14 bm WITH (NOLOCK, INDEX = IX_bettransm14) ON b.refno = bm.refno
+			INNER JOIN  bodb02.dbo.bettransm14 bm WITH (NOLOCK) ON b.refno = bm.refno
 			INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 			WHERE m.ChildMatchType = 204
 			GROUP BY b.transid 		
@@ -361,7 +360,6 @@ BEGIN
 			INTO	#bettransmSummary
 			FROM	#bettransm
 			GROUP BY transid
-
 			
 			CREATE CLUSTERED INDEX #cix_bettransmSummary ON #bettransmSummary (transid)
 
@@ -414,7 +412,6 @@ BEGIN
 				,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
 			HAVING SUM(b.WinningAmount) >= CASE WHEN @Recommend >0 THEN 0 ELSE @WinningAmount END
 			ORDER BY WinningAmount DESC
-
 		
 		END
 		ELSE
@@ -438,7 +435,6 @@ BEGIN
 			ORDER BY WinningAmount DESC
 			
 		END
-
 
 	END
 	
