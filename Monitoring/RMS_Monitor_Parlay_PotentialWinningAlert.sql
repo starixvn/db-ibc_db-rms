@@ -102,6 +102,9 @@ Revisions:
                        OR (@IsTest = 0
                            AND currency <> 20))
 				  AND b.transdate < @TransTime
+				  AND (@IsHP = 0 OR
+					(b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3)
+					)
             GROUP BY b.custid, 
                      b.username, 
                      b.CurrencyName
@@ -164,6 +167,9 @@ Revisions:
                            AND currency <> 20))
                   AND b.transdate > l.alerttime
 				  AND b.transdate < @TransTime
+				  AND (@IsHP = 0 OR
+					(b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3)
+					)
             GROUP BY b.custid
             ORDER BY WinningAmount DESC;
 
