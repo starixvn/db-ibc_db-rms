@@ -182,7 +182,7 @@ Revisions:
             ISNULL(r.WinningAmount, 0) AS AmountFromLastAlert,
 			COMPRESS((SELECT TransList AS 'tl',
 					CASE WHEN @IsSMP = 1 THEN 'Single Match Parlay' 
-						WHEN @IsHP = 1 THEN 'Hybrid Parlay' ELSE
+						WHEN @IsHP = 1 THEN 'Bet Builder+' ELSE
 						CASE WHEN WinningAmount >= 1000000 AND WinningAmount < 2000000 AND @IsTest = 0 THEN 'Orange Level' 
 							 WHEN WinningAmount >= 2000000 AND WinningAmount < 3000000 AND @IsTest = 0 THEN 'Yellow Level'
 							 WHEN WinningAmount >= 3000000 AND WinningAmount < 4000000 AND @IsTest = 0 THEN 'Red 1 Level'
