@@ -72,7 +72,7 @@ WHERE   t1.winlostdate > @yesterday
 		AND NOT EXISTS (SELECT 1 FROM #tmpHybrid h WHERE t1.transid = h.transid)
 
 CREATE TABLE #temp (transid BIGINT, Extra VARCHAR(500))
-CREATE CLUSTERED INDEX idx_transid_#temp ON #temp(transid) 
+CREATE CLUSTERED INDEX IX_transid ON #temp(transid) 
 
 INSERT INTO #temp (transid, Extra)
 SELECT t1.transid, x.Extra
