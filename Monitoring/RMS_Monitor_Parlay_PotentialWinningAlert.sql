@@ -74,6 +74,8 @@ Revisions:
 						  AND t.statusid = 0
 						  AND ((@IsTest = 1	AND t.currency = 20)
 								OR (@IsTest = 0	AND t.currency <> 20))
+						  AND (@IsHP = 0 OR
+							(t.bettype = 29 AND t.betteam = N'1' AND t.oddsspread = 3))
 					FOR XML PATH(''), TYPE
 					).value('.', 'NVARCHAR(MAX)')  
 					,1,1,'') TransList,
