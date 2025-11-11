@@ -15,6 +15,7 @@ AS
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20250604@Cherry: Show Total Selection as INT (#229589)
+		- 20251120@Cherry: Exclude Hybrid Parlay (#242165)
 */
 
 BEGIN
@@ -35,6 +36,20 @@ BEGIN
 		SET @LastTransDate = CONVERT(DATE, GETDATE()) -- from begin today
 	ELSE
 		SET @LastTransDate = DATEADD(HOUR, -1, @LastTransDate)
+
+	CREATE TABLE #tmpHybrid (transid BIGINT)
+
+	INSERT INTO #tmpHybrid (transid)
+	SELECT transid
+	FROM dbo.rmBettrans WITH (NOLOCK)
+	WHERE TransDate > @LastTransDate
+		AND bettype = 29
+		AND betteam = N'1'
+		AND oddsspread = 3
+		AND statusID = 0
+		AND ((@IsTest = 0 AND currency <> 20) 
+			OR (@IsTest = 1 AND currency = 20)
+			)
 
 	-- Mix parlay tickets have 2 selections
 	-- 1. 1 selection: on small league
@@ -121,6 +136,7 @@ BEGIN
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON b.currency = e.exchangeid
 	WHERE EXISTS (SELECT 1 FROM @bettrans bt WHERE b.transid = bt.transid)
+		AND NOT EXISTS (SELECT 1 FROM #tmpHybrid h WHERE b.transid = h.transid)
 
 	SELECT
 		TransId,
@@ -148,6 +164,7 @@ BEGIN
 	SELECT CONVERT(VARCHAR(200), @TransDate, 121) AS TransDate -- new TransDate
 
 	DROP TABLE #Result
+	DROP TABLE #tmpHybrid
 
 END
 GO

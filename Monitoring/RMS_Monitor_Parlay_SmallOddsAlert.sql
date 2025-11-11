@@ -15,6 +15,7 @@ AS
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20250604@Cherry: Show Total Selection as INT (#229589)
+		- 20251120@Cherry: Exclude Hybrid Parlay (#242165)
 */
 
 BEGIN
@@ -44,6 +45,8 @@ BEGIN
 		TotalBets INT
 	)
 
+	CREATE TABLE #tmpHybrid (transid BIGINT)
+
 	CREATE TABLE #tmpBettrans (transid BIGINT, bac INT)
 
 	INSERT INTO #tmpBettrans (transid, bac)
@@ -52,6 +55,18 @@ BEGIN
 	FROM dbo.rmBettrans WITH (NOLOCK)
 	WHERE TransDate > @LastTransDate
 		AND matchid = 29
+		AND statusID = 0
+		AND ((@IsTest = 0 AND currency <> 20) 
+			OR (@IsTest = 1 AND currency = 20)
+			)
+
+	INSERT INTO #tmpHybrid (transid)
+	SELECT transid
+	FROM dbo.rmBettrans WITH (NOLOCK)
+	WHERE TransDate > @LastTransDate
+		AND bettype = 29
+		AND betteam = N'1'
+		AND oddsspread = 3
 		AND statusID = 0
 		AND ((@IsTest = 0 AND currency <> 20) 
 			OR (@IsTest = 1 AND currency = 20)
@@ -102,6 +117,7 @@ BEGIN
 			)
 		AND b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= 10000
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 2)
+		AND NOT EXISTS (SELECT 1 FROM #tmpHybrid h WHERE b.transid = h.transid)
 
 	SELECT d.TransId,
 		d.ParlayType,
@@ -132,5 +148,7 @@ BEGIN
 
 	DROP TABLE #Result
 	DROP TABLE #tmpBettrans
+	DROP TABLE #tmpHybrid
+
 END
 GO
