@@ -63,7 +63,7 @@ BEGIN
 				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 			WHERE bm.refno = b.refno
 				AND EXISTS (SELECT 1 FROM @rmLeague l WHERE m.leagueid = l.leagueId)
-			ORDER BY CASE WHEN bm.bettype IN (5, 15) THEN 1 ELSE 0 END
+			ORDER BY CASE WHEN bm.bettype IN (5, 15) THEN 1 ELSE 0 END ASC
 		) bm
 	WHERE b.TransDate > @LastTransDate
 		AND b.matchid = 29
