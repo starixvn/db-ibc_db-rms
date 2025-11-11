@@ -102,7 +102,7 @@ select  t1.transid,
 		hashbytes('MD5',(SELECT  ',' + t.extra 
 			from #temp t
 			WHERE t.transid = t1.transid
-			ORDER BY t.extra 
+			ORDER BY t.extra ASC
 			FOR XML PATH(''), TYPE
 			).value('.', 'NVARCHAR(MAX)'))
 		selection, 
@@ -224,6 +224,7 @@ DROP TABLE  #main
 DROP TABLE  #rmRunningTicketMonitor
 DROP TABLE  #temp
 DROP TABLE  #result
+DROP TABLE  #tmpHybrid
 
 END
 
