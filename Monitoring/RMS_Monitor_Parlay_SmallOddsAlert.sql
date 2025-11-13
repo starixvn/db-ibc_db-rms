@@ -45,8 +45,6 @@ BEGIN
 		TotalBets INT
 	)
 
-	CREATE TABLE #tmpHybrid (transid BIGINT)
-
 	CREATE TABLE #tmpBettrans (transid BIGINT, bac INT)
 
 	INSERT INTO #tmpBettrans (transid, bac)
@@ -55,18 +53,6 @@ BEGIN
 	FROM dbo.rmBettrans WITH (NOLOCK)
 	WHERE TransDate > @LastTransDate
 		AND matchid = 29
-		AND statusID = 0
-		AND ((@IsTest = 0 AND currency <> 20) 
-			OR (@IsTest = 1 AND currency = 20)
-			)
-
-	INSERT INTO #tmpHybrid (transid)
-	SELECT transid
-	FROM dbo.rmBettrans WITH (NOLOCK)
-	WHERE TransDate > @LastTransDate
-		AND bettype = 29
-		AND betteam = N'1'
-		AND oddsspread = 3
 		AND statusID = 0
 		AND ((@IsTest = 0 AND currency <> 20) 
 			OR (@IsTest = 1 AND currency = 20)
@@ -117,7 +103,7 @@ BEGIN
 			)
 		AND b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= 10000
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 2)
-		AND NOT EXISTS (SELECT 1 FROM #tmpHybrid h WHERE b.transid = h.transid)
+		AND NOT EXISTS (SELECT 1 FROM dbo.rmBettrans h WITH (NOLOCK) WHERE b.transid = h.transid AND h.bettype = 29 AND h.betteam = N'1' AND h.oddsspread = 3)
 
 	SELECT d.TransId,
 		d.ParlayType,
@@ -148,7 +134,6 @@ BEGIN
 
 	DROP TABLE #Result
 	DROP TABLE #tmpBettrans
-	DROP TABLE #tmpHybrid
 
 END
 GO

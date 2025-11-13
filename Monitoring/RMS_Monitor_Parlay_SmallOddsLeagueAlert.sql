@@ -37,20 +37,6 @@ BEGIN
 	ELSE
 		SET @LastTransDate = DATEADD(HOUR, -1, @LastTransDate)
 
-	CREATE TABLE #tmpHybrid (transid BIGINT)
-
-	INSERT INTO #tmpHybrid (transid)
-	SELECT transid
-	FROM dbo.rmBettrans WITH (NOLOCK)
-	WHERE TransDate > @LastTransDate
-		AND bettype = 29
-		AND betteam = N'1'
-		AND oddsspread = 3
-		AND statusID = 0
-		AND ((@IsTest = 0 AND currency <> 20) 
-			OR (@IsTest = 1 AND currency = 20)
-			)
-
 	-- Mix parlay tickets have 2 selections
 	-- 1. 1 selection: on small league
 	DECLARE @bettrans TABLE (transid BIGINT, refno BIGINT, m_transid BIGINT)
@@ -76,7 +62,7 @@ BEGIN
 		AND (b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= 10000
 		AND b.odds2 BETWEEN 1.01 AND 1.20
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 3)
-		AND NOT EXISTS (SELECT 1 FROM #tmpHybrid h WHERE b.transid = h.transid)
+		AND NOT EXISTS (SELECT 1 FROM dbo.rmBettrans h WITH (NOLOCK) WHERE b.transid = h.transid AND h.bettype = 29 AND h.betteam = N'1' AND h.oddsspread = 3)
 
 	-- 2. Remaining selection: FT/HT 1x2
 	DELETE b
@@ -137,7 +123,7 @@ BEGIN
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON b.currency = e.exchangeid
 	WHERE EXISTS (SELECT 1 FROM @bettrans bt WHERE b.transid = bt.transid)
-		AND NOT EXISTS (SELECT 1 FROM #tmpHybrid h WHERE b.transid = h.transid)
+		AND NOT EXISTS (SELECT 1 FROM dbo.rmBettrans h WITH (NOLOCK) WHERE b.transid = h.transid AND h.bettype = 29 AND h.betteam = N'1' AND h.oddsspread = 3)
 
 	SELECT
 		TransId,
@@ -165,7 +151,6 @@ BEGIN
 	SELECT CONVERT(VARCHAR(200), @TransDate, 121) AS TransDate -- new TransDate
 
 	DROP TABLE #Result
-	DROP TABLE #tmpHybrid
 
 END
 GO
