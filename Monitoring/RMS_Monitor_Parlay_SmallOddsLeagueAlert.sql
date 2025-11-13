@@ -76,6 +76,7 @@ BEGIN
 		AND (b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= 10000
 		AND b.odds2 BETWEEN 1.01 AND 1.20
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 3)
+		AND NOT EXISTS (SELECT 1 FROM #tmpHybrid h WHERE b.transid = h.transid)
 
 	-- 2. Remaining selection: FT/HT 1x2
 	DELETE b

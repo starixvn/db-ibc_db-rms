@@ -16,6 +16,7 @@ AS
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20250410@Cherry: Upgrade ExchangeID (#222189)
 		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
+		- 20251030@Cherry: Exclude Hybrid Parlay (#242165)
 */
 
 BEGIN
@@ -38,6 +39,19 @@ BEGIN
 		SELECT @min_tstamp = MIN(tstamp) FROM bodb02.dbo.bettrans WITH (NOLOCK) WHERE winlostdate > @MoveBetsDay
 
 	SELECT  @max_tstamp = MAX(tstamp) FROM bodb02.dbo.bettrans WITH (NOLOCK)
+
+	CREATE TABLE #tmpHybrid (transid BIGINT)
+
+	INSERT INTO #tmpHybrid (transid)
+	SELECT transid
+	FROM bodb02.dbo.bettrans WITH (NOLOCK)
+	WHERE tstamp between @min_tstamp and @max_tstamp
+		AND bettype = 29
+		AND betteam = N'1'
+		AND oddsspread = 3
+		AND statusID = 112
+		AND ((@IsTest = 1 AND currency = 20)
+              OR (@IsTest = 0 AND currency <> 20))
 
 	CREATE TABLE #tmpBigWinning
 	(
@@ -91,7 +105,8 @@ BEGIN
               OR (@IsTest = 0 AND b.currency <> 20)
 			  )
 		AND (b.winlost - b.actual_stake) * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= @WinningAmount
-		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 4)	
+		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 4)
+		AND NOT EXISTS (SELECT 1 FROM #tmpHybrid h WHERE b.transid = h.transid)
 
 	DELETE t
 	FROM #tmpBigWinning t
@@ -171,7 +186,7 @@ BEGIN
 
 			INSERT INTO #tmpbettrans (transid, refno, custid)
 			SELECT transid, refno, custid
-			FROM bodb02.dbo.bettrans WITH (NOLOCK)
+			FROM bodb02.dbo.bettrans b WITH (NOLOCK)
 			WHERE bettype = 29
 				AND hdp2 = @combo
 				AND statusID = 112
@@ -180,6 +195,7 @@ BEGIN
 					)
 				AND refno <> @refno
 				AND winlostdate = @winlostdate
+				AND NOT EXISTS (SELECT 1 FROM #tmpHybrid h WHERE b.transid = h.transid)
 
 			DELETE t
 			FROM #tmpbettrans t
@@ -377,6 +393,7 @@ BEGIN
 	DROP TABLE #tmpSelection
 	DROP TABLE #tmpSimilar
 	DROP TABLE #tmpSMP_Selection
+	DROP TABLE #tmpHybrid
 	
 END
 GO

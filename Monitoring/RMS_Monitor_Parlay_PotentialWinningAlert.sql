@@ -149,6 +149,7 @@ Revisions:
                        MAX(alerttime) alerttime
                 FROM rmPotentialWinningAlert WITH(NOLOCK)
                 WHERE IsSMP = @IsSMP
+					AND IsHP = @IsHP
                 GROUP BY custid
             ) m
             INNER JOIN rmPotentialWinningAlert p WITH(NOLOCK) ON m.CustId = p.CustId
