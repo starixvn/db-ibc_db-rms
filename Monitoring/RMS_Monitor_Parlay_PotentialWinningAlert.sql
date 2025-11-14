@@ -89,6 +89,7 @@ Revisions:
 								OR (@IsTest = 0	AND t.currency <> 20))
 						  AND ((@IsHP = 0 AND NOT EXISTS (SELECT 1 FROM #tmpHybrid p WHERE p.transid = t.transid))
 							OR (@IsHP = 1 AND EXISTS (SELECT 1 FROM #tmpHybrid h WHERE h.transid = t.transid)))
+						  AND t.transdate < @TransTime
 					FOR XML PATH(''), TYPE
 					).value('.', 'NVARCHAR(MAX)')  
 					,1,1,'') TransList,
