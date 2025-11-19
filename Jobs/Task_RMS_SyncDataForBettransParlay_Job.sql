@@ -44,7 +44,7 @@ BEGIN
 	SET DEADLOCK_PRIORITY LOW
 
 	DECLARE @min_tstamp BINARY(8), @max_tstamp BINARY(8)
-	SELECT  @min_tstamp = CONVERT(BINARY(8), CONVERT(BIGINT, ISNULL(VValue, 0)) + 1)
+	SELECT  @min_tstamp = CONVERT(BINARY(8), ISNULL(VValue, 0))
 	FROM dbo.rmSettings WITH (ROWLOCK)
 	WHERE VName = 'rmBettrans'
 
@@ -52,6 +52,8 @@ BEGIN
 
 	SELECT  @max_tstamp = MAX(tstamp) FROM bodb02.dbo.bettrans WITH (NOLOCK)
 	SELECT  @max_tstamp = ISNULL(@max_tstamp, @min_tstamp)
+
+	WAITFOR DELAY '00:00:01'
 
 	DECLARE @MoveBetsDay SMALLDATETIME, @BalanceUpDay SMALLDATETIME, @ErrCode INT, @ErrMsg VARCHAR(4000)
 	DECLARE @tblErrMsg TABLE (TableName VARCHAR(300), ErrMsg VARCHAR(4000))
@@ -156,7 +158,7 @@ BEGIN
 			,sdiscount,scomm,spositiontaking,swinlost,srecommend,Username,CurrencyName,virtualrate,oddstype,statusID,currency2
 			,balance,SecAcceptFlag,epositiontaking,1,hdp2,odds,1,ExtraInfo
 		FROM bodb02.dbo.bettrans WITH (NOLOCK, INDEX = IX_tstamp_transid)
-		WHERE tstamp BETWEEN @min_tstamp AND @max_tstamp
+		WHERE tstamp > @min_tstamp AND tstamp <= @max_tstamp
 			AND bettype IN (29, 38, 376)
 		END TRY
 		BEGIN CATCH
