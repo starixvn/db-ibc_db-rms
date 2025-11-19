@@ -20,7 +20,7 @@ AS
 		- 20250212@Cherry: hot fix (#217757)
 		- 20250214@Cherry: Support direct member (#215427)
 		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
-
+		- 20251120@Cherry: Integrate Hybrid Parlay (#242165)
 
 */
 
@@ -80,17 +80,15 @@ BEGIN
 	)
 	CREATE CLUSTERED INDEX CIX_rmSumByLeague ON #rmSumByLeague (leagueId, ParlayType)
 
-	DECLARE @bettrans TABLE (transid BIGINT, refno BIGINT, ParlayType TINYINT, IsDeposit BIT, statusID TINYINT, TotalSelection SMALLMONEY, stake MONEY, winloss MONEY, playercomm MONEY, HouseWinloss MONEY)
+	CREATE TABLE #bettrans (transid BIGINT, refno BIGINT, ParlayType TINYINT, IsDeposit BIT, statusID TINYINT, TotalSelection SMALLMONEY, stake MONEY, winloss MONEY, playercomm MONEY, HouseWinloss MONEY)
 
 	CREATE TABLE #bettransmbk (refno BIGINT, statusID TINYINT, leagueid INT)
-	
-	DECLARE @SQL VARCHAR(MAX)
 
 	IF @winlostdate > @MoveBetsDay
 	BEGIN
-		INSERT INTO @bettrans (transid, refno, ParlayType, IsDeposit, statusID, TotalSelection, stake, winloss, playercomm, HouseWinloss)
+		INSERT INTO #bettrans (transid, refno, ParlayType, IsDeposit, statusID, TotalSelection, stake, winloss, playercomm, HouseWinloss)
 		SELECT transid, refno, 
-			CASE 
+			CASE WHEN betteam = N'1' AND oddsspread = 3 THEN 9 --Hybrid Parlay
 				WHEN betteam = N'1' THEN 2 --Mix Parlay
 				ELSE 3 -- Combo Parlay
 			END ParlayType, 
@@ -108,9 +106,9 @@ BEGIN
 	END
 	ELSE
 	BEGIN
-		INSERT INTO @bettrans (transid, refno, ParlayType, IsDeposit, statusID, TotalSelection, stake, winloss, playercomm, HouseWinloss)
+		INSERT INTO #bettrans (transid, refno, ParlayType, IsDeposit, statusID, TotalSelection, stake, winloss, playercomm, HouseWinloss)
 		SELECT transid, refno, 
-			CASE 
+			CASE WHEN betteam = N'1' AND oddsspread = 3 THEN 9 --Hybrid Parlay
 				WHEN betteam = N'1' THEN 2 --Mix Parlay
 				ELSE 3 -- Combo Parlay
 			END ParlayType,
@@ -125,7 +123,7 @@ BEGIN
 			AND r.liveawayscore IN (1, 2, 3) -- soccer
 			AND r.statusID IN (111, 112, 113, 101, 102)
 			AND r.currency <> 20
-			AND r.transid NOT IN (SELECT transid FROM @bettrans)
+			AND r.transid NOT IN (SELECT transid FROM #bettrans)
 	END
 
 	INSERT INTO #BettransmByLeague (transid, leagueId, matchid, statusID, ParlayType, IsDeposit, stake, winloss, playercomm, HouseWinloss, BetCount, WonCount, LoseCount, DrawCount  )
@@ -144,7 +142,7 @@ BEGIN
 		SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END),
 		SUM(CASE WHEN bm.statusID = 113 THEN 1 ELSE 0 END),
 		SUM(CASE WHEN bm.statusID = 111 THEN 1 ELSE 0 END)
-	FROM @bettrans b
+	FROM #bettrans b
 		INNER JOIN dbo.rmBettransm_bk bm WITH (NOLOCK) ON b.refno = bm.refno
 		INNER JOIN dbo.rmMatch_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
 	WHERE  m.sporttype IN (1,2) AND bm.winlostdate < @BalanceUpDay
@@ -166,7 +164,7 @@ BEGIN
 		SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END),
 		SUM(CASE WHEN bm.statusID = 113 THEN 1 ELSE 0 END),
 		SUM(CASE WHEN bm.statusID = 111 THEN 1 ELSE 0 END)
-	FROM @bettrans b
+	FROM #bettrans b
 		INNER JOIN bodb02.dbo.bettransm bm WITH (NOLOCK) ON b.refno = bm.refno
 		INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 	WHERE  m.sporttype IN (1,2) AND (bm.winlostdate > @MoveBetsDay OR bm.winlostdate IS NULL)
@@ -189,7 +187,7 @@ BEGIN
 		SUM(CASE WHEN bm.statusID = 112 THEN 1 ELSE 0 END),
 		SUM(CASE WHEN bm.statusID = 113 THEN 1 ELSE 0 END),
 		SUM(CASE WHEN bm.statusID = 111 THEN 1 ELSE 0 END)
-	FROM @bettrans b
+	FROM #bettrans b
 		INNER JOIN bodb02.dbo.bettransm14 bm WITH (NOLOCK) ON b.refno = bm.refno
 		INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
 	WHERE m.sporttype IN (1,2)  AND bm.winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay
@@ -321,7 +319,7 @@ BEGIN
 		--RETURN
 	END CATCH
 
-	
+	DROP TABLE #bettrans
 	DROP TABLE #BettransmByLeague
 	DROP TABLE #bettransmbk
 	DROP TABLE #rmSumByLeague

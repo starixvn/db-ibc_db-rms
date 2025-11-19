@@ -13,7 +13,8 @@ AS
 	Revisions:
 		- 20250310@Cherry: Initialize SP [RedmineID: #214662]	
 		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
-
+		- 20251103@Cherry: Tuning performance
+		- 20251120@Cherry: Integrate Hybrid Parlay (#242165)
 
 */
 
@@ -73,6 +74,7 @@ BEGIN
 			r.custid,
 			bettype,
 			CASE WHEN bettype = 38 THEN 4 --Single Match Parlay
+				WHEN betteam = N'1' AND oddsspread = 3 THEN 9 --Hybrid Parlay
 				WHEN betteam = N'1' THEN 2 --Mix Parlay
 				ELSE 3 --Combo Parlay
 			END ParlayType, 
@@ -98,6 +100,7 @@ BEGIN
 			r.custid,
 			r.bettype, 
 			CASE WHEN r.bettype = 38 THEN 4 --Single Match Parlay
+				WHEN r.betteam = N'1' AND r.oddsspread = 3 THEN 9 --Hybrid Parlay
 				WHEN r.betteam = N'1' THEN 2 --Mix Parlay
 				ELSE 3 --Combo Parlay
 			END ParlayType, 
@@ -184,8 +187,7 @@ BEGIN
 		t.betteam,		
 		b.IsDeposit,
         TransList = STRING_AGG(CASE WHEN b.statusID = 112 THEN CAST(b.transid AS VARCHAR(MAX)) 
-						ELSE NULL END
-					, ','),
+						ELSE NULL END, ','),
 		BetCount			= SUM(1),
 		WonCount			= SUM(CASE WHEN t.statusID = 112 THEN 1 ELSE 0 END),
 		LoseCount			= SUM(CASE WHEN t.statusID = 113 THEN 1 ELSE 0 END),
@@ -215,6 +217,8 @@ BEGIN
 		t.betteam,
 		b.custid,
         b.TotalSelection
+
+	OPTION (RECOMPILE, MAX_GRANT_PERCENT = 25)
 			
 	CREATE TABLE #tmp2 (refno BIGINT, bettype SMALLINT, leagueid INT, matchid INT, statusID TINYINT, RowNum BIGINT)
 	INSERT INTO #tmp2 (refno, bettype, leagueid, matchid, statusID, RowNum)
@@ -234,8 +238,7 @@ BEGIN
 		'0' betteam,
 		b.IsDeposit,
 		TransList = STRING_AGG(CASE WHEN b.statusID = 112 THEN CAST(b.transid AS VARCHAR(MAX)) 
-						ELSE NULL END
-					, ','),
+							ELSE NULL END, ','),
 		BetCount			= SUM(1),
 		WonCount			= SUM(CASE WHEN t.statusID = 112 THEN 1 ELSE 0 END),
 		LoseCount			= SUM(CASE WHEN t.statusID = 113 THEN 1 ELSE 0 END),
@@ -264,6 +267,8 @@ BEGIN
 		b.IsDeposit,
 		b.custid,
         b.TotalSelection
+
+	OPTION (RECOMPILE, MAX_GRANT_PERCENT = 25)
 
 	BEGIN TRY
 		DELETE dbo.rmSumByCust WITH (ROWLOCK, UPDLOCK) WHERE winlostdate = @WLDate

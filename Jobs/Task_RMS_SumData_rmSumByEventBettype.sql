@@ -17,7 +17,8 @@ AS
 		- 20250214@Cherry: Support direct member (#215427)
 		- 20250310@Cherry: Get Selection type of SMP (#214662)
 		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
-
+		- 20251103@Cherry: Tuning performance
+		- 20251120@Cherry: Integrate Hybrid Parlay (#242165)
 */
 
 BEGIN
@@ -73,6 +74,7 @@ BEGIN
 			END refno, 
 			bettype,
 			CASE WHEN bettype = 38 THEN 4 --Single Match Parlay
+				WHEN betteam = N'1' AND oddsspread = 3 THEN 9 --Hybrid Parlay
 				WHEN betteam = N'1' THEN 2 --Mix Parlay
 				ELSE 3 --Combo Parlay
 			END ParlayType, 
@@ -97,6 +99,7 @@ BEGIN
 			END refno,  
 			r.bettype, 
 			CASE WHEN r.bettype = 38 THEN 4 --Single Match Parlay
+				WHEN r.betteam = N'1' AND r.oddsspread = 3 THEN 9 --Hybrid Parlay
 				WHEN r.betteam = N'1' THEN 2 --Mix Parlay
 				ELSE 3 --Combo Parlay
 			END ParlayType, 
@@ -212,7 +215,9 @@ BEGIN
 			b.IsDeposit,
 			t.LeagueId,
 			t.matchid,
-			t.betteam				
+			t.betteam		
+			
+		OPTION (RECOMPILE, MAX_GRANT_PERCENT = 25)
 			
 		CREATE TABLE #tmp2 (refno BIGINT, bettype SMALLINT, leagueid INT, matchid INT, statusID TINYINT, RowNum BIGINT)
 		INSERT INTO #tmp2 (refno, bettype, leagueid, matchid, statusID, RowNum)
@@ -233,8 +238,8 @@ BEGIN
 			COMPRESS((SELECT STRING_AGG(CASE WHEN b.statusID = 112 THEN CAST(b.transid AS VARCHAR(MAX)) 
 							ELSE NULL END
 						, ',') AS 'tl'
-							 FOR JSON PATH
-							,INCLUDE_NULL_VALUES))  TransList,
+						FOR JSON PATH
+					,INCLUDE_NULL_VALUES))  TransList,
 			BetCount			= SUM(1),
 			WonCount			= SUM(CASE WHEN t.statusID = 112 THEN 1 ELSE 0 END),
 			LoseCount			= SUM(CASE WHEN t.statusID = 113 THEN 1 ELSE 0 END),
@@ -262,6 +267,7 @@ BEGIN
 			t.matchid, 
 			b.IsDeposit
 		-- End SMP
+		OPTION (RECOMPILE, MAX_GRANT_PERCENT = 25)
 	END
 
 	BEGIN TRY
