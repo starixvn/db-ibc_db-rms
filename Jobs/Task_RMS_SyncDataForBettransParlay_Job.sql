@@ -157,7 +157,7 @@ BEGIN
 			,recommend,mrecommend,ruben,betid,statuswinlost,modds,bettype,betdaqid,actual_stake,currency,ip,transdesc
 			,sdiscount,scomm,spositiontaking,swinlost,srecommend,Username,CurrencyName,virtualrate,oddstype,statusID,currency2
 			,balance,SecAcceptFlag,epositiontaking,1,hdp2,odds,1,ExtraInfo
-		FROM bodb02.dbo.bettrans WITH (NOLOCK, INDEX = IX_tstamp_transid)
+		FROM bodb02.dbo.bettrans WITH (NOLOCK, INDEX = IX_tstamp_transid, FORCESEEK)
 		WHERE tstamp > @min_tstamp AND tstamp <= @max_tstamp
 			AND bettype IN (29, 38, 376)
 		END TRY
