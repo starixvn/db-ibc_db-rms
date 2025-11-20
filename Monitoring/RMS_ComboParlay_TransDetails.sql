@@ -22,6 +22,7 @@ AS
 		- 20230320@Cherry: Change formula of Stake (#185251)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
+		- 20251120@Cherry: Show Half Won, Half Lose (#242421)
 */
 
 BEGIN
@@ -56,7 +57,7 @@ BEGIN
 	DECLARE @bettransm TABLE
 	(
 		transid BIGINT, bettype SMALLINT, homeid INT, awayid INT, hdp1 SMALLMONEY, hdp2 SMALLMONEY
-		,odds SMALLMONEY, betteam NVARCHAR(10), statusID TINYINT, status NVARCHAR(10)
+		,odds SMALLMONEY, betteam NVARCHAR(10), statusID TINYINT, statuswinlost TINYINT, status NVARCHAR(10)
 		,livehomescore SMALLINT, liveawayscore SMALLINT, liveindicator BIT
 		,leagueid INT, sporttype SMALLINT, isNeutral BIT, matchid INT, matchcode NVARCHAR(50)
 		,betstatus NVARCHAR(50), betcheck NVARCHAR(50), stake MONEY, transdate DATETIME, transdesc NVARCHAR(1000)
@@ -69,7 +70,7 @@ BEGIN
 		INSERT INTO @bettransm
 		(
 			transid, bettype, homeid, awayid, hdp1, hdp2
-			,odds, betteam, statusID, status
+			,odds, betteam, statusID, statuswinlost, status
 			,livehomescore, liveawayscore, liveindicator
 			,leagueid, sporttype, isNeutral, matchid, matchcode
 			,betstatus, betcheck, stake, transdate, transdesc
@@ -77,7 +78,7 @@ BEGIN
 		)
 		SELECT
 			bm.transid, bm.bettype, m.homeid, m.awayid, bm.hdp1, bm.hdp2
-			,bm.odds, bm.betteam, bm.statusID, bm.status
+			,bm.odds, bm.betteam, bm.statusID, bm.statuswinlost, bm.status
 			,bm.livehomescore, bm.liveawayscore, bm.liveindicator
 			,m.leagueid, m.sporttype, m.isNeutral, CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END, m.matchcode
 			,m.betstatus, bm.betcheck, bm.stake, bm.transdate, bm.transdesc
@@ -94,7 +95,7 @@ BEGIN
 		INSERT INTO @bettransm
 		(
 			transid, bettype, homeid, awayid, hdp1, hdp2
-			,odds, betteam, statusID, status
+			,odds, betteam, statusID, statuswinlost, status
 			,livehomescore, liveawayscore, liveindicator
 			,leagueid, sporttype, isNeutral, matchid, matchcode
 			,betstatus, betcheck, stake, transdate, transdesc
@@ -102,7 +103,7 @@ BEGIN
 		)
 		SELECT
 			bm.transid, bm.bettype, m.homeid, m.awayid, bm.hdp1, bm.hdp2
-			,bm.odds, bm.betteam, bm.statusID, bm.status
+			,bm.odds, bm.betteam, bm.statusID, bm.statuswinlost, bm.status
 			,bm.livehomescore, bm.liveawayscore, bm.liveindicator
 			,m.leagueid, m.sporttype, m.isNeutral,  CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END, m.matchcode
 			,m.betstatus, bm.betcheck, bm.stake, bm.transdate, bm.transdesc
@@ -119,7 +120,7 @@ BEGIN
 		SELECT @sql = 'SELECT transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusid
 							,status,livehomescore,liveawayscore,liveindicator,leagueid,sporttype
 							,isNeutral,matchid,matchcode,betstatus,betcheck,stake,transdate,transdesc
-						FROM OPENQUERY(DBARC, ''SELECT bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
+						FROM OPENQUERY(DBARC, ''SELECT bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid,bm.statuswinlost
 														,bm.status,bm.livehomescore,bm.liveawayscore,bm.liveindicator,m.leagueid,m.sporttype
 														,m.isNeutral, CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END matchid,m.matchcode,m.betstatus,bm.betcheck,bm.stake ,bm.transdate, bm.transdesc
 												FROM bodb_Archive.dbo.bettransm bm WITH (NOLOCK)
@@ -130,7 +131,7 @@ BEGIN
 		INSERT INTO @bettransm
 		(
 			transid, bettype, homeid, awayid, hdp1, hdp2
-			,odds, betteam, statusID, status
+			,odds, betteam, statusID, statuswinlost, status
 			,livehomescore, liveawayscore, liveindicator
 			,leagueid, sporttype, isNeutral, matchid, matchcode
 			,betstatus, betcheck, stake, transdate, transdesc
@@ -145,7 +146,11 @@ BEGIN
 
 	-- Return data
 	SELECT
-		transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusID,status,livehomescore,liveawayscore
+		transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusID,
+		CASE WHEN statusid = 112 AND statuswinlost = 1 THEN 'HALF WON'
+			WHEN statusid = 113 AND statuswinlost = 3 THEN 'HALF LOSE'
+		ELSE status END status
+		,livehomescore,liveawayscore
 		,liveindicator,leagueid,sporttype,isNeutral,matchid,matchcode,betstatus,betcheck
 		,(stake * @actualrate) AS stake,transdate,@transdesc transdesc
 		,IsBlacklistLeague
