@@ -44,7 +44,7 @@ BEGIN
 	SET DEADLOCK_PRIORITY LOW
 
 	DECLARE @min_tstamp BINARY(8), @max_tstamp BINARY(8)
-	SELECT  @min_tstamp = CONVERT(BINARY(8), ISNULL(VValue, 0))
+	SELECT  @min_tstamp = CONVERT(BINARY(8), CONVERT(BIGINT, ISNULL(VValue, 0)))
 	FROM dbo.rmSettings WITH (ROWLOCK)
 	WHERE VName = 'rmBettrans'
 
