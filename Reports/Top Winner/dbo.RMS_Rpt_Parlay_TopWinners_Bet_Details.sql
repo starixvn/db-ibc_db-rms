@@ -20,6 +20,7 @@ AS
 		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
+		- 20251120@Cherry: Show Half Won, Half Lose (#242421)
 */
 
 BEGIN
@@ -43,6 +44,7 @@ BEGIN
 		,odds			SMALLMONEY
 		,betteam		NVARCHAR(20)
 		,statusid		INT
+		,statuswinlost	INT
 		,[status]		NVARCHAR(20)
 		,livehomescore	SMALLINT
 		,liveawayscore	SMALLINT
@@ -88,7 +90,8 @@ BEGIN
 			,hdp2			
 			,odds			
 			,betteam		
-			,statusid		
+			,statusid	
+			,statuswinlost
 			,[status]		
 			,livehomescore	
 			,liveawayscore	
@@ -103,7 +106,7 @@ BEGIN
 			,stake			
     )
         SELECT
-			bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
+			bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid,bm.statuswinlost
 			,bm.[status],bm.livehomescore,bm.liveawayscore,bm.liveindicator,m.leagueid,m.sporttype
 			,m.isNeutral,CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END,m.matchcode,m.betstatus,bm.betcheck,bm.stake
 		FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
@@ -121,8 +124,9 @@ BEGIN
 			,hdp2			
 			,odds			
 			,betteam		
-			,statusid		
-			,[status]		
+			,statusid	
+			,statuswinlost
+			,[status]				
 			,livehomescore	
 			,liveawayscore	
 			,liveindicator	
@@ -136,7 +140,7 @@ BEGIN
 			,stake			
     )
         SELECT
-			bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
+			bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid,bm.statuswinlost
 			,bm.[status],bm.livehomescore,bm.liveawayscore,bm.liveindicator,m.leagueid,m.sporttype
 			,m.isNeutral,CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END,m.matchcode,m.betstatus,bm.betcheck,bm.stake
 		FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
@@ -148,7 +152,7 @@ BEGIN
 		SELECT @SQL = 'SELECT transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusid
 							,[status],livehomescore,liveawayscore,liveindicator,leagueid,sporttype
 							,isNeutral,matchid,matchcode,betstatus,betcheck,transdesc,stake
-						FROM OPENQUERY(DBARC, ''SELECT bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
+						FROM OPENQUERY(DBARC, ''SELECT bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid,bm.statuswinlost
 														,bm.[status],bm.livehomescore,bm.liveawayscore,bm.liveindicator,m.leagueid,m.sporttype
 														,m.isNeutral,CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END matchid,m.matchcode,m.betstatus,bm.betcheck,bm.stake
 												FROM bodb_Archive.dbo.bettransm bm WITH (NOLOCK)
@@ -166,7 +170,8 @@ BEGIN
 			,hdp2			
 			,odds			
 			,betteam		
-			,statusid		
+			,statusid	
+			,statuswinlost
 			,[status]		
 			,livehomescore	
 			,liveawayscore	
@@ -185,7 +190,10 @@ BEGIN
 
 	-- Return data
 	SELECT
-		transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusid,STATUS
+		transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusid,
+		CASE WHEN statusid = 112 AND statuswinlost = 1 THEN 'HALF WON'
+			WHEN statusid = 113 AND statuswinlost = 3 THEN 'HALF LOSE'
+			ELSE STATUS END status
 		,livehomescore,liveawayscore,liveindicator,b.leagueid,sporttype,isNeutral
 		,matchid,matchcode,betstatus,betcheck,@transdesc transdesc
 		,(stake * (1 - @tpositiontaking) * @actualrate) AS stake
