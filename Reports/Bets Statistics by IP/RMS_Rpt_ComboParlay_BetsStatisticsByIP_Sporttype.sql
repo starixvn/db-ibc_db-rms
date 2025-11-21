@@ -24,6 +24,7 @@ AS
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241206@Cherry: Sporttype of Betbuilder (#213805)
 		- 20251020@Cherry: Upgrade Sporttype (#242167)
+		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
 
 	Parameter's Explanation:
 		@sporttype = '1': soccer only
@@ -78,7 +79,14 @@ BEGIN
 			a.oddsspread,
 			a.ExtraInfo,
 			a.actual_stake,
-			CAST(CASE WHEN a.bettype = 29 AND a.oddsspread = 1 AND a.betteam = N'1' THEN 1 ELSE 0 END AS BIT) IsGOF
+			CAST(CASE WHEN a.bettype = 29 AND a.oddsspread = 1 AND a.betteam = N'1' THEN 1 ELSE 0 END AS BIT) IsGOF,
+			CASE
+				WHEN a.bettype = 29 AND a.betteam = N'1' AND a.oddsspread = 3 THEN 8
+				WHEN a.bettype = 29 AND a.betteam = N'1' THEN 1
+				WHEN a.bettype = 29 AND a.betteam <> N'1' THEN 2
+				WHEN a.bettype = 38 THEN 3
+				WHEN a.bettype = 376 THEN 4
+			ELSE 0 END AS ParlayType
      FROM dbo.rmBettrans a WITH (NOLOCK)
           LEFT JOIN bodb02.dbo.match m WITH (NOLOCK) ON m.matchid = a.matchid AND a.bettype IN (38, 376)
 		  LEFT JOIN (SELECT DISTINCT transid, refno, modds, ExtraValue

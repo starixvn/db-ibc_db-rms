@@ -18,19 +18,20 @@ AS
 		- 20200821@Percy: Fix issue duplicate data due to MBBU process [RedmineID: #140078]
 		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
 */
 
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @MBU TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
-	INSERT INTO @MBU (BalanceUpDay, MoveBetsDay)
+	CREATE TABLE #MBU (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+	INSERT INTO #MBU (BalanceUpDay, MoveBetsDay)
 	EXEC bodb02.dbo.Age_SelBalanceUpDay
 
 	DECLARE @BalanceUpDay SMALLDATETIME, @MoveBetsDay SMALLDATETIME
-	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM @MBU
+	SELECT  @BalanceUpDay = BalanceUpDay, @MoveBetsDay = MoveBetsDay FROM #MBU
 
-	DECLARE @BetListMP TABLE
+	CREATE TABLE #BetListMP 
     (
 		transid			BIGINT
 		,bettype		INT
@@ -52,7 +53,6 @@ BEGIN
 		,matchcode		NVARCHAR(50)
 		,betstatus		NVARCHAR(50)
 		,betcheck		NVARCHAR(50)
-		,transdesc		NVARCHAR(1000)
 		,stake			MONEY
     )
 
@@ -60,38 +60,84 @@ BEGIN
 	DECLARE @BlacklistLeagueGroupId INT
 	SELECT  @BlacklistLeagueGroupId = GroupId FROM dbo.rmLeagueGroup WITH (NOLOCK) WHERE GroupName = 'Blacklist'
 	
-	DECLARE @tpositiontaking SMALLMONEY, @actualrate FLOAT, @SQL VARCHAR(MAX)
+	DECLARE @tpositiontaking SMALLMONEY, @actualrate FLOAT, @SQL NVARCHAR(MAX), @transdesc NVARCHAR(1000)
 	
-	SELECT  @tpositiontaking = tpositiontaking, @actualrate = actualrate
+	SELECT  @tpositiontaking = tpositiontaking, @actualrate = actualrate, @transdesc = transdesc
 	FROM bodb02.dbo.bettrans WITH (NOLOCK)
 	WHERE transid = @transid
 
 	IF @@ROWCOUNT = 0
-		SELECT @tpositiontaking = tpositiontaking, @actualrate = actualrate
+		SELECT @tpositiontaking = tpositiontaking, @actualrate = actualrate, @transdesc = transdesc
 		FROM bodb02.dbo.bettrans14 WITH (NOLOCK)
 		WHERE transid = @transid
 
 	IF @@ROWCOUNT = 0
-		SELECT @tpositiontaking = tpositiontaking, @actualrate = actualrate
+		SELECT @tpositiontaking = tpositiontaking, @actualrate = actualrate, @transdesc = transdesc
 		FROM DBARC.bodb_Archive.dbo.bettrans_bk WITH (NOLOCK)
 		WHERE transid = @transid
 
 	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm WITH (NOLOCK) WHERE refno = @refno AND (statusID IN (0, 1) OR winlostdate > @MoveBetsDay))
-		INSERT INTO @BetListMP
+		INSERT INTO #BetListMP
+		(
+			transid			
+			,bettype		
+			,homeid			
+			,awayid			
+			,hdp1			
+			,hdp2			
+			,odds			
+			,betteam		
+			,statusid		
+			,[status]		
+			,livehomescore	
+			,liveawayscore	
+			,liveindicator	
+			,leagueid		
+			,sporttype		
+			,isNeutral		
+			,matchid		
+			,matchcode		
+			,betstatus		
+			,betcheck		
+			,stake			
+    )
         SELECT
 			bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
 			,bm.[status],bm.livehomescore,bm.liveawayscore,bm.liveindicator,m.leagueid,m.sporttype
-			,m.isNeutral,CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END,m.matchcode,m.betstatus,bm.betcheck,bm.transdesc,bm.stake
+			,m.isNeutral,CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END,m.matchcode,m.betstatus,bm.betcheck,bm.stake
 		FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
 			INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 		WHERE bm.refno = @refno
 
 	IF EXISTS (SELECT 1 FROM bodb02.dbo.bettransm14 WITH (NOLOCK) WHERE refno = @refno AND winlostdate BETWEEN @BalanceUpDay AND @MoveBetsDay)
-		INSERT INTO @BetListMP
+		INSERT INTO #BetListMP
+		(
+			transid			
+			,bettype		
+			,homeid			
+			,awayid			
+			,hdp1			
+			,hdp2			
+			,odds			
+			,betteam		
+			,statusid		
+			,[status]		
+			,livehomescore	
+			,liveawayscore	
+			,liveindicator	
+			,leagueid		
+			,sporttype		
+			,isNeutral		
+			,matchid		
+			,matchcode		
+			,betstatus		
+			,betcheck		
+			,stake			
+    )
         SELECT
 			bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
 			,bm.[status],bm.livehomescore,bm.liveawayscore,bm.liveindicator,m.leagueid,m.sporttype
-			,m.isNeutral,CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END,m.matchcode,m.betstatus,bm.betcheck,bm.transdesc,bm.stake
+			,m.isNeutral,CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END,m.matchcode,m.betstatus,bm.betcheck,bm.stake
 		FROM bodb02.dbo.bettransm14 bm WITH (NOLOCK)
 			INNER JOIN bodb02.dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
 		WHERE bm.refno = @refno
@@ -103,25 +149,51 @@ BEGIN
 							,isNeutral,matchid,matchcode,betstatus,betcheck,transdesc,stake
 						FROM OPENQUERY(DBARC, ''SELECT bm.transid,bm.bettype,m.homeid,m.awayid,bm.hdp1,bm.hdp2,bm.odds,bm.betteam,bm.statusid
 														,bm.[status],bm.livehomescore,bm.liveawayscore,bm.liveindicator,m.leagueid,m.sporttype
-														,m.isNeutral,CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END matchid,m.matchcode,m.betstatus,bm.betcheck,bm.transdesc,bm.stake
+														,m.isNeutral,CASE WHEN m.ChildMatchType = 200 THEN m.ParentID else m.matchid END matchid,m.matchcode,m.betstatus,bm.betcheck,bm.stake
 												FROM bodb_Archive.dbo.bettransm bm WITH (NOLOCK)
 													INNER JOIN bodb_Archive.dbo.match_bk m WITH (NOLOCK) ON bm.matchid = m.matchid
 												WHERE bm.refno = ' + CONVERT(VARCHAR(50), @refno) + ''')'
 
 		
-		INSERT INTO @BetListMP
-        EXEC (@SQL)
+		INSERT INTO #BetListMP
+		(
+			transid			
+			,bettype		
+			,homeid			
+			,awayid			
+			,hdp1			
+			,hdp2			
+			,odds			
+			,betteam		
+			,statusid		
+			,[status]		
+			,livehomescore	
+			,liveawayscore	
+			,liveindicator	
+			,leagueid		
+			,sporttype		
+			,isNeutral		
+			,matchid		
+			,matchcode		
+			,betstatus		
+			,betcheck		
+			,stake			
+		)
+        EXECUTE sp_executesql @SQL
 	END
 
 	-- Return data
 	SELECT
 		transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusid,STATUS
 		,livehomescore,liveawayscore,liveindicator,b.leagueid,sporttype,isNeutral
-		,matchid,matchcode,betstatus,betcheck,transdesc
+		,matchid,matchcode,betstatus,betcheck,@transdesc transdesc
 		,(stake * (1 - @tpositiontaking) * @actualrate) AS stake
 		,CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END AS IsBlacklistLeague
-     FROM @BetListMP b
+     FROM #BetListMP b
 		LEFT JOIN dbo.rmLeague l WITH (NOLOCK) ON b.leagueid = l.LeagueId AND l.GroupId = @BlacklistLeagueGroupId
      ORDER BY TransID DESC
+
+	 DROP TABLE #BetListMP
+	 DROP TABLE #MBU
 END
 GO

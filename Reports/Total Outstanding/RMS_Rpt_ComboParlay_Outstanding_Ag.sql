@@ -28,6 +28,7 @@ AS
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241212@Cherry: Separate Cricket (#214664)
+		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
 	
 	Parameter's Explanation:
 		- @selection:
@@ -50,6 +51,7 @@ AS
 					. 5: GOF
 					. 6: Parlay Generator
 					. 7: Parlay Boost
+					. 8: Hybrid Parlay
 */
 
 BEGIN
@@ -113,7 +115,7 @@ BEGIN
 				INSERT INTO #ParlayType (ParlayType) VALUES (7)
 		END
 	
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%' OR ',' + @ParlayType + ',' LIKE '%,8,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)			
@@ -179,7 +181,7 @@ BEGIN
 				AND statusid = 0
 				AND (rb.bettype <> 29
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND rb.bettype = 29 AND rb.betteam = N'1')
+						AND rb.bettype = 29 AND rb.betteam = N'1' AND ISNULL(rb.oddsspread,0) <> 3)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND rb.bettype = 29 AND rb.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
@@ -188,6 +190,8 @@ BEGIN
 						AND rb.bettype = 29 AND rb.betteam = N'1' AND o.bac|16 = o.bac)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2)
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 8)
+						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 3)
 					)		
 				AND t.CornerParlay > 0
 			GROUP BY rb.custid,	rb.username, ci.CustomerClass
@@ -214,7 +218,7 @@ BEGIN
 				AND statusid = 0
 				AND (rb.bettype <> 29
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND rb.bettype = 29 AND rb.betteam = N'1')
+						AND rb.bettype = 29 AND rb.betteam = N'1' AND ISNULL(rb.oddsspread,0) <> 3)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND rb.bettype = 29 AND rb.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
@@ -223,6 +227,8 @@ BEGIN
 						AND rb.bettype = 29 AND rb.betteam = N'1' AND o.bac|16 = o.bac)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2)
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 8)
+						AND rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 3)
 					)		
 			GROUP BY  rb.custid, rb.username, ci.CustomerClass
 			ORDER  BY net_win DESC

@@ -18,6 +18,7 @@ AS
 		- 20230830@Cherry: Enhance (#192682)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241024@Cherry: Add Parlay Odds condition (#208395)
+		- 20251120@Cherry: Integrate Hybrid Parlay (#242165)
 
 	EXEC RMS_Similar_Betlist_Alert
 */
@@ -41,6 +42,20 @@ CREATE TABLE #main (transid BIGINT, PotentialWinningAnt MONEY ,combo INT , refno
 					transid2 BIGINT, TotalMemberStake MONEY, Odds MONEY, CompanyLoseAmt MONEY)
 CREATE CLUSTERED INDEX cix_#main ON #main(transid) 
 
+CREATE TABLE #tmpHybrid (transid BIGINT)
+
+INSERT INTO #tmpHybrid (transid)
+	SELECT transid
+	FROM dbo.rmBettrans WITH (NOLOCK)
+	WHERE winlostdate > @yesterday
+		AND bettype = 29
+		AND betteam = N'1'
+		AND oddsspread = 3
+		AND statusID = 0
+		AND ((@IsTest = 0 AND currency <> 20) 
+			OR (@IsTest = 1 AND currency = 20)
+			)
+
 INSERT INTO #main (transid, PotentialWinningAnt, combo, refno, transid2, TotalMemberStake, Odds, CompanyLoseAmt)
 SELECT  t1.transid , t1.stake * (t1.odds2 - 1) * CASE WHEN @IsTest = 1 THEN 1 ELSE t1.actualrate END AS PotentialWinningAnt,  
 	t1.combo, t1.refno ,transid2, 
@@ -54,9 +69,10 @@ WHERE   t1.winlostdate > @yesterday
 		AND ((@IsTest = 0 AND t1.currency <> 20) 
 			OR (@IsTest = 1 AND t1.currency = 20)
 			)
+		AND NOT EXISTS (SELECT 1 FROM #tmpHybrid h WHERE t1.transid = h.transid)
 
 CREATE TABLE #temp (transid BIGINT, Extra VARCHAR(500))
-CREATE CLUSTERED INDEX idx_transid_#temp ON #temp(transid) 
+CREATE CLUSTERED INDEX IX_transid ON #temp(transid) 
 
 INSERT INTO #temp (transid, Extra)
 SELECT t1.transid, x.Extra
@@ -86,7 +102,7 @@ select  t1.transid,
 		hashbytes('MD5',(SELECT  ',' + t.extra 
 			from #temp t
 			WHERE t.transid = t1.transid
-			ORDER BY t.extra 
+			ORDER BY t.extra ASC
 			FOR XML PATH(''), TYPE
 			).value('.', 'NVARCHAR(MAX)'))
 		selection, 
@@ -208,6 +224,7 @@ DROP TABLE  #main
 DROP TABLE  #rmRunningTicketMonitor
 DROP TABLE  #temp
 DROP TABLE  #result
+DROP TABLE  #tmpHybrid
 
 END
 

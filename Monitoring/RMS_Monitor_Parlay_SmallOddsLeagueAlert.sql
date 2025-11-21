@@ -15,6 +15,7 @@ AS
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20250604@Cherry: Show Total Selection as INT (#229589)
+		- 20251120@Cherry: Exclude Hybrid Parlay (#242165)
 */
 
 BEGIN
@@ -48,7 +49,7 @@ BEGIN
 				INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 			WHERE bm.refno = b.refno
 				AND EXISTS (SELECT 1 FROM @rmLeague l WHERE m.leagueid = l.leagueId)
-			ORDER BY CASE WHEN bm.bettype IN (5, 15) THEN 1 ELSE 0 END
+			ORDER BY CASE WHEN bm.bettype IN (5, 15) THEN 1 ELSE 0 END ASC
 		) bm
 	WHERE b.TransDate > @LastTransDate
 		AND b.matchid = 29
@@ -61,6 +62,7 @@ BEGIN
 		AND (b.odds2 - 1) * b.stake * CASE WHEN @IsTest = 1 THEN 1 ELSE b.actualrate END >= 10000
 		AND b.odds2 BETWEEN 1.01 AND 1.20
 		AND NOT EXISTS (SELECT 1 FROM dbo.rmLastTicketAlert t WITH (NOLOCK) WHERE b.transid = t.transid AND t.JobType = 3)
+		AND NOT EXISTS (SELECT 1 FROM dbo.rmBettrans h WITH (NOLOCK) WHERE b.transid = h.transid AND h.bettype = 29 AND h.betteam = N'1' AND h.oddsspread = 3)
 
 	-- 2. Remaining selection: FT/HT 1x2
 	DELETE b
@@ -121,6 +123,7 @@ BEGIN
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN bodb02.dbo.Exchange e WITH (NOLOCK) ON b.currency = e.exchangeid
 	WHERE EXISTS (SELECT 1 FROM @bettrans bt WHERE b.transid = bt.transid)
+		AND NOT EXISTS (SELECT 1 FROM dbo.rmBettrans h WITH (NOLOCK) WHERE b.transid = h.transid AND h.bettype = 29 AND h.betteam = N'1' AND h.oddsspread = 3)
 
 	SELECT
 		TransId,

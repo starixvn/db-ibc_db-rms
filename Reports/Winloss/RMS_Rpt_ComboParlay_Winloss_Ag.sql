@@ -42,6 +42,7 @@ AS
 		- 20250227@Cherry: Hot fix (#218639)
 		- 20250306@Cherry: Add @HouseWL (#218958)
 		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
+		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -59,6 +60,7 @@ AS
 					. 5: GOF
 					. 6: Parlay Generator
 					. 7: Parlay Boost
+					. 8: Hybrid Parlay
 
 		- @ReportBy:
 					. 1: Report by Month
@@ -154,7 +156,7 @@ BEGIN
 		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType IN (6,7)) 
 			INSERT INTO #ParlayType (ParlayType) VALUES (77) --Parlay Generator & Boost
 	
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%' OR ',' + @ParlayType + ',' LIKE '%,8,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)			
@@ -249,7 +251,7 @@ BEGIN
 				AND EXISTS(SELECT TOP 1 1 FROM #userList ul WHERE ul.custID = b.custid)
 				AND (b.bettype <> 29 
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND b.bettype = 29 AND b.betteam = N'1')
+						AND b.bettype = 29 AND b.betteam = N'1' AND ISNULL(b.oddsspread,0) <> 3)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
@@ -258,6 +260,8 @@ BEGIN
 						AND b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 8)
+						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3)
 				)		
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 			GROUP BY winlostdate, b.custid, b.username, ci.CustomerClass

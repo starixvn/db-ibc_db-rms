@@ -38,6 +38,7 @@ AS
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241212@Cherry: Separate Cricket (#214664)
 		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
+		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
 
 	Parameter's Explanation:
 		- @selection:
@@ -197,7 +198,7 @@ BEGIN
 				INSERT INTO #ParlayType (ParlayType) VALUES (7)
 		END
 	
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%' OR ',' + @ParlayType + ',' LIKE '%,8,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)			
@@ -250,7 +251,7 @@ BEGIN
 					b.oddsspread,
 					ci.CustomerClass
 			FROM #rmTransRecommend tmp
-				INNER JOIN dbo.rmBettrans b WITH (NOLOCK, INDEX = CIX_bettransParlay, FORCESEEK) ON tmp.transid = b.transid
+				INNER JOIN dbo.rmBettrans b WITH (NOLOCK) ON tmp.transid = b.transid
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
@@ -265,7 +266,7 @@ BEGIN
 				AND	ISNULL(mc.level,0) IN (SELECT l.level FROM #level l)
 				AND (b.bettype <> 29
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND b.bettype = 29 AND b.betteam = N'1')
+						AND b.bettype = 29 AND b.betteam = N'1' AND ISNULL(b.oddsspread,0) <> 3)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
@@ -274,6 +275,8 @@ BEGIN
 						AND b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 8)
+						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3)
 					)		
 				AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
 
@@ -314,7 +317,7 @@ BEGIN
 				AND	ISNULL(mc.level,0) IN(SELECT l.level FROM #level l)
 				AND (b.bettype <> 29
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND b.bettype = 29 AND b.betteam = N'1')
+						AND b.bettype = 29 AND b.betteam = N'1' AND ISNULL(b.oddsspread,0) <> 3)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
@@ -323,10 +326,11 @@ BEGIN
 						AND b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 8)
+						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3)
 					)		
 				AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
 		END
-
 
 		IF @IsCornerParlay = 1
 		BEGIN
@@ -338,7 +342,7 @@ BEGIN
 			INSERT INTO #bettransm (transid, CornerParlay)
 			SELECT b.transid, COUNT(1) AS CornerParlay
 			FROM #bettrans_details b WITH(NOLOCK)
-			INNER JOIN  bodb02.dbo.bettransm bm WITH (NOLOCK, INDEX = IX_bettransm) ON b.refno = bm.refno
+			INNER JOIN  bodb02.dbo.bettransm bm WITH (NOLOCK) ON b.refno = bm.refno
 			INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 			WHERE m.ChildMatchType = 204
 			GROUP BY b.transid 	 	
@@ -347,7 +351,7 @@ BEGIN
 			INSERT INTO #bettransm (transid, CornerParlay)
 			SELECT  b.transid, COUNT(1) AS CornerParlay
 			FROM #bettrans_details b WITH(NOLOCK)
-			INNER JOIN  bodb02.dbo.bettransm14 bm WITH (NOLOCK, INDEX = IX_bettransm14) ON b.refno = bm.refno
+			INNER JOIN  bodb02.dbo.bettransm14 bm WITH (NOLOCK) ON b.refno = bm.refno
 			INNER JOIN bodb02.dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
 			WHERE m.ChildMatchType = 204
 			GROUP BY b.transid 		
@@ -356,7 +360,6 @@ BEGIN
 			INTO	#bettransmSummary
 			FROM	#bettransm
 			GROUP BY transid
-
 			
 			CREATE CLUSTERED INDEX #cix_bettransmSummary ON #bettransmSummary (transid)
 
@@ -409,7 +412,6 @@ BEGIN
 				,CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
 			HAVING SUM(b.WinningAmount) >= CASE WHEN @Recommend >0 THEN 0 ELSE @WinningAmount END
 			ORDER BY WinningAmount DESC
-
 		
 		END
 		ELSE
@@ -433,7 +435,6 @@ BEGIN
 			ORDER BY WinningAmount DESC
 			
 		END
-
 
 	END
 	

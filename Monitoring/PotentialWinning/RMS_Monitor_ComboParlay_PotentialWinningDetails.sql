@@ -28,6 +28,7 @@ AS
 		- 20240115@Cherry: Change attribute for Parlay Generator (#199766)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241212@Cherry: Separate Cricket (#214664)
+		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
 
 	Parameter's Explanation:
 		- @selection:
@@ -49,6 +50,7 @@ AS
 					. 5: GOF
 					. 6: Parlay Generator
 					. 7: Parlay Boost
+					. 8: Hybrid Parlay
 */
 
 BEGIN
@@ -129,7 +131,7 @@ BEGIN
 				INSERT INTO #ParlayType (ParlayType) VALUES (7)
 		END
 	
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%' OR ',' + @ParlayType + ',' LIKE '%,8,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)			
@@ -170,7 +172,7 @@ BEGIN
 		AND b.currency <> 20
 		AND (b.bettype <> 29
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-				AND b.bettype = 29 AND b.betteam = N'1')
+				AND b.bettype = 29 AND b.betteam = N'1' AND ISNULL(b.oddsspread,0) <> 3)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 				AND b.bettype = 29 AND b.betteam <> N'1')
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
@@ -179,6 +181,8 @@ BEGIN
 				AND b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 				AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
+			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 8)
+				AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3)
 			)		
 
 	CREATE CLUSTERED INDEX CIX_bettype ON #bettrans (bettype)
@@ -239,6 +243,13 @@ BEGIN
 		,rb.IsParlayGenerator
 		,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 		,l.username AS TrackingUser
+		,CASE
+			WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3 THEN 8
+			WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
+			WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 2
+			WHEN b.bettype = 38 THEN 3
+			WHEN b.bettype = 376 THEN 4
+		ELSE 0 END AS ParlayType
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN #bettrans rb ON rb.transid = b.transid
 		LEFT JOIN #NumberWon n ON b.refno = n.refno

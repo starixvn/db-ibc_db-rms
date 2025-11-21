@@ -21,6 +21,7 @@ AS
 		20240312@Cherry: Change SQL account in metadata (#202012)
 		20250604@Cherry: Show Total Selection as INT (#229589)
 		20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
+		20251020@Cherry: Integrate Hybrid Parlay (#242165)
 
 	Param:
 		@TicketStatus = 112: Won
@@ -75,6 +76,7 @@ BEGIN
 		SiteGroup VARCHAR(10),
 		UserName NVARCHAR(50),
 		CustomerClass SMALLINT,
+		ParlayType TINYINT,
 		Stake MONEY,
 		WinningAmt MONEY,
 		HouseAmt MONEY,
@@ -90,6 +92,7 @@ BEGIN
 		BetType SMALLINT,
 		UserName NVARCHAR(50),
 		Odds MONEY,		
+		ParlayType TINYINT,
 		Stake MONEY,
 		WinningAmt MONEY,
 		HouseAmt MONEY,
@@ -123,7 +126,8 @@ BEGIN
 			BetType,
 			SiteGroup,
 			UserName,
-			CustomerClass,			
+			CustomerClass,	
+			ParlayType,
 			Stake,
 			WinningAmt,
 			HouseAmt,
@@ -137,6 +141,13 @@ BEGIN
 			CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup,
 			p.username,
 			ci.CustomerClass,
+			CASE
+				WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 3 THEN 8
+				WHEN p.bettype = 29 AND p.betteam = N'1' THEN 1
+				WHEN p.bettype = 29 AND p.betteam <> N'1' THEN 2
+				WHEN p.bettype = 38 THEN 3
+				WHEN p.bettype = 376 THEN 4
+			ELSE 0 END AS ParlayType,
 			(p.stake * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END) AS stake,
 			CASE WHEN p.statusID = 0 THEN p.stake * (p.odds2 - 1) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END
 				 WHEN p.statusID = 112 THEN (p.winlost - p.actual_stake) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END
@@ -164,6 +175,7 @@ BEGIN
 			SiteGroup,
 			UserName,
 			CustomerClass,
+			ParlayType,
 			Stake,
 			WinningAmt,
 			HouseAmt,
@@ -177,6 +189,13 @@ BEGIN
 			CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END SiteGroup,
 			p.username,
 			ci.CustomerClass,
+			CASE
+				WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 3 THEN 8
+				WHEN p.bettype = 29 AND p.betteam = N'1' THEN 1
+				WHEN p.bettype = 29 AND p.betteam <> N'1' THEN 2
+				WHEN p.bettype = 38 THEN 3
+				WHEN p.bettype = 376 THEN 4
+			ELSE 0 END AS ParlayType,
 			(p.stake * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END) AS stake,
 			CASE WHEN p.statusID = 0 THEN p.stake * (p.odds2 - 1) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END
 				 WHEN p.statusID = 112 THEN (p.winlost - p.actual_stake) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END
@@ -204,6 +223,7 @@ BEGIN
 			SiteGroup,
 			UserName,
 			CustomerClass,
+			ParlayType,
 			Stake,
 			WinningAmt,
 			HouseAmt,
@@ -221,7 +241,8 @@ BEGIN
 			CustID,
 			BetType,
 			UserName,
-			Odds,			
+			Odds,		
+			ParlayType,
 			Stake,
 			WinningAmt,
 			HouseAmt,
@@ -241,7 +262,14 @@ BEGIN
 			p.CustID,
 			BetType,
 			c.username,
-			odds2 * TotalBet,			
+			odds2 * TotalBet,	
+			CASE
+				WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 3 THEN 8
+				WHEN p.bettype = 29 AND p.betteam = N'1' THEN 1
+				WHEN p.bettype = 29 AND p.betteam <> N'1' THEN 2
+				WHEN p.bettype = 38 THEN 3
+				WHEN p.bettype = 376 THEN 4
+			ELSE 0 END AS ParlayType,
 			stake * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END AS stake,
 			CASE WHEN statusID = 0 THEN stake * (odds2 - 1) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END
 				 WHEN statusID = 112 THEN (winlost - actual_stake) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END
@@ -277,7 +305,8 @@ BEGIN
 			CustID,
 			BetType,
 			UserName,
-			Odds,			
+			Odds,		
+			ParlayType,
 			Stake,
 			WinningAmt,
 			HouseAmt,
@@ -297,7 +326,14 @@ BEGIN
 			p.CustID,
 			BetType,
 			c.username,
-			odds2 * TotalBet,			
+			odds2 * TotalBet,		
+			CASE
+				WHEN p.bettype = 29 AND p.betteam = N'1' AND p.oddsspread = 3 THEN 8
+				WHEN p.bettype = 29 AND p.betteam = N'1' THEN 1
+				WHEN p.bettype = 29 AND p.betteam <> N'1' THEN 2
+				WHEN p.bettype = 38 THEN 3
+				WHEN p.bettype = 376 THEN 4
+			ELSE 0 END AS ParlayType,
 			stake * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END AS stake,
 			CASE WHEN statusID = 0 THEN stake * (odds2 - 1) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END
 				 WHEN statusID = 112 THEN (winlost - actual_stake) * CASE WHEN p.currency = 20 THEN 1 ELSE p.actualrate END
@@ -334,6 +370,7 @@ BEGIN
 			BetType,
 			UserName,
 			Odds,
+			ParlayType,
 			Stake,
 			WinningAmt,
 			HouseAmt,

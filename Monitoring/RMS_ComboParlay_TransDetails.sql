@@ -20,6 +20,7 @@ AS
 		- 20210319@Danny: Incorporate Cricket AIO into PRMS [RedmineID: #151319]
 		- 20230320@Cherry: Change formula of Stake (#185251)
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
+		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
 */
 
 BEGIN
@@ -34,14 +35,15 @@ BEGIN
 
 	SET @CurrencyName = NULL
 
-	DECLARE @tpositiontaking SMALLMONEY, @actualrate FLOAT, @sql NVARCHAR(MAX)
-	SELECT  @CurrencyName = MAX(CurrencyName), @tpositiontaking = MAX(tpositiontaking), @actualrate = MAX(actualrate)
+	DECLARE @tpositiontaking SMALLMONEY, @actualrate FLOAT, @sql NVARCHAR(MAX), @transdesc NVARCHAR(1000)
+	SELECT  @CurrencyName = MAX(CurrencyName), @tpositiontaking = MAX(tpositiontaking), 
+			@actualrate = MAX(actualrate), @transdesc = MAX(transdesc)
 	FROM
 	(
-		SELECT CurrencyName, tpositiontaking, actualrate
+		SELECT CurrencyName, tpositiontaking, actualrate, transdesc
 		FROM dbo.rmBettrans WITH (NOLOCK) WHERE transid = @transid
 		UNION 
-		SELECT CurrencyName, tpositiontaking, actualrate
+		SELECT CurrencyName, tpositiontaking, actualrate, transdesc
 		FROM dbo.rmBettrans_Old WITH (NOLOCK) WHERE transid = @transid
 	)m
 
@@ -132,7 +134,7 @@ BEGIN
 			,leagueid, sporttype, isNeutral, matchid, matchcode
 			,betstatus, betcheck, stake, transdate, transdesc
 		)
-        EXEC (@sql)
+        EXECUTE sp_executesql @sql
 
 		UPDATE m
 		SET m.IsBlacklistLeague = CASE WHEN l.LeagueId IS NOT NULL THEN 1 ELSE 0 END
@@ -144,9 +146,9 @@ BEGIN
 	SELECT
 		transid,bettype,homeid,awayid,hdp1,hdp2,odds,betteam,statusID,status,livehomescore,liveawayscore
 		,liveindicator,leagueid,sporttype,isNeutral,matchid,matchcode,betstatus,betcheck
-		,(stake * @actualrate) AS stake,transdate,transdesc
+		,(stake * @actualrate) AS stake,transdate,@transdesc transdesc
 		,IsBlacklistLeague
 	FROM @bettransm
-	ORDER BY transid
+	ORDER BY transid ASC
 END
 GO

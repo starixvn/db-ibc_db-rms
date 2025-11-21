@@ -29,6 +29,7 @@ AS
 		- 20241106@Cherry: Add Single Match Parlay (#209293)
 		- 20250115@Cherry: Support direct member (#215427)
 		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
+		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
 		
 	Parameter's Explanation:
 		- @selection:
@@ -57,6 +58,7 @@ AS
 					. 5: GOF
 					. 6: Parlay Generator
 					. 7: Parlay Boost
+					. 8: Hybrid Parlay
 */
 
 BEGIN
@@ -179,7 +181,7 @@ BEGIN
 				INSERT INTO #ParlayType (ParlayType) VALUES (7)
 		END
 		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%' OR ',' + @ParlayType + ',' LIKE '%,8,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
@@ -225,7 +227,7 @@ BEGIN
 					AND ISNULL(mc.level, 0) IN (SELECT level FROM @levelTab)
 					AND (b.bettype <> 29
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-							AND b.bettype = 29 AND b.betteam = N'1')
+							AND b.bettype = 29 AND b.betteam = N'1' AND ISNULL(b.oddsspread,0) <> 3)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 							AND b.bettype = 29 AND b.betteam <> N'1')
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
@@ -234,6 +236,8 @@ BEGIN
 							AND b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac)
 						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
+						OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 8)
+							AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3)
 						)		
 
 		END
@@ -268,7 +272,7 @@ BEGIN
 				AND ISNULL(mc.level, 0) IN (SELECT level FROM @levelTab)
 				AND (b.bettype <> 29
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND b.bettype = 29 AND b.betteam = N'1')
+						AND b.bettype = 29 AND b.betteam = N'1' AND ISNULL(b.oddsspread,0) <> 3)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
@@ -277,6 +281,8 @@ BEGIN
 						AND b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 8)
+						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3)
 					)		
 		END		
 
@@ -362,14 +368,15 @@ BEGIN
 						SUM(rm.stake* rm.actualrate) AS totalStake, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate) AS totalWinningAmt, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking)) AS companyLoseAmt, 
-						COUNT(1) AS totalTicket 
-				FROM	#Result r
-				INNER JOIN rmBettrans rm ON r.transid = rm.transid
-				INNER JOIN bodb02.dbo.League l ON r.leagueid = l.leagueid
+						COUNT(1) AS totalTicket					
+				FROM #Result r
+					INNER JOIN rmBettrans rm ON r.transid = rm.transid
+					INNER JOIN bodb02.dbo.League l ON r.leagueid = l.leagueid
 				GROUP BY r.leagueid, l.leagueName
 			), u AS
 			(
-				SELECT leagueid, leagueName, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
+				SELECT leagueid, leagueName, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, 
+					ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
 				FROM t
 			)
 			SELECT leagueid, leagueName, totalStake, totalWinningAmt, companyLoseAmt, totalTicket
@@ -386,16 +393,17 @@ BEGIN
 						SUM(rm.stake * rm.actualrate)  AS totalStake, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate) AS totalWinningAmt, 
 						SUM((rm.odds2 - 1) * rm.stake * rm.actualrate * (1 - rm.tpositiontaking)) AS companyLoseAmt, 
-						COUNT(1) AS totalTicket 
+						COUNT(1) AS totalTicket
 				FROM	#Result r
 					INNER JOIN rmBettrans rm WITH(NOLOCK) ON r.transid = rm.transid
 					LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.custid = r.custid
 					LEFT JOIN bodb02.dbo.site s WITH(NOLOCK) ON c.site = s.site
 				GROUP BY r.custid, c.username,
-						CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END 
+						CASE WHEN s.isDeposit = 0 OR s.site IN ('Saba789','NovaCasino','SEAL888') THEN 'C' ELSE 'L' END
 			), u AS
 			(
-				SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
+				SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket, 
+					ROW_NUMBER() OVER(ORDER BY totalWinningAmt DESC) AS rn
 				FROM t
 			)
 			SELECT custid, SiteGroup, username, totalStake, totalWinningAmt, companyLoseAmt, totalTicket
@@ -421,7 +429,14 @@ BEGIN
 					rm.refno,
 					rm.bettype, 
 					r.IsParlayGenerator,
-					CAST(CASE WHEN rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
+					CAST(CASE WHEN rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus,
+					CASE
+						WHEN rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 3 THEN 8
+						WHEN rm.bettype = 29 AND rm.betteam = N'1' THEN 1
+						WHEN rm.bettype = 29 AND rm.betteam <> N'1' THEN 2
+						WHEN rm.bettype = 38 THEN 3
+						WHEN rm.bettype = 376 THEN 4
+					ELSE 0 END AS ParlayType
 			FROM	#Result r
 				INNER JOIN rmBettrans rm WITH(NOLOCK) ON r.transid = rm.transid
 				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON r.custid = mc.custid

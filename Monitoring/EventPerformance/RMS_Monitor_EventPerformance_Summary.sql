@@ -30,6 +30,7 @@ AS
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20240802@Cherry: Change formula of stake (#202238)
 		- 20241031@Cherry: Add Single Match Parlay (#209293)
+		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
 	
 	Parameter's Explanation:
 		- @selection:
@@ -51,6 +52,7 @@ AS
 					. 4: Panalty shootout combo
 					. 5: GOF
 					. 6: Parlay Generator
+					. 8: Hybrid Parlay
 
 		EXEC RMS_Monitor_EventPerformance_Summary 
 				@selection		 = '0',
@@ -185,7 +187,7 @@ BEGIN
 			NOT EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
 			INSERT INTO #ParlayType (ParlayType) VALUES (6)
 		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,8,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)
@@ -235,13 +237,15 @@ BEGIN
 		AND ISNULL(mc.level, 0) IN (SELECT level FROM #level)
 		AND ( rm.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
 		AND ((EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-				AND rm.bettype = 29 AND rm.betteam = N'1')
+				AND rm.bettype = 29 AND rm.betteam = N'1' AND ISNULL(rm.oddsspread,0) <> 3)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 				AND rm.bettype = 29 AND rm.betteam <> N'1')
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
 				AND rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 1)
 			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
 				AND rm.bettype = 29 AND rm.betteam = N'1' AND t.bac|16 = t.bac)
+			OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 8)
+				AND rm.bettype = 29 AND rm.betteam = N'1' AND rm.oddsspread = 3)
 			)		
 	END
 
@@ -314,7 +318,7 @@ BEGIN
 		SELECT leagueID, leaguename , HomeTotalStake, HomeTotalTicket, AwayTotalStake, AwayTotalTicket, OtherTotalStake, OtherTotalTicket
 		FROM cte
 		WHERE ( rn <= @limitRowCount OR @limitRowCount = 0)
-		ORDER BY rn
+		ORDER BY rn ASC
 	END
 	ELSE
 	BEGIN

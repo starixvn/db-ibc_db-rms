@@ -37,6 +37,7 @@ AS
 		- 20250716@Cherry: Report by Parlay Type (#232923)
 		- 20251015@Cherry: Tuning performance (#241737)
 		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
+		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
 	
 	Parameter's Explanation:
 		- @sporttype:
@@ -59,6 +60,7 @@ AS
 					. 5: GOF
 					. 6: Parlay Generator
 					. 7: Parlay Boost
+					. 8: Hybrid Parlay
 
 		 - @Site:
 					. 0 = Credit sites
@@ -130,7 +132,7 @@ BEGIN
 		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType IN (6,7)) 
 			INSERT INTO #ParlayType (ParlayType) VALUES (77) --Parlay Generator & Boost
 	
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%' OR ',' + @ParlayType + ',' LIKE '%,8,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)			
@@ -209,6 +211,7 @@ BEGIN
 					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 7
 					  WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 6
 					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 5
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3 THEN 8
 					  WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
 					  WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 2
 				END parlaytype
@@ -222,7 +225,7 @@ BEGIN
 				AND b.currency <> 20
 				AND (b.bettype <> 29
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-						AND b.bettype = 29 AND b.betteam = N'1')
+						AND b.bettype = 29 AND b.betteam = N'1' AND ISNULL(b.oddsspread,0) <> 3)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 						AND b.bettype = 29 AND b.betteam <> N'1')
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
@@ -231,6 +234,8 @@ BEGIN
 						AND b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac)
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
+					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 8)
+						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3)
 					)		
 				AND (@Site = 2 OR
 					EXISTS(SELECT 1 FROM bodb02.dbo.customer c WITH(NOLOCK) 
@@ -245,6 +250,7 @@ BEGIN
 					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 7
 					  WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 6
 					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 1 THEN 5
+					  WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3 THEN 8
 					  WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
 					  WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 2
 				END
@@ -379,6 +385,7 @@ BEGIN
 				WHEN parlaytype = 6 THEN 'Parlay Generator'
 				WHEN parlaytype = 7 THEN 'Parlay Boost'
 				WHEN parlaytype = 77 THEN 'Parlay Boost & Generator'
+				WHEN parlaytype = 8 THEN 'Hybrid Parlay'
 				END AS parlaytype
 			,SUM(tickets_won)	AS tickets_won
 			,SUM(tickets_lose)	AS tickets_lose
@@ -398,6 +405,7 @@ BEGIN
 				WHEN parlaytype = 6 THEN 'Parlay Generator'
 				WHEN parlaytype = 7 THEN 'Parlay Boost'
 				WHEN parlaytype = 77 THEN 'Parlay Boost & Generator'
+				WHEN parlaytype = 8 THEN 'Hybrid Parlay'
 				END
 		ORDER BY winlostdate ASC, 
 			CASE WHEN parlaytype = 1 THEN 'Mix Parlay'
@@ -408,6 +416,7 @@ BEGIN
 				WHEN parlaytype = 6 THEN 'Parlay Generator'
 				WHEN parlaytype = 7 THEN 'Parlay Boost'
 				WHEN parlaytype = 77 THEN 'Parlay Boost & Generator'
+				WHEN parlaytype = 8 THEN 'Hybrid Parlay'
 				END ASC
 	
 	DROP TABLE #bettype

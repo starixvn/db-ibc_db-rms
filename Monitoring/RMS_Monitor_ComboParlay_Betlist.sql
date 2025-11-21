@@ -53,6 +53,7 @@ AS
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241212@Cherry: Separate Cricket (#214664)
 		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
+		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
 
 	Parameter's Explanation:
 		- @selection:
@@ -84,6 +85,7 @@ AS
 					. 5: GOF
 					. 6: Parlay Generator
 					. 7: Parlay Boost
+					. 8: Hybrid Parlay
 		- @@LiveStatus:
 					. Non live : 0, 
 					. Live : 1, 
@@ -251,7 +253,7 @@ BEGIN
 		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType IN (6,7)) 
 			INSERT INTO #ParlayType (ParlayType) VALUES (77) --Parlay Generator & Boost
 	
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%' OR ',' + @ParlayType + ',' LIKE '%,8,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)			
@@ -298,7 +300,7 @@ BEGIN
 			AND b.bettype = 29 
 			AND (
 				(EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-					AND b.betteam = N'1')
+					AND b.betteam = N'1' AND ISNULL(b.oddsspread,0) <> 3)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 					AND b.betteam <> N'1')
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
@@ -306,8 +308,10 @@ BEGIN
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 6)
 					AND b.betteam = N'1' AND t.bac|16 = t.bac)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
-					AND b.betteam = N'1' AND b.oddsspread = 2)
-				)		
+					AND b.betteam = N'1' AND b.oddsspread = 2)	
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 8)
+					AND b.betteam = N'1' AND b.oddsspread = 3)
+				)	
 			AND (b.livehomescore = @LiveStatus OR @LiveStatus = 3)
 			AND (b.IP = @IP OR @IP IS NULL)
 			
@@ -453,11 +457,13 @@ BEGIN
 			,potentialWinningAmt MONEY
 			,CustomerClass SMALLINT
 			,TrackingUser NVARCHAR(50)
+			,ParlayType TINYINT
 		)
 		INSERT INTO #Result
 		(
 			custid, transdate, IsBoostBonus, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
-			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF, IsParlayGenerator, potentialWinningAmt, CustomerClass , TrackingUser
+			,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, betteam, oddsspread, IsGOF, 
+			IsParlayGenerator, potentialWinningAmt, CustomerClass , TrackingUser,ParlayType
 		)
 		SELECT
 			rb.custid
@@ -487,6 +493,13 @@ BEGIN
 			,(rb.odds2 - 1) * rb.stake * rb.actualrate
 			,ci.CustomerClass
 			,l.username AS TrackingUser
+			,CASE
+				WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 3 THEN 8
+				WHEN rb.bettype = 29 AND rb.betteam = N'1' THEN 1
+				WHEN rb.bettype = 29 AND rb.betteam <> N'1' THEN 2
+				WHEN rb.bettype = 38 THEN 3
+				WHEN rb.bettype = 376 THEN 4
+			ELSE 0 END AS ParlayType
 		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN #bettrans b ON rb.transid = b.transid AND b.isSelected = 1
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rb.custid = ci.custid
@@ -506,10 +519,12 @@ BEGIN
 		CREATE INDEX IX_Index ON #Result (transid)
 		
 		SELECT custid, transdate, IsBoostBonus, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
-			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, IsParlayGenerator, potentialWinningAmt, CustomerClass, TrackingUser
+			,TotalSelection, TotalBet, IP, level, 0 AS IsBetRadar, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, 
+			IsParlayGenerator, potentialWinningAmt, CustomerClass, TrackingUser, ParlayType
 		FROM (
 				SELECT custid, transdate, IsBoostBonus, transid, refno, SiteGroup, username, sporttype, odds, statusId, stake, maxpayout
-					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, IsParlayGenerator, potentialWinningAmt, CustomerClass, TrackingUser
+					,TotalSelection, TotalBet, IP, level, NumberWon, bettype, IsLive, IsBlacklistLeague, IsGOF, IsParlayGenerator, 
+					potentialWinningAmt, CustomerClass, TrackingUser, ParlayType
 					,ROW_NUMBER() OVER(ORDER BY transid DESC) AS rn
 				FROM #Result
 			) r

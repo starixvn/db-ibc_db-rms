@@ -32,6 +32,7 @@ AS
 		- 20240312@Cherry: Change SQL account in metadata (#202012)
 		- 20241212@Cherry: Separate Cricket (#214664)
 		- 20250115@Cherry: Support direct member (#215427)
+		- 20251020@Cherry: Integrate Hybrid Parlay (#242165)
 		
 	Parameter's Explanation:th
 		- @sporttype:
@@ -48,6 +49,7 @@ AS
 					. 5: GOF
 					. 6: Parlay Generator
 					. 7: Parlay Boost
+					. 8: Hybrid Parlay
 
 		- @ReportBy:
 					. '1': Company
@@ -76,7 +78,8 @@ BEGIN
 		balanceUpday	DATETIME ,
 		movebetsday		DATETIME
 		)
-		insert into #MBU  exec bodb02.dbo.Age_SelBalanceUpDay
+		insert into #MBU (balanceUpday,movebetsday) 
+		exec bodb02.dbo.Age_SelBalanceUpDay
 
 		select @movebetsday = movebetsday, @balanceUpday = balanceUpday FROM #MBU
 
@@ -161,7 +164,7 @@ BEGIN
 		IF EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType IN (6,7)) 
 			INSERT INTO #ParlayType (ParlayType) VALUES (77) --Parlay Generator & Boost
 		
-		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%'
+		IF ',' + @ParlayType + ',' LIKE '%,1,%' OR ',' + @ParlayType + ',' LIKE '%,2,%' OR ',' + @ParlayType + ',' LIKE '%,5,%' OR ',' + @ParlayType + ',' LIKE '%,6,%' OR ',' + @ParlayType + ',' LIKE '%,7,%' OR ',' + @ParlayType + ',' LIKE '%,8,%'
 		BEGIN
 			INSERT INTO #bettype (bettype)
 			VALUES (29)		
@@ -273,7 +276,7 @@ BEGIN
 				AND b.currency <> 20
 				AND (b.bettype <> 29
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
-					AND b.bettype = 29 AND b.betteam = N'1')
+					AND b.bettype = 29 AND b.betteam = N'1' AND ISNULL(b.oddsspread,0) <> 3)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 2)
 					AND b.bettype = 29 AND b.betteam <> N'1')
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 5)
@@ -282,6 +285,8 @@ BEGIN
 					AND b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac)
 				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 7)
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2)
+				OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 8)
+						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3)
 				)		
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
 		END
@@ -518,7 +523,7 @@ BEGIN
 				RealTurnover,
 				CustomerClass
 			FROM #rptRiskWLControl_Summary
-			ORDER BY UserName
+			ORDER BY UserName ASC
 
 			RETURN
 		END
@@ -536,7 +541,20 @@ BEGIN
 				@RowStart = @PageSize * @PageIndex + 1,
 				@RowEnd = @RowStart + @PageSize - 1;
 
-		SELECT wl.*
+		SELECT CustID,
+				UserName,
+				RoleID, 
+				NoMember, 
+				BetCount, 
+				MemberWinloss, 
+				SMAwinloss, 
+				ExtraPT, 
+				Commission, 
+				RealIncome, 
+				RealTurnover,
+				CustomerClass,
+				RowNum,
+				Site
 		FROM (
 			SELECT	CustID,
 					UserName,
@@ -550,7 +568,7 @@ BEGIN
 					RealIncome, 
 					RealTurnover,
 					CustomerClass,
-					ROW_NUMBER() over(order by UserName) as RowNum,
+					ROW_NUMBER() over(order by UserName ASC) as RowNum,
 					@Site as Site
 				FROM #rptRiskWLControl_Summary
 		) wl
@@ -576,7 +594,7 @@ BEGIN
 			@Site as Site,
 			CustomerClass
 	FROM #rptRiskWLControl_Summary
-	ORDER BY UserName
+	ORDER BY UserName ASC
 	
 	DROP TABLE #CustList
 	DROP TABLE #MBU

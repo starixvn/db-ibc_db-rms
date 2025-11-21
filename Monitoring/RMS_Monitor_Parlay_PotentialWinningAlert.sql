@@ -1,9 +1,10 @@
-
 /*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" viewers="" isFunction="0" isNested="0"></info>*/
 
-ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_PotentialWinningAlert] @IsTest              BIT            = 0, 
-                                                                 @IsSMP       BIT            = 0, 
-                                                                 @MinPotentialWinning MONEY  = 500000
+ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_PotentialWinningAlert]
+	@IsTest BIT = 0, 
+    @IsSMP BIT = 0, 
+	@IsHP BIT = 0,
+    @MinPotentialWinning MONEY  = 500000
 AS
 
 /*
@@ -19,19 +20,33 @@ Revisions:
 	- 20230809@Cherry: Duplicate data
 	- 20230830@Cherry: Enhance (#192682)
 	- 20240312@Cherry: Change SQL account in metadata (#202012)
+	- 20251030@Cherry: Add Hybrid Parlay (#242165)
 */
 
-     SET NOCOUNT ON;
+     SET NOCOUNT ON
 
-     DECLARE @BetType INT;
+     DECLARE @BetType INT
      SELECT @BetType = CASE
                            WHEN @IsSMP = 1
                            THEN 38
                            ELSE 29
-                       END;
+                       END
 
      DECLARE @TransTime DATETIME = GETDATE()
 	 WAITFOR DELAY '00:00:05'
+
+	 CREATE TABLE #tmpHybrid (transid BIGINT)
+
+	 INSERT INTO #tmpHybrid (transid)
+	 SELECT transid
+	 FROM rmBettrans WITH(NOLOCK)
+	 WHERE bettype = 29 
+		AND betteam = N'1' 
+		AND oddsspread = 3
+		AND statusid = 0
+        AND ((@IsTest = 1 AND currency = 20)
+          OR (@IsTest = 0 AND currency <> 20))
+		AND transdate < @TransTime
 
      -- #sumtotal
      CREATE TABLE #sumtotal
@@ -47,7 +62,7 @@ Revisions:
       totalselectionsmax INT, 
       odds               MONEY, 
       housept            MONEY,
-     );
+     )
      INSERT INTO #sumtotal
      (custid, 
       username, 
@@ -72,6 +87,9 @@ Revisions:
 						  AND t.statusid = 0
 						  AND ((@IsTest = 1	AND t.currency = 20)
 								OR (@IsTest = 0	AND t.currency <> 20))
+						  AND ((@IsHP = 0 AND NOT EXISTS (SELECT 1 FROM #tmpHybrid p WHERE p.transid = t.transid))
+							OR (@IsHP = 1 AND EXISTS (SELECT 1 FROM #tmpHybrid h WHERE h.transid = t.transid)))
+						  AND t.transdate < @TransTime
 					FOR XML PATH(''), TYPE
 					).value('.', 'NVARCHAR(MAX)')  
 					,1,1,'') TransList,
@@ -100,6 +118,8 @@ Revisions:
                        OR (@IsTest = 0
                            AND currency <> 20))
 				  AND b.transdate < @TransTime
+				  AND ((@IsHP = 0 AND NOT EXISTS (SELECT 1 FROM #tmpHybrid p WHERE p.transid = b.transid))
+							OR (@IsHP = 1 AND EXISTS (SELECT 1 FROM #tmpHybrid h WHERE h.transid = b.transid)))
             GROUP BY b.custid, 
                      b.username, 
                      b.CurrencyName
@@ -108,14 +128,14 @@ Revisions:
                                                      THEN 1
                                                      ELSE b.actualrate
                                                  END) >= @MinPotentialWinning
-            ORDER BY WinningAmount DESC;
+            ORDER BY WinningAmount DESC
 
      -- #lastalert
      CREATE TABLE #lastalert
      (custid      INT, 
       alerttime   DATETIME, 
       alertamount MONEY
-     );
+     )
      INSERT INTO #lastalert
      (custid, 
       alerttime, 
@@ -130,17 +150,20 @@ Revisions:
                        MAX(alerttime) alerttime
                 FROM rmPotentialWinningAlert WITH(NOLOCK)
                 WHERE IsSMP = @IsSMP
+					AND IsHP = @IsHP
                 GROUP BY custid
             ) m
             INNER JOIN rmPotentialWinningAlert p WITH(NOLOCK) ON m.CustId = p.CustId
                                                                  AND m.alerttime = p.AlertTime
-            WHERE p.IsSMP = @IsSMP;
+            WHERE p.IsSMP = @IsSMP
+				AND p.IsHP = @IsHP
 
      -- #sumtotalfromlastalert
      CREATE TABLE #sumtotalfromlastalert
      (custid        INT, 
       winningamount MONEY
-     );
+     )
+
      INSERT INTO #sumtotalfromlastalert
      (custid, 
       winningamount
@@ -161,8 +184,10 @@ Revisions:
                            AND currency <> 20))
                   AND b.transdate > l.alerttime
 				  AND b.transdate < @TransTime
+				  AND ((@IsHP = 0 AND NOT EXISTS (SELECT 1 FROM #tmpHybrid p WHERE p.transid = b.transid))
+						OR (@IsHP = 1 AND EXISTS (SELECT 1 FROM #tmpHybrid h WHERE h.transid = b.transid)))
             GROUP BY b.custid
-            ORDER BY WinningAmount DESC;
+            ORDER BY WinningAmount DESC
 
      -- SELECT 
      SELECT s.custid, 
@@ -178,7 +203,8 @@ Revisions:
             ISNULL(p.AlertAmount, 0) LastAlertAmount, 
             ISNULL(r.WinningAmount, 0) AS AmountFromLastAlert,
 			COMPRESS((SELECT TransList AS 'tl',
-					CASE WHEN @IsSMP = 1 THEN 'Single Match Parlay' ELSE
+					CASE WHEN @IsSMP = 1 THEN 'Single Match Parlay' 
+						WHEN @IsHP = 1 THEN 'Bet Builder+' ELSE
 						CASE WHEN WinningAmount >= 1000000 AND WinningAmount < 2000000 AND @IsTest = 0 THEN 'Orange Level' 
 							 WHEN WinningAmount >= 2000000 AND WinningAmount < 3000000 AND @IsTest = 0 THEN 'Yellow Level'
 							 WHEN WinningAmount >= 3000000 AND WinningAmount < 4000000 AND @IsTest = 0 THEN 'Red 1 Level'
@@ -205,8 +231,11 @@ Revisions:
 				)) TransInfo
      FROM #sumtotal s
           LEFT JOIN #sumtotalfromlastalert r ON s.custid = r.custid
-          LEFT JOIN #lastalert p WITH(NOLOCK) ON s.custid = p.custid;
-     DROP TABLE #sumtotal;
-     DROP TABLE #sumtotalfromlastalert;
-     DROP TABLE #lastalert;
+          LEFT JOIN #lastalert p WITH(NOLOCK) ON s.custid = p.custid
+
+     DROP TABLE #sumtotal
+     DROP TABLE #sumtotalfromlastalert
+     DROP TABLE #lastalert
+	 DROP TABLE #tmpHybrid
+
 GO
