@@ -1,6 +1,7 @@
 /*<info serverAlias="DBRMS-bodb_RMS" executers="wsv_rms" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[RMS_Similar_Betlist_Alert]
 	@IsTest BIT = 0
+
 AS
 /*
 	Created: 20160426@Winnie

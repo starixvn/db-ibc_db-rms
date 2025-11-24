@@ -6,7 +6,6 @@ ALTER PROCEDURE [dbo].[RMS_PotentialWinningAlertIns]
     @AlertAmount MONEY, 
     @IsSMP BIT = 0,
 	@IsHP BIT = 0
-
 													 
 /*
 	Created: Jacob
