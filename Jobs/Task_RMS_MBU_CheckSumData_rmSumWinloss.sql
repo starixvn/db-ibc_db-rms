@@ -52,7 +52,7 @@ BEGIN
 				[betcheck] [nvarchar](50) NULL,
 				[oddsspread] [smallmoney] NULL,
 				[betteam] [nvarchar](10) NULL,
-				[hdp2] [smallmoney] NULL,
+				[combo] [int] NULL,
 				[username] [varchar](30) NULL,
 				[currency] [smallint] NULL,
 				[stake] [money] NULL,
@@ -121,7 +121,7 @@ BEGIN
 				[betcheck],
 				[oddsspread],
 				[betteam],
-				[hdp2],
+				[combo],
 				[username],
 				[currency],
 				[stake],
@@ -156,7 +156,7 @@ BEGIN
 				[betcheck],
 				[oddsspread],
 				[betteam],
-				[hdp2],
+				[combo],
 				[username],
 				[currency],
 				[stake],
@@ -194,7 +194,7 @@ BEGIN
 			,b.custid
 			,b.transid2 AS sporttype
 			,b.statusID
-			,CASE WHEN b.bettype = 29 AND b.betcheck IS NULL THEN LEN(b.betteam) ELSE b.hdp2 END AS combo
+			,CASE WHEN b.bettype = 29 AND b.betcheck IS NULL THEN LEN(b.betteam) ELSE b.combo END AS combo
 			,ISNULL(b.username,c.username)
 			,b.currency
 			,SUM(b.stake) AS stake
@@ -238,7 +238,7 @@ BEGIN
 			,b.custid
 			,b.transid2
 			,b.statusID
-			,CASE WHEN b.bettype = 29 AND b.betcheck IS NULL THEN LEN(b.betteam) ELSE b.hdp2 END
+			,CASE WHEN b.bettype = 29 AND b.betcheck IS NULL THEN LEN(b.betteam) ELSE b.combo END
 			,ISNULL(b.username,c.username)
 			,b.currency
 			,b.actualrate
