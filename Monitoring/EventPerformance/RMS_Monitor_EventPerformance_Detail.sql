@@ -231,7 +231,7 @@ BEGIN
 	WHERE	winlostdate >= @yesterday AND rm.custID > 0 AND matchid IN (29,38,376) AND statusID = 0 AND rm.currency <> 20
 		AND bettype IN (SELECT x.bettype FROM #bettype x)
 		AND refno IN (SELECT DISTINCT y.refno FROM #bettransm y)
-		AND hdp2 IN (SELECT z.selection FROM #tmpSelection z)
+		AND combo IN (SELECT selection FROM #tmpSelection)			
 		AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 		AND ISNULL(mc.level, 0) IN (SELECT level FROM #level)
 		AND (rm.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
@@ -309,6 +309,13 @@ BEGIN
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND b.bac|16 = b.bac THEN 1 ELSE 0 END IsParlayGenerator
 			,CASE WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 2 THEN 1 ELSE 0 END IsBoostBonus
 			,CASE WHEN rb.bettype = 38 THEN 1 ELSE 0 END IsSMP
+			,CASE
+				WHEN rb.bettype = 29 AND rb.betteam = N'1' AND rb.oddsspread = 3 THEN 8
+				WHEN rb.bettype = 29 AND rb.betteam = N'1' THEN 1
+				WHEN rb.bettype = 29 AND rb.betteam <> N'1' THEN 2
+				WHEN rb.bettype = 38 THEN 3
+				WHEN rb.bettype = 376 THEN 4
+				ELSE 0 END AS ParlayType
 		FROM rmBettrans rb WITH (NOLOCK)
 			INNER JOIN trans t ON rb.transid = t.transid
 			INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON rb.custid = ci.custid

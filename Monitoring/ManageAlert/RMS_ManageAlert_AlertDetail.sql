@@ -292,7 +292,7 @@ BEGIN
 		FROM dbo.rmBettrans p WITH (NOLOCK) 
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
-			AND p.hdp2 IN (SELECT selection FROM #tmpSelection)
+			AND p.combo IN (SELECT selection FROM #tmpSelection)
 			AND (@Odds IS NULL OR p.odds2 * p.TotalBet <= @Odds)
 			AND (@TicketStatus = '-1'
 				OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE p.StatusID = t.StatusID))
@@ -357,7 +357,7 @@ BEGIN
 			LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON p.custid = c.custid
 		WHERE transid IN (SELECT TransID FROM #tmpTransID)
 			AND transid NOT IN (SELECT TransID FROM #tmpPotential)
-			AND p.hdp2 IN (SELECT selection FROM #tmpSelection)
+			AND p.combo IN (SELECT selection FROM #tmpSelection)
 			AND (@Odds IS NULL OR p.odds2 * p.TotalBet <= @Odds)
 			AND (@TicketStatus = '-1'
 				OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE p.StatusID = t.StatusID))

@@ -159,7 +159,7 @@ BEGIN
 		SELECT b.transid, b.bettype, b.refno, b.betteam, b.oddsspread, t.bac
 		FROM dbo.rmBettrans b WITH (NOLOCK)
 			INNER JOIN #bettype bt ON b.bettype = bt.bettype
-			INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+			INNER JOIN #tmpSelection s ON b.combo = s.selection
 			INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 			LEFT JOIN #Generator t ON b.transid = t.transid
 		WHERE b.statusID = 0

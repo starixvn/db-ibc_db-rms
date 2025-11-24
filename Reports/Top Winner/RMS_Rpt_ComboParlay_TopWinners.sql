@@ -221,7 +221,7 @@ BEGIN
 				 ,COUNT(1)
 			FROM dbo.rmBettrans b WITH (NOLOCK)				
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
-				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN #tmpSelection s ON b.combo = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 				INNER JOIN #tmpCurrency tc ON tc.currency = b.currency
 				LEFT JOIN #tmpBettrans t ON b.transid = t.transid

@@ -228,7 +228,7 @@ BEGIN
 			FROM  dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
-				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN #tmpSelection s ON b.combo = s.selection
 				LEFT JOIN #tmpBettrans t ON b.transid = t.transid
 			WHERE b.winlostdate BETWEEN @f_date AND @t_date
 				AND statusID IN (111,112, 113)

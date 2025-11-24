@@ -109,7 +109,7 @@ BEGIN
 		refno BIGINT,
 		bettype INT,
 		statusID TINYINT,
-		hdp2 SMALLMONEY,		
+		combo INT,		
 		transid2 BIGINT,
 		ParlayType TINYINT
 	)	
@@ -120,7 +120,7 @@ BEGIN
 		refno BIGINT,
 		bettype INT,
 		statusID TINYINT,
-		hdp2 SMALLMONEY,		
+		combo INT,		
 		transid2 BIGINT,
 		ParlayType TINYINT
 	)	
@@ -250,7 +250,7 @@ BEGIN
 		refno,
 		bettype,
 		statusID, 
-		hdp2,		
+		combo,		
 		transid2,
 		ParlayType
 	)
@@ -258,7 +258,7 @@ BEGIN
 		b.refno,
 		b.bettype,
 		b.statusID, 
-		b.hdp2,		
+		b.combo,		
 		b.transid2,
 		CASE
 			WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3 THEN 8
@@ -297,7 +297,7 @@ BEGIN
 			)
 		AND (@TicketStatus = '-1'
 			OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE b.StatusID = t.StatusID))
-		AND EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection)
+		AND EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.combo = s.selection)
 		AND d.AlertID BETWEEN @fAlertID AND @tAlertID 
 	OPTION(RECOMPILE)
 
@@ -310,7 +310,7 @@ BEGIN
         refno,
         bettype,
         statusID, 
-        hdp2,       
+        combo,       
         transid2,
 		ParlayType
     )
@@ -318,7 +318,7 @@ BEGIN
         b.refno,
         b.bettype,
         b.statusID, 
-        b.hdp2,     
+        b.combo,     
         b.transid2,
 		CASE
 			WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3 THEN 8
@@ -357,7 +357,7 @@ BEGIN
 			)
 		AND (@TicketStatus = '-1'
 			OR EXISTS(SELECT TOP 1 1 FROM #tmpStatusID t WHERE b.StatusID = t.StatusID))
-		AND EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.hdp2 = s.selection)
+		AND EXISTS(SELECT TOP 1 1 FROM #tmpSelection s WHERE b.combo = s.selection)
         AND d.AlertID BETWEEN @fAlertID AND @tAlertID 
 	OPTION(RECOMPILE)
 	

@@ -242,7 +242,7 @@ BEGIN
 			FROM  rmBettrans b WITH (NOLOCK, INDEX = IX_winlostdate_matchid_statusid)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
-				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN #tmpSelection s ON b.combo = s.selection
 				LEFT JOIN #tmpBettrans t ON b.transid = t.transid
 			WHERE  b.custid IN (SELECT custID FROM #CustList c)
 				AND b.winlostdate BETWEEN @f_date AND @t_date
