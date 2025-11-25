@@ -78,7 +78,7 @@ BEGIN
 				WHEN betteam = N'1' THEN 2 --Mix Parlay
 				ELSE 3 --Combo Parlay
 			END ParlayType, 
-			CASE WHEN s.Site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END, statusID, hdp2,
+			CASE WHEN s.Site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END, statusID, combo,
 			stake*actualrate,(winlost-actual_stake)*actualrate, playercomm*actualrate, 
 			CASE WHEN tpositiontaking = 1 THEN 0 ELSE (-(winlost-actual_stake)*(1-tpositiontaking-CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)))-scomm+scomm*CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))/(1 - tpositiontaking))*actualrate END
 		FROM dbo.rmBettrans r WITH (NOLOCK)
@@ -105,7 +105,7 @@ BEGIN
 				ELSE 3 --Combo Parlay
 			END ParlayType, 
 			CASE WHEN s.Site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END, 
-			r.statusID, r.hdp2, r.stake*r.actualrate, (r.winlost-r.actual_stake)*r.actualrate, r.playercomm*r.actualrate, 
+			r.statusID, r.combo, r.stake*r.actualrate, (r.winlost-r.actual_stake)*r.actualrate, r.playercomm*r.actualrate, 
 			CASE WHEN r.tpositiontaking = 1 THEN 0 ELSE (-(r.winlost-r.actual_stake)*(1-r.tpositiontaking-CAST(ISNULL(r.epositiontaking, 0) AS DECIMAL(9,8)))-r.scomm+r.scomm*CAST(ISNULL(r.epositiontaking, 0) AS DECIMAL(9,8))/(1 - r.tpositiontaking))*r.actualrate END
 		FROM dbo.rmBettrans_Old r WITH (NOLOCK)
 			INNER JOIN bodb02.dbo.Customer c WITH (NOLOCK) ON r.custid = c.custid
