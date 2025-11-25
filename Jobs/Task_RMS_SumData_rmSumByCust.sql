@@ -171,7 +171,7 @@ BEGIN
 	CREATE TABLE #tmp1 (refno BIGINT, bettype SMALLINT, leagueid INT, matchid INT, betteam NVARCHAR(10), statusID TINYINT, RowNum BIGINT)
 	INSERT INTO #tmp1 (refno, bettype, leagueid, matchid, betteam, statusID, RowNum)
 	SELECT refno, bettype, LeagueId, matchId, betteam, statusID, 			
-			ROW_NUMBER() OVER(PARTITION BY refno, bettype, LeagueId, matchId, betteam ORDER BY (SELECT NULL)) AS RowNum
+			ROW_NUMBER() OVER(PARTITION BY refno, bettype, LeagueId, matchId, betteam ORDER BY (SELECT NULL) ASC) AS RowNum
 	FROM  #bettransm
 
 	CREATE CLUSTERED INDEX CIX_tmp1 ON #tmp1 (refno)
@@ -223,7 +223,7 @@ BEGIN
 	CREATE TABLE #tmp2 (refno BIGINT, bettype SMALLINT, leagueid INT, matchid INT, statusID TINYINT, RowNum BIGINT)
 	INSERT INTO #tmp2 (refno, bettype, leagueid, matchid, statusID, RowNum)
 	SELECT refno, bettype, LeagueId, matchId, statusID, 			
-			ROW_NUMBER() OVER(PARTITION BY refno, bettype, LeagueId, matchId ORDER BY (SELECT NULL)) AS RowNum
+			ROW_NUMBER() OVER(PARTITION BY refno, bettype, LeagueId, matchId ORDER BY (SELECT NULL) ASC) AS RowNum
 	FROM  #bettransm
 
 	CREATE CLUSTERED INDEX CIX_tmp2 ON #tmp2 (refno)
