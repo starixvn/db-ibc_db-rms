@@ -121,7 +121,7 @@ BEGIN
 
 	END
 
-	IF ((SELECT COUNT(*) FROM #tmpSelection) = 9
+	IF ((SELECT COUNT(*) FROM #tmpSelection) = 10
 		AND @Username = '')
 	BEGIN
 		IF @ReportBy = 1 -- view by league

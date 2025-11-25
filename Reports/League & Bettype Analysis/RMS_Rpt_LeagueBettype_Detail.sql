@@ -174,7 +174,7 @@ BEGIN
 		INNER JOIN bodb02.dbo.Team a WITH (NOLOCK) ON m.awayid = a.teamid
 	WHERE t.HomeName IS NULL
 	
-	IF ((SELECT COUNT(*) FROM #tmpSelection) = 9
+	IF ((SELECT COUNT(*) FROM #tmpSelection) = 10
 		AND @Username = '')
 	BEGIN
 		IF @ReportBy = 1 -- view by league detail
@@ -579,7 +579,7 @@ BEGIN
 	
 	IF @ReportBy = 3
 	BEGIN
-		IF ((SELECT COUNT(*) FROM #tmpSelection) = 9
+		IF ((SELECT COUNT(*) FROM #tmpSelection) = 10
 				AND @Username = '')
 		BEGIN
 			INSERT INTO #tmpTransList (TransID)
