@@ -26,6 +26,7 @@ AS
 		- 20240815@Cherry: Get None League Group (#204375)
 		- 20250314@Cherry: Add filter by Username (#214662)
 		- 20251016@Cherry: Move sites NovaCasino, SEAL888 from Deposit to Credit (#241763)
+		- 20251120@Cherry: Integrate Hybrid Parlay (#242165)
 
 	Param's Explanation:
 		. @ParlayType: '1,2'
