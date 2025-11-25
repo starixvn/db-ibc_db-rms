@@ -173,7 +173,7 @@ BEGIN
 			(
 				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, IsGOF, IsParlayGenerator, IsBoostBonus
 			)
-			SELECT b.transid, refno, transid2, b.bettype, hdp2 AS combo, TotalBet AS TotalCombo
+			SELECT b.transid, refno, transid2, b.bettype, b.combo, TotalBet AS TotalCombo
 				,CASE
 					WHEN b.bettype = 29 AND betteam = N'1' AND b.oddsspread = 3 THEN 8
 					WHEN b.bettype = 29 AND betteam = N'1' THEN 1
@@ -237,7 +237,7 @@ BEGIN
 			(
 				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, IsGOF, IsParlayGenerator, IsBoostBonus
 			)
-			SELECT b.transid, refno, transid2, b.bettype, hdp2 AS combo, TotalBet AS TotalCombo
+			SELECT b.transid, refno, transid2, b.bettype, b.combo, TotalBet AS TotalCombo
 				,CASE
 					WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3 THEN 8
 					WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
