@@ -196,7 +196,7 @@ BEGIN
 				stake_lose,member_won,member_lose,
 				ourPT_won,ourPT_lose,parlaytype
 			)
-			SELECT b.winlostdate, b.hdp2, b.transid2
+			SELECT b.winlostdate, b.combo, b.transid2
 				,SUM(CASE WHEN statusID = 112 THEN 1 ELSE 0 END) AS tickets_won
 				,SUM(CASE WHEN statusID = 113 THEN 1 ELSE 0 END) AS tickets_lose
 				,SUM(CASE WHEN statusID = 112 THEN stake * actualrate * (1 - tpositiontaking - CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))) ELSE 0 END) AS stake_won
@@ -243,7 +243,7 @@ BEGIN
                         WHERE c.custid = b.custid 
 							AND CASE WHEN s.Site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END = @Site))						
 				AND (CASE WHEN b.bettype = 29 THEN b.livehomescore ELSE b.liveindicator END = @LiveStatus OR @LiveStatus = 3)
-			GROUP BY b.winlostdate, b.hdp2, b.transid2,
+			GROUP BY b.winlostdate, b.combo, b.transid2,
 				CASE WHEN b.bettype = 38 THEN 3
 					  WHEN b.bettype = 376 THEN 4
 					  WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac AND b.oddsspread = 2 THEN 77
