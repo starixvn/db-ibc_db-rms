@@ -67,7 +67,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	CREATE TABLE #company(Site NVARCHAR(50))
+	CREATE TABLE #company(Site VARCHAR(50))
 	INSERT INTO #company(Site)
 	select value from  STRING_SPLIT(@company, ',')
 

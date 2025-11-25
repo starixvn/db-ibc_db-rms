@@ -10,7 +10,7 @@ ALTER PROCEDURE [dbo].[RMS_Rpt_Winloss_Risk_Control_Agent]
 	@PageSize		INT = 0,
 	@PageIndex		INT = 0,
 	@TotalRecords   INT =0  OUTPUT,
-	@Site			NVARCHAR(50) = '',
+	@Site			VARCHAR(50) = '',
 	@Selection		VARCHAR(MAX) = '',
 	@LiveStatus		TINYINT = 3
 

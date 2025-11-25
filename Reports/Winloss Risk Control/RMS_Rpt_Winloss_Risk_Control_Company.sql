@@ -2,7 +2,7 @@
 ALTER PROCEDURE [dbo].[RMS_Rpt_Winloss_Risk_Control_Company]
 	@fromdate		SMALLDATETIME,
 	@todate			SMALLDATETIME,
-	@company		NVARCHAR(50),
+	@company		VARCHAR(50),
 	@isDeposit		BIT,
 	@ParlayType		VARCHAR(100) = '',
 	@sporttype		VARCHAR(100) = '',
