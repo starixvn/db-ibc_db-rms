@@ -179,8 +179,7 @@ BEGIN
 
 		-- Update hdp2 for number of selections of Hybrid Parlay
 		UPDATE b
-		SET hdp2 = betid,
-			combo = betid
+		SET hdp2 = betid
 		FROM #rmBettrans b
 		WHERE bettype = 29 AND betteam = N'1' AND oddsspread = 3
 
