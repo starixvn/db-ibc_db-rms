@@ -575,7 +575,8 @@ BEGIN
 		SportType			SMALLINT,
 		IP					VARCHAR(45),
 		CurrencyName		NVARCHAR(50),
-		CustomerClass		SMALLINT
+		CustomerClass		SMALLINT,
+		ParlayType			TINYINT
 	)		
 	
 	IF @ReportBy = 3
@@ -636,7 +637,8 @@ BEGIN
 		SportType,
 		IP,
 		currencyName,
-		CustomerClass		
+		CustomerClass,
+		ParlayType
 	)			
 	SELECT
 		b.transdate
@@ -652,7 +654,14 @@ BEGIN
 		,b.transid2 AS SportType
 		,b.IP
 		,b.CurrencyName
-		,ci.CustomerClass
+		,ci.CustomerClass,
+		CASE
+			WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3 THEN 8
+			WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
+			WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 2
+			WHEN b.bettype = 38 THEN 3
+			WHEN b.bettype = 376 THEN 4
+		ELSE 0 END AS ParlayType
 	FROM dbo.rmBettrans b WITH (NOLOCK)
 		INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
 	WHERE b.transid IN (SELECT TransID FROM #tmpTransList)
@@ -672,7 +681,8 @@ BEGIN
 		SportType,
 		IP,
 		currencyName,
-		CustomerClass		
+		CustomerClass,
+		ParlayType
 	)			
 	SELECT
 		b.transdate
@@ -688,7 +698,14 @@ BEGIN
 		,b.transid2 AS SportType
 		,b.IP
 		,b.CurrencyName
-		,ci.CustomerClass
+		,ci.CustomerClass,
+		CASE
+			WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3 THEN 8
+			WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
+			WHEN b.bettype = 29 AND b.betteam <> N'1' THEN 2
+			WHEN b.bettype = 38 THEN 3
+			WHEN b.bettype = 376 THEN 4
+		ELSE 0 END AS ParlayType
 	FROM dbo.rmBettrans_Old b WITH (NOLOCK)
 		INNER JOIN bodb02.dbo.CustInfo ci WITH(NOLOCK) ON b.custid = ci.custid
 	WHERE b.transid IN (SELECT TransID FROM #tmpTransList)
@@ -708,7 +725,8 @@ BEGIN
 		TotalSelection,
 		SportType,
 		IP,
-		CASE WHEN BetType = 38 THEN 1 ELSE 0 END IsSMP
+		CASE WHEN BetType = 38 THEN 1 ELSE 0 END IsSMP,
+		ParlayType
 	FROM #tmpBettrans
 	END
 
