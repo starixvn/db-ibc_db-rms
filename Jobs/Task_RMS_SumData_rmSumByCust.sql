@@ -78,7 +78,7 @@ BEGIN
 				WHEN betteam = N'1' THEN 2 --Mix Parlay
 				ELSE 3 --Combo Parlay
 			END ParlayType, 
-			CASE WHEN s.Site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END, statusID, hdp2,
+			CASE WHEN s.Site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END, statusID, combo,
 			stake*actualrate,(winlost-actual_stake)*actualrate, playercomm*actualrate, 
 			CASE WHEN tpositiontaking = 1 THEN 0 ELSE (-(winlost-actual_stake)*(1-tpositiontaking-CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8)))-scomm+scomm*CAST(ISNULL(epositiontaking, 0) AS DECIMAL(9,8))/(1 - tpositiontaking))*actualrate END
 		FROM dbo.rmBettrans r WITH (NOLOCK)
@@ -105,7 +105,7 @@ BEGIN
 				ELSE 3 --Combo Parlay
 			END ParlayType, 
 			CASE WHEN s.Site IN ('Saba789','NovaCasino','SEAL888') THEN 0 ELSE s.isDeposit END, 
-			r.statusID, r.hdp2, r.stake*r.actualrate, (r.winlost-r.actual_stake)*r.actualrate, r.playercomm*r.actualrate, 
+			r.statusID, r.combo, r.stake*r.actualrate, (r.winlost-r.actual_stake)*r.actualrate, r.playercomm*r.actualrate, 
 			CASE WHEN r.tpositiontaking = 1 THEN 0 ELSE (-(r.winlost-r.actual_stake)*(1-r.tpositiontaking-CAST(ISNULL(r.epositiontaking, 0) AS DECIMAL(9,8)))-r.scomm+r.scomm*CAST(ISNULL(r.epositiontaking, 0) AS DECIMAL(9,8))/(1 - r.tpositiontaking))*r.actualrate END
 		FROM dbo.rmBettrans_Old r WITH (NOLOCK)
 			INNER JOIN bodb02.dbo.Customer c WITH (NOLOCK) ON r.custid = c.custid
@@ -171,7 +171,7 @@ BEGIN
 	CREATE TABLE #tmp1 (refno BIGINT, bettype SMALLINT, leagueid INT, matchid INT, betteam NVARCHAR(10), statusID TINYINT, RowNum BIGINT)
 	INSERT INTO #tmp1 (refno, bettype, leagueid, matchid, betteam, statusID, RowNum)
 	SELECT refno, bettype, LeagueId, matchId, betteam, statusID, 			
-			ROW_NUMBER() OVER(PARTITION BY refno, bettype, LeagueId, matchId, betteam ORDER BY (SELECT NULL)) AS RowNum
+			ROW_NUMBER() OVER(PARTITION BY refno, bettype, LeagueId, matchId, betteam ORDER BY (SELECT NULL) ASC) AS RowNum
 	FROM  #bettransm
 
 	CREATE CLUSTERED INDEX CIX_tmp1 ON #tmp1 (refno)
@@ -223,7 +223,7 @@ BEGIN
 	CREATE TABLE #tmp2 (refno BIGINT, bettype SMALLINT, leagueid INT, matchid INT, statusID TINYINT, RowNum BIGINT)
 	INSERT INTO #tmp2 (refno, bettype, leagueid, matchid, statusID, RowNum)
 	SELECT refno, bettype, LeagueId, matchId, statusID, 			
-			ROW_NUMBER() OVER(PARTITION BY refno, bettype, LeagueId, matchId ORDER BY (SELECT NULL)) AS RowNum
+			ROW_NUMBER() OVER(PARTITION BY refno, bettype, LeagueId, matchId ORDER BY (SELECT NULL) ASC) AS RowNum
 	FROM  #bettransm
 
 	CREATE CLUSTERED INDEX CIX_tmp2 ON #tmp2 (refno)
