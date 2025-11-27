@@ -232,7 +232,7 @@ BEGIN
 	WHERE	winlostdate >= @yesterday AND rm.custID > 0 AND matchid = 29 AND statusID = 0 AND rm.currency <> 20
 		AND bettype IN (SELECT x.bettype FROM #bettype x)
 		AND refno IN (SELECT DISTINCT y.refno FROM #bettransm y)
-		AND hdp2 IN (SELECT z.selection FROM #tmpSelection z)
+		AND combo IN (SELECT z.selection FROM #tmpSelection z)
 		AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 		AND ISNULL(mc.level, 0) IN (SELECT level FROM #level)
 		AND ( rm.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')

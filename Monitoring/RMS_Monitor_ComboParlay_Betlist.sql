@@ -148,7 +148,7 @@ BEGIN
 		END
 	END
 
-	CREATE TABLE #company(Site NVARCHAR(50))
+	CREATE TABLE #company(Site VARCHAR(50))
 	INSERT INTO #company(Site)
 	select value from  STRING_SPLIT(@company, ',')
 
@@ -287,7 +287,7 @@ BEGIN
 			INSERT INTO #bettrans (transid, bettype, matchid, refno)
 			SELECT  DISTINCT b.transid, b.bettype, b.matchid, b.refno
 			FROM dbo.rmBettrans b WITH (NOLOCK)
-				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN #tmpSelection s ON b.combo = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 				INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
 				INNER JOIN #company cp ON cp.Site = ct.site

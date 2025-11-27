@@ -217,7 +217,7 @@ BEGIN
 					CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 1 ELSE 0 END
 			FROM		dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
-				INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN @tmpSelection s ON b.combo = s.selection
 				INNER JOIN @tmpSport sp ON b.transid2 = sp.sporttype
 				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
 				LEFT JOIN #tmpBettrans t ON b.transid = t.transid
@@ -262,7 +262,7 @@ BEGIN
 				CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND t.bac|16 = t.bac THEN 1 ELSE 0 END
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
-				INNER JOIN @tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN @tmpSelection s ON b.combo = s.selection
 				INNER JOIN @tmpSport sp ON b.transid2 = sp.sporttype
 				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
 				LEFT JOIN #tmpBettrans t ON b.transid = t.transid

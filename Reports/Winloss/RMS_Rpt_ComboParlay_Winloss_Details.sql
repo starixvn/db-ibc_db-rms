@@ -173,7 +173,7 @@ BEGIN
 			(
 				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, IsGOF, IsParlayGenerator, IsBoostBonus
 			)
-			SELECT b.transid, refno, transid2, b.bettype, hdp2 AS combo, TotalBet AS TotalCombo
+			SELECT b.transid, refno, transid2, b.bettype, b.combo, TotalBet AS TotalCombo
 				,CASE
 					WHEN b.bettype = 29 AND betteam = N'1' AND b.oddsspread = 3 THEN 8
 					WHEN b.bettype = 29 AND betteam = N'1' THEN 1
@@ -192,7 +192,7 @@ BEGIN
 				,CAST(CASE WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 			FROM dbo.rmBettrans b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
-				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN #tmpSelection s ON b.combo = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 				LEFT JOIN #tmpGenerator t ON b.transid = t.transid
 			WHERE winlostdate BETWEEN @f_date AND @t_date
@@ -237,7 +237,7 @@ BEGIN
 			(
 				transid, refno, sporttype, bettype, combo, TotalCombo, ParlayType, stake, winlost, company_winlost, stake_baseRM, winlost_baseRM, company_winlost_baseRM, IsGOF, IsParlayGenerator, IsBoostBonus
 			)
-			SELECT b.transid, refno, transid2, b.bettype, hdp2 AS combo, TotalBet AS TotalCombo
+			SELECT b.transid, refno, transid2, b.bettype, b.combo, TotalBet AS TotalCombo
 				,CASE
 					WHEN b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3 THEN 8
 					WHEN b.bettype = 29 AND b.betteam = N'1' THEN 1
@@ -256,7 +256,7 @@ BEGIN
 				,CAST(CASE WHEN b.bettype = 29 AND b.betteam= N'1' AND b.oddsspread = 2 THEN 1 ELSE 0 END AS BIT) AS IsBoostBonus
 			FROM dbo.rmBettrans_old b WITH (NOLOCK)
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
-				INNER JOIN #tmpSelection s ON b.hdp2 = s.selection
+				INNER JOIN #tmpSelection s ON b.combo = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
 				LEFT JOIN #tmpGenerator t ON b.transid = t.transid
 			WHERE winlostdate BETWEEN @f_date AND @t_date
@@ -301,7 +301,6 @@ BEGIN
 		,b.IsParlayGenerator
 		,b.IsBoostBonus
 	FROM #tmpBettrans b
-		INNER JOIN #tmpSelection s ON b.combo = s.selection
 		INNER JOIN #tmpSport sp ON b.sporttype = sp.sporttype
 	ORDER BY transid DESC
 

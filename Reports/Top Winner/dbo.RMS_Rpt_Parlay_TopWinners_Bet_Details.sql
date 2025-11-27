@@ -2,6 +2,7 @@
 ALTER PROCEDURE [dbo].[RMS_Rpt_Parlay_TopWinners_Bet_Details]
 	@transid	BIGINT
 	,@refno		BIGINT
+
 AS
 
 /*

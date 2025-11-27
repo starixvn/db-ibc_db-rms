@@ -3,6 +3,7 @@ ALTER PROCEDURE [dbo].[RMS_ComboParlay_TransDetails]
 	@transid		BIGINT
 	,@refno			BIGINT
 	,@CurrencyName	VARCHAR(50) = NULL OUTPUT
+
 AS
 
 /*	

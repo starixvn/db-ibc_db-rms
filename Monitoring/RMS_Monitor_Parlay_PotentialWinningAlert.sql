@@ -5,6 +5,7 @@ ALTER PROCEDURE [dbo].[RMS_Monitor_Parlay_PotentialWinningAlert]
     @IsSMP BIT = 0, 
 	@IsHP BIT = 0,
     @MinPotentialWinning MONEY  = 500000
+
 AS
 
 /*

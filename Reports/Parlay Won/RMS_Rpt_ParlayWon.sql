@@ -298,7 +298,7 @@ BEGIN
 					,b.matchid
 				FROM dbo.rmBettrans b WITH (NOLOCK)
 					INNER JOIN #bettype bt ON b.bettype = bt.bettype
-					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
+					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.combo = s.selection) s
 					CROSS APPLY (SELECT TOP 1 sp.sporttype FROM @tmpSport sp WHERE b.transid2 = sp.sporttype) sp
 					CROSS APPLY (SELECT TOP 1 tc.currency FROM @tmpCurrency tc WHERE b.currency = tc.currency) tc
 					INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
@@ -386,7 +386,7 @@ BEGIN
 					,b.matchid
 				FROM dbo.rmBettrans_Old b WITH (NOLOCK)
 					INNER JOIN #bettype bt ON b.bettype = bt.bettype
-					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.hdp2 = s.selection) s
+					CROSS APPLY (SELECT TOP 1 s.selection FROM @tmpSelection s WHERE b.combo = s.selection) s
 					CROSS APPLY (SELECT TOP 1 sp.sporttype FROM @tmpSport sp WHERE b.transid2 = sp.sporttype) sp
 					CROSS APPLY (SELECT TOP 1 tc.currency FROM @tmpCurrency tc WHERE b.currency = tc.currency) tc
 					INNER JOIN bodb02.dbo.Customer ct WITH(NOLOCK) ON b.custid = ct.custid
