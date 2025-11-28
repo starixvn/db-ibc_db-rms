@@ -251,7 +251,7 @@ BEGIN
 					b.oddsspread,
 					ci.CustomerClass
 			FROM #rmTransRecommend tmp
-				INNER JOIN dbo.rmBettrans b WITH (NOLOCK) ON tmp.transid = b.transid
+				INNER JOIN dbo.rmBettrans b WITH (NOLOCK, INDEX = CIX_bettransParlay, FORCESEEK) ON tmp.transid = b.transid
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.combo = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
@@ -284,6 +284,12 @@ BEGIN
 		END
 		ELSE
 		BEGIN
+			CREATE TABLE #tmpbettrans (transid BIGINT)
+			INSERT INTO #tmpbettrans (transid)
+			SELECT transid
+			FROM dbo.rmBettrans WITH (NOLOCK)
+			WHERE statusID = 0
+				AND currency <> 20
 
 			INSERT INTO #bettrans_details(refno,bettype,transid,custID,username,betteam,CurrencyName,Odds,stake,WinningAmount,CompanyLoseAmount, transdate,recommend,level,oddsspread, CustomerClass)
 			SELECT	b.refno, 
@@ -302,7 +308,8 @@ BEGIN
 					ISNULL(mc.level,0),
 					b.oddsspread,
 					ci.CustomerClass
-			FROM dbo.rmBettrans b WITH (NOLOCK)
+			FROM #tmpbettrans tmp
+				INNER JOIN dbo.rmBettrans b WITH (NOLOCK, INDEX = CIX_bettransParlay, FORCESEEK) ON tmp.transid = b.transid 
 				INNER JOIN #bettype bt ON b.bettype = bt.bettype
 				INNER JOIN #tmpSelection s ON b.combo = s.selection
 				INNER JOIN #tmpSport sp ON b.transid2 = sp.sporttype
@@ -311,9 +318,7 @@ BEGIN
 				INNER JOIN #company cp ON cp.Site = ct.site
 				LEFT JOIN rmCustomer mc WITH (NOLOCK) ON b.custid = mc.custid
 				LEFT JOIN #Generator t ON t.transid = b.transid
-			WHERE b.statusID = 0
-				AND b.currency <> 20
-				AND (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
+			WHERE (ci.CustomerClass = @CustomerClass OR @CustomerClass IS NULL)
 				AND	ISNULL(mc.level,0) IN(SELECT l.level FROM #level l)
 				AND (b.bettype <> 29
 					OR (EXISTS(SELECT TOP 1 1 FROM #ParlayType WHERE ParlayType = 1)
@@ -330,6 +335,8 @@ BEGIN
 						AND b.bettype = 29 AND b.betteam = N'1' AND b.oddsspread = 3)
 					)		
 				AND (b.custid IN (SELECT ul.custID FROM #userList ul) OR @UserName = '')
+
+			DROP TABLE #tmpbettrans
 		END
 
 		IF @IsCornerParlay = 1
